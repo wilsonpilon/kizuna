@@ -1,0 +1,60 @@
+# ============================================================
+# KIZUNA demo -- Obifile de exemplo (receita de build)
+# Croqui hipotetico -- nao executa / prova de conceito
+# ============================================================
+
+target: demo.com
+entry: Main.Demo
+
+resources:
+  - file: opening.scr
+    bank: 3
+    size: 12K
+    desc: "Tela de abertura SCREEN 2"
+
+  - file: font.fnt
+    bank: 2
+    size: 2K
+    desc: "Fonte propria do Pascal"
+
+modules:
+  - name: Main
+    source: main.pas
+    compiler: wirth80
+    bank: 0        # area comum, sempre mapeada
+    size: 12K
+
+  - name: ScreenFX
+    source: screen.asm
+    compiler: kaji80
+    bank: 1
+    size: 12K
+
+  - name: Chart
+    source: chart.bas
+    compiler: dignac
+    bank: 2
+    size: 5K
+
+link:
+  tool: musubi
+  map: demo.map        # relatorio de enderecos + trampolins gerados
+  trampoline: auto      # MUSUBI decide sozinho onde precisa
+
+library:
+  tool: hako
+  archive: runtime.hlib  # runtime comum (I/O, strings, etc) empacotado
+
+# ------------------------------------------------------------
+# Saida esperada de `obi build` (ilustrativa):
+#
+# KAJI80    screen.asm     -> screen.mob     (banco 1, 12K)
+# DIGNAC    chart.bas      -> chart.mob      (banco 2,  5K)
+# WIRTH80   main.pas       -> main.mob       (banco 0, 12K)
+# HAKO      runtime.hlib   [ja empacotada]
+# MUSUBI    linkando 3 modulos + runtime.hlib...
+#           gerando trampolim: Main -> Chart (banco 0 -> banco 2)
+#           gerando trampolim: Main -> ScreenFX (banco 0 -> banco 1)
+#           mapa de memoria: demo.map
+# -> demo.com  (43K distribuidos em 4 bancos)
+# ------------------------------------------------------------
