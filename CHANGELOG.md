@@ -11,7 +11,7 @@ Formato inspirado em [Keep a Changelog](https://keepachangelog.com/).
   técnica inicial (`SPEC.md`).
 - Definição do escopo da linguagem Pascal alvo: fiel ao Turbo Pascal 4,
   com suporte a units.
-- Definição do modelo de memória: MSX2, 128Kb com memory mapper, 4
+- Definição do modelo de memória: MSX2+, 256Kb ou mais com memory mapper, 4
   páginas de 16Kb, janela comutável na página 2.
 - Desenho do formato de objeto relocável próprio `.MOB` (segmentos,
   símbolos, relocations), decidido como formato novo em vez de reusar o

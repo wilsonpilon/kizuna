@@ -18,7 +18,7 @@ croqui de como um programa real usaria a toolchain depois de pronta.
   no `msxbasica` (`KAJI80`, `WIRTH80`, `DIGNAC`, `MUSUBI`, `HAKO`, `OBI`).
 - **Especificação técnica** (`SPEC.md`) cobrindo:
   - Escopo da linguagem Pascal (fiel ao Turbo Pascal 4, com units)
-  - Modelo de memória MSX2 de 128Kb com bank switching
+  - Modelo de memória MSX2+ de 256Kb ou mais com bank switching
   - Formato de objeto relocável próprio `.MOB`
   - Mecanismo de trampolim automático entre bancos
   - ABI própria (pilha, `IX` como frame pointer, retorno em `A`/`HL`)

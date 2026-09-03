@@ -2,8 +2,8 @@
 
 > "Um laço entre linguagens, amarrado num único `.COM`."
 
-**KIZUNA** é uma proposta de toolchain para MSX2 (Z80 / MSX-DOS / 128Kb
-com memory mapper) que permite escrever partes de um mesmo programa em
+**KIZUNA** é uma proposta de toolchain para MSX2+ (Z80 / MSX-DOS 2 / 256Kb
+ou mais com memory mapper) que permite escrever partes de um mesmo programa em
 **Assembly Z80**, **Pascal** (estilo Turbo Pascal 4, com units) e
 **MSX-BASIC Dignified**, compilar cada parte separadamente e linkar tudo
 num único executável — inclusive distribuindo módulos por bancos de
@@ -16,12 +16,14 @@ Versão `0.0.0`.
 
 ## Por quê
 
-MSX-DOS herda compatibilidade de BDOS do CP/M-80, plataforma onde
+MSX-DOS 2 herda compatibilidade de BDOS do CP/M-80, plataforma onde
 linguagens como Macro-80, Fortran-80 e Cobol-80 já linkavam juntas via um
-formato de objeto comum. O Turbo Pascal 3 rodava nesse mesmo mundo; o
-Turbo Pascal 4, que introduziu units, ficou restrito a MS-DOS/x86. O
-KIZUNA propõe recuperar essa ideia — um Pascal fiel ao TP4, com units —
-mas nativo para MSX2, e indo além: aproveitando os 128Kb via bank
+formato de objeto comum. O Turbo Pascal 3 (até a 3.3) rodava nesse mesmo
+mundo, mas **não permitia linkar com outras linguagens**; foi o Turbo
+Pascal 4, com suas units e a diretiva `{$L}` para `.OBJ` externos, que
+passou a **permitir** essa integração — só que ficou restrito a
+MS-DOS/x86. O KIZUNA propõe recuperar essa ideia — um Pascal fiel ao TP4, com units —
+mas nativo para MSX2+, e indo além: aproveitando os 256Kb (ou mais) via bank
 switching, coisa que os compiladores originais de CP/M nunca precisaram
 resolver, e permitindo combinar isso com Assembly e um BASIC estruturado
 no mesmo binário.
@@ -39,7 +41,7 @@ no mesmo binário.
 
 Cada compilador gera um objeto relocável no formato próprio `.MOB`;
 `MUSUBI` linka tudo (com trampolins automáticos de bank switching quando
-necessário) e produz um `.COM` MSX-DOS.
+necessário) e produz um `.COM` MSX-DOS 2.
 
 ## Estrutura deste repositório
 
