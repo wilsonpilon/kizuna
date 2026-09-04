@@ -9,7 +9,7 @@ import "fmt"
 const (
 	Major    = 4
 	Minor    = 3
-	Build    = 2
+	Build    = 3
 	Codename = "Akatsuki (暁)"
 )
 

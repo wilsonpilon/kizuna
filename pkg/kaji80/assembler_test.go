@@ -233,3 +233,42 @@ func TestPass1AndPass2Sync(t *testing.T) {
 		}
 	}
 }
+
+func Test16BitAluInstructions(t *testing.T) {
+	src := `
+MODULE Test16
+BANK 0
+PUBLIC Start
+Start:
+    add  hl, bc
+    add  hl, de
+    adc  hl, bc
+    adc  hl, de
+    sbc  hl, bc
+    sbc  hl, de
+    ld   hl, (1234h)
+    ld   (1234h), hl
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	data := obj.Segments[0].Data
+	expected := []byte{
+		0x09,             // ADD HL, BC
+		0x19,             // ADD HL, DE
+		0xED, 0x4A,       // ADC HL, BC
+		0xED, 0x5A,       // ADC HL, DE
+		0xED, 0x42,       // SBC HL, BC
+		0xED, 0x52,       // SBC HL, DE
+		0x2A, 0x34, 0x12, // LD HL, (1234h)
+		0x22, 0x34, 0x12, // LD (1234h), HL
+	}
+
+	if !bytes.Equal(data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", data, expected)
+	}
+}
+

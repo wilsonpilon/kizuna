@@ -328,7 +328,7 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			}
 		}
 		return 1, nil
-	case "ADD", "ADC", "SUB", "SBC", "AND", "XOR", "OR", "CP":
+	case "ADD":
 		if len(ops) == 2 {
 			dst := strings.ToUpper(ops[0])
 			if dst == "HL" {
@@ -341,6 +341,9 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			if _, ok := reg8Map[src]; ok {
 				return 1, nil
 			}
+			if src == "(HL)" {
+				return 1, nil
+			}
 			return 2, nil
 		}
 		if len(ops) == 1 {
@@ -351,7 +354,54 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			if op == "(HL)" {
 				return 1, nil
 			}
-			// Imediato de 8 bits (ex: CP 61h, SUB 20h, AND 0Fh) -> 2 bytes
+			return 2, nil
+		}
+		return 1, nil
+	case "ADC", "SBC":
+		if len(ops) == 2 {
+			dst := strings.ToUpper(ops[0])
+			if dst == "HL" {
+				return 2, nil // ED 4A/5A/6A/7A ou ED 42/52/62/72 (2 bytes)
+			}
+			src := strings.ToUpper(ops[1])
+			if _, ok := reg8Map[src]; ok {
+				return 1, nil
+			}
+			if src == "(HL)" {
+				return 1, nil
+			}
+			return 2, nil
+		}
+		if len(ops) == 1 {
+			op := strings.ToUpper(ops[0])
+			if _, ok := reg8Map[op]; ok {
+				return 1, nil
+			}
+			if op == "(HL)" {
+				return 1, nil
+			}
+			return 2, nil
+		}
+		return 1, nil
+	case "SUB", "AND", "XOR", "OR", "CP":
+		if len(ops) == 2 {
+			src := strings.ToUpper(ops[1])
+			if _, ok := reg8Map[src]; ok {
+				return 1, nil
+			}
+			if src == "(HL)" {
+				return 1, nil
+			}
+			return 2, nil
+		}
+		if len(ops) == 1 {
+			op := strings.ToUpper(ops[0])
+			if _, ok := reg8Map[op]; ok {
+				return 1, nil
+			}
+			if op == "(HL)" {
+				return 1, nil
+			}
 			return 2, nil
 		}
 		return 1, nil
@@ -677,24 +727,38 @@ func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token,
 				a.emit(0xDD, 0x09|(p<<4))
 				return nil
 			}
+			if dst == "IY" {
+				p, ok := reg16Map[strings.ToUpper(ops[1])]
+				if !ok {
+					return fmt.Errorf("registrador inválido para ADD IY: %s", ops[1])
+				}
+				a.emit(0xFD, 0x09|(p<<4))
+				return nil
+			}
 		}
-		fallthrough
-	case "ADC", "SUB", "SBC", "AND", "XOR", "OR", "CP":
-		opCode := aluMap[mnem]
-		target := ops[0]
-		if len(ops) == 2 {
-			target = ops[1]
+		return a.encodeAlu8(mnem, ops)
+	case "ADC":
+		if len(ops) == 2 && strings.EqualFold(ops[0], "HL") {
+			p, ok := reg16Map[strings.ToUpper(ops[1])]
+			if !ok {
+				return fmt.Errorf("registrador inválido para ADC HL: %s", ops[1])
+			}
+			a.emit(0xED, 0x4A|(p<<4))
+			return nil
 		}
-		upperTarget := strings.ToUpper(target)
-		if r, ok := reg8Map[upperTarget]; ok {
-			a.emit(0x80 | (opCode << 3) | r)
-		} else if upperTarget == "(HL)" {
-			a.emit(0x86 | (opCode << 3))
-		} else {
-			// Imediato de 8 bits
-			val := a.parseImm8(target)
-			a.emit(0xC6|(opCode<<3), val)
+		return a.encodeAlu8(mnem, ops)
+	case "SBC":
+		if len(ops) == 2 && strings.EqualFold(ops[0], "HL") {
+			p, ok := reg16Map[strings.ToUpper(ops[1])]
+			if !ok {
+				return fmt.Errorf("registrador inválido para SBC HL: %s", ops[1])
+			}
+			a.emit(0xED, 0x42|(p<<4))
+			return nil
 		}
+		return a.encodeAlu8(mnem, ops)
+	case "SUB", "AND", "XOR", "OR", "CP":
+		return a.encodeAlu8(mnem, ops)
 	case "LD":
 		return a.encodeLd(ops)
 	case "DB", "DEFB", "BYTE":
@@ -723,6 +787,25 @@ func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token,
 		}
 	default:
 		return fmt.Errorf("instrução desconhecida '%s'", mnem)
+	}
+	return nil
+}
+
+func (a *Assembler) encodeAlu8(mnem string, ops []string) error {
+	opCode := aluMap[mnem]
+	target := ops[0]
+	if len(ops) == 2 {
+		target = ops[1]
+	}
+	upperTarget := strings.ToUpper(target)
+	if r, ok := reg8Map[upperTarget]; ok {
+		a.emit(0x80 | (opCode << 3) | r)
+	} else if upperTarget == "(HL)" {
+		a.emit(0x86 | (opCode << 3))
+	} else {
+		// Imediato de 8 bits
+		val := a.parseImm8(target)
+		a.emit(0xC6|(opCode<<3), val)
 	}
 	return nil
 }
@@ -795,6 +878,22 @@ func (a *Assembler) encodeLd(ops []string) error {
 	if strings.HasPrefix(dst, "(") && strings.HasSuffix(dst, ")") && src == "A" {
 		addr := strings.Trim(ops[0], "()")
 		a.emit(0x32)
+		a.emitAddressOrReloc(addr)
+		return nil
+	}
+
+	// LD HL, (nn)
+	if dst == "HL" && strings.HasPrefix(src, "(") && strings.HasSuffix(src, ")") {
+		addr := strings.Trim(ops[1], "()")
+		a.emit(0x2A)
+		a.emitAddressOrReloc(addr)
+		return nil
+	}
+
+	// LD (nn), HL
+	if strings.HasPrefix(dst, "(") && strings.HasSuffix(dst, ")") && src == "HL" {
+		addr := strings.Trim(ops[0], "()")
+		a.emit(0x22)
 		a.emitAddressOrReloc(addr)
 		return nil
 	}

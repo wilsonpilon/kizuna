@@ -8,6 +8,18 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 - **MINOR**: Incrementado a cada feature ou subsistema novo adicionado.
 - **COMPILAÇÃO (BUILD)**: Incrementado a cada compilação / build realizado no projeto.
 
+## [4.3.3] - 2026-09-04
+
+### Corrigido
+- **Suporte Aritmético de 16 bits no Assembler KAJI80 ([pkg/kaji80/assembler.go](pkg/kaji80/assembler.go))**:
+  - Implementada a codificação e estimativa precisa de `SBC HL, ss` (`ED 42/52/62/72`) e `ADC HL, ss` (`ED 4A/5A/6A/7A`) de 16 bits.
+  - Anteriormente, `SBC HL, DE` caía no caso ALU de 8 bits e montava incorretamente como `0xDE 0x00` (`SBC A, 00h`). Isso fazia o loop de cálculo de dígitos em `PrintDecDigit` entrar em um loop infinito no Z80 sem subtrair HL, travando a máquina antes de imprimir qualquer caractere e impedindo a execução de prosseguir para o som e retorno ao DOS.
+  - Implementado suporte a `LD HL, (nn)` (`0x2A`) e `LD (nn), HL` (`0x22`) no KAJI80.
+- **Ajuste de Duração do Loop de Pausa de Áudio ([sample/libdemo/main.asm](sample/libdemo/main.asm))**:
+  - Reduzido o contador do loop externo `LD B, 18h` (que durava ~11.5 segundos) para `LD B, 02h` (~1 segundo audível), tornando a execução e retorno ao DOS fluídos e imediatos.
+- **Validação Completa via Emulação de CPU**:
+  - Execução validada instrução-a-instrução em simulador Z80, comprovando o cálculo de `123 x 45 = 5535`, ativação correta do PSG e encerramento com sucesso via BDOS 00h.
+
 ---
 
 ## [4.3.2] - 2026-09-04

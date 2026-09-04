@@ -47,8 +47,8 @@ Start:
     LD E, 0Fh    ; Volume maximo (15)
     CALL PSG_PlayTone
 
-    ; Pausa audivel de aproximadamente meio segundo
-    LD B, 18h
+    ; Pausa audivel de aproximadamente um segundo
+    LD B, 02h
 DelayOuter:
     LD HL, 0000h
 DelayInner:
