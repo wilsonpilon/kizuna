@@ -45,12 +45,16 @@ PSG_MuteAll:
     CALL PSG_Write
     LD A, 0Ah ; Canal C volume
     CALL PSG_Write
+    ; Desativa tons no mixer de forma segura para portas de I/O do MSX (0xBF)
+    LD A, 07h
+    LD E, 0BFh
+    CALL PSG_Write
     POP DE
     POP AF
     RET
 
 ; -----------------------------------------------------------------------------
-; PSG_PlayTone: Configura frequência e toca tom contínuo em um canal (0, 1 ou 2)
+; PSG_PlayTone: Configura frequência e toca tom em um canal (0, 1 ou 2)
 ; Entrada: A = canal (0=A, 1=B, 2=C)
 ;          HL = período da nota (12 bits: menor valor = frequência mais alta)
 ;          E = volume (0..15)
@@ -61,8 +65,7 @@ PSG_PlayTone:
     PUSH DE
     PUSH HL
 
-    ; Determina registrador de tom fino (canal * 2)
-    LD B, A ; B = canal
+    LD B, A ; B = canal (0, 1 ou 2)
     ADD A, A
     LD C, A ; C = reg fino (0, 2 ou 4)
 
@@ -74,7 +77,6 @@ PSG_PlayTone:
 
     ; 2. Escrever parte alta do período (4 bits)
     INC C
-    LD A, C
     OUT (PSG_REG_SEL), A
     LD A, H
     AND 0Fh
@@ -88,22 +90,9 @@ PSG_PlayTone:
     AND 0Fh
     OUT (PSG_DATA_WR), A
 
-    ; 4. Ativar canal no misturador (Reg 7): bit = 0 ativa o tom
-    LD A, 07h
-    CALL PSG_Read
-    ; Criar máscara para zerar bit B
-    LD D, A ; D = valor atual do Reg 7
-    LD A, 01h
-    LD E, B
-    INC E
-PSG_Mask_Loop:
-    DEC E
-    JR Z, PSG_Mask_Done
-    SLA A
-    JR PSG_Mask_Loop
-PSG_Mask_Done:
-    CPL ; Inverte máscara: 0 no canal desejado, 1 nos outros
-    AND D
+    ; 4. Ativar tom no misturador (Reg 7): 0xB8 ativa Canal A com I/O preservado
+    LD A, 0B8h
+    OR B
     LD E, A
     LD A, 07h
     CALL PSG_Write

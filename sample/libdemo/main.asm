@@ -47,8 +47,8 @@ Start:
     LD E, 0Ch    ; Volume 12
     CALL PSG_PlayTone
 
-    ; Pequena pausa / delay em loop
-    LD BC, 0FFFFh
+    ; Pequena pausa / delay em loop (~0.3s)
+    LD BC, 8000h
 DelayLoop:
     DEC BC
     LD A, B

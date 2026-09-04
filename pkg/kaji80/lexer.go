@@ -214,6 +214,16 @@ func (l *Lexer) readNumber() (Token, error) {
 	}
 	raw := string(l.src[start:l.pos])
 
+	// Verificar sufixo 'H' (hexadecimal) antes de 0b para suportar 0BFh, 0B8h, etc.
+	if strings.HasSuffix(strings.ToLower(raw), "h") {
+		hexPart := raw[:len(raw)-1]
+		val, err := strconv.ParseInt(hexPart, 16, 64)
+		if err != nil {
+			return Token{}, fmt.Errorf("número hexadecimal inválido %q", raw)
+		}
+		return Token{Type: TokenNumber, Value: raw, Number: val}, nil
+	}
+
 	// Verificar prefixo 0x ou 0b
 	if strings.HasPrefix(strings.ToLower(raw), "0x") {
 		val, err := strconv.ParseInt(raw[2:], 16, 64)
@@ -226,16 +236,6 @@ func (l *Lexer) readNumber() (Token, error) {
 		val, err := strconv.ParseInt(raw[2:], 2, 64)
 		if err != nil {
 			return Token{}, fmt.Errorf("número binário inválido %q", raw)
-		}
-		return Token{Type: TokenNumber, Value: raw, Number: val}, nil
-	}
-
-	// Verificar sufixo 'H' (hexadecimal)
-	if strings.HasSuffix(strings.ToLower(raw), "h") {
-		hexPart := raw[:len(raw)-1]
-		val, err := strconv.ParseInt(hexPart, 16, 64)
-		if err != nil {
-			return Token{}, fmt.Errorf("número hexadecimal inválido %q", raw)
 		}
 		return Token{Type: TokenNumber, Value: raw, Number: val}, nil
 	}

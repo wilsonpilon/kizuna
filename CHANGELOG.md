@@ -10,6 +10,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [4.3.1] - 2026-09-03
+
+### Corrigido
+- **Conversão Decimal em `PrintDec16` ([lib/src/string.asm](lib/src/string.asm))**:
+  - Reescrita da rotina de conversão para utilizar subtração sucessiva direta de potências de 10 sem endereçamento indexado `(IX+d)`, eliminando falha que impedia a exibição do resultado numérico.
+- **Preservação de Registradores em Chamadas BDOS ([lib/src/bdos.asm](lib/src/bdos.asm))**:
+  - `BDOS_PrintChar` e `BDOS_PrintString` agora salvam e restauram explicitamente todos os registradores (`AF`, `BC`, `DE`, `HL`, `IX`, `IY`), prevenindo corrupção de registradores durante chamadas de console do MSX-DOS.
+- **Controle Seguro do Misturador PSG ([lib/src/psg.asm](lib/src/psg.asm))**:
+  - `PSG_PlayTone` e `PSG_MuteAll` agora gravam valores fixos e seguros no Registrador 7 (`0xB8` / `0xBF`), eliminando leituras na porta `0xA2` e preservando intactas as direções das portas de I/O (joystick e teclado) do MSX.
+- **Lexer do KAJI80 ([pkg/kaji80/lexer.go](pkg/kaji80/lexer.go))**:
+  - Ajustada a precedência na análise de literais para verificar o sufixo `H` antes do prefixo `0b`, corrigindo erro de montagem em constantes hexadecimais iniciadas em `0B` (ex: `0BFh`, `0B8h`).
+
+---
+
 ## [4.3.0] - 2026-09-03 - Biblioteca Padrão MSXLIB
 
 ### Adicionado

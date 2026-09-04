@@ -21,23 +21,45 @@ BDOS_Call:
 ; -----------------------------------------------------------------------------
 ; BDOS_PrintChar: Imprime um único caractere no console (Função 02h)
 ; Entrada: E = código ASCII do caractere
+; Preserva: todos os registradores
 ; -----------------------------------------------------------------------------
 BDOS_PrintChar:
+    PUSH AF
     PUSH BC
+    PUSH DE
+    PUSH HL
+    PUSH IX
+    PUSH IY
     LD C, 02h
     CALL BDOS_ENTRY
+    POP IY
+    POP IX
+    POP HL
+    POP DE
     POP BC
+    POP AF
     RET
 
 ; -----------------------------------------------------------------------------
 ; BDOS_PrintString: Imprime string terminada em '$' no console (Função 09h)
 ; Entrada: DE = ponteiro para a string terminada em '$'
+; Preserva: todos os registradores
 ; -----------------------------------------------------------------------------
 BDOS_PrintString:
+    PUSH AF
     PUSH BC
+    PUSH DE
+    PUSH HL
+    PUSH IX
+    PUSH IY
     LD C, 09h
     CALL BDOS_ENTRY
+    POP IY
+    POP IX
+    POP HL
+    POP DE
     POP BC
+    POP AF
     RET
 
 ; -----------------------------------------------------------------------------
