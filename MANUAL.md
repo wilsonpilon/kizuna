@@ -1,63 +1,50 @@
-# KIZUNA — Manual (rascunho conceitual, v0.0.0)
+# KIZUNA — Manual do Usuário (v4.4.0 — Release Akatsuki)
 
-> Este manual descreve o uso **pretendido** da toolchain. Nenhuma das
-> ferramentas abaixo está implementada nesta versão — serve como guia de
-> referência para a implementação futura.
+> Este manual descreve o uso da toolchain **KIZUNA** para MSX2+ / MSX-DOS 2.
+> As ferramentas `kaji80`, `wirth80`, `musubi`, `hako`, `mobdump` e a biblioteca `msxlib.hlib`
+> estão totalmente implementadas e funcionais.
 
 ## 1. Visão geral do fluxo
 
 ```
 fonte.asm  ──KAJI80──►  fonte.mob  ─┐
-fonte.pas  ──WIRTH80─►  fonte.mob  ─┼──MUSUBI──►  programa.com
+fonte.pas  ──WIRTH80─►  fonte.mob  ─┼──MUSUBI (+ msxlib.hlib)──►  programa.com
 fonte.bas  ──DIGNAC──►  fonte.mob  ─┘
 ```
 
-Um projeto KIZUNA é descrito por um arquivo `Obifile` na raiz, que lista
-os módulos-fonte, o compilador de cada um, o banco de memória alvo e o
-tamanho esperado. O comando `obi build` lê essa receita, invoca cada
-compilador na ordem correta e chama `MUSUBI` para gerar o `.COM` final.
+## 2. As Ferramentas
 
-## 2. Estrutura de um `Obifile`
+| Ferramenta | Comando | Status | O que faz |
+|---|---|---|---|
+| **`KAJI80`** | `kaji80 arq.asm -o arq.mob` | **Funcional** | Assembler Z80 modular com suporte a bancos e relocações. |
+| **`WIRTH80`**| `wirth80 arq.pas -o arq.mob` | **Funcional** | Compilador Pascal nativo (TP4-like) gerando objetos `.mob`. |
+| **`MUSUBI`** | `musubi *.mob *.hlib -o prog.com` | **Funcional** | Linker multi-banco com Smart-Linking e trampolins de mapper. |
+| **`HAKO`**   | `hako -c lib.hlib *.mob` | **Funcional** | Bibliotecário / empacotador de arquivos estáticos `.HLIB`. |
+| **`MOBDUMP`**| `mobdump arq.mob` | **Funcional** | Despejo legível de cabeçalhos, segmentos, símbolos e relocs. |
+| **`MSXLIB`** | `msxlib.hlib` | **Funcional** | Biblioteca padrão MSX (BDOS, BIOS, VDP, PSG, String, Math). |
+| **`DIGNAC`** | `dignac arq.bas` | *Planejado* | Compilador MSX-BASIC Dignified para Z80. |
+| **`OBI`**    | `obi build` | *Planejado* | Orquestrador declarativo de build via `Obifile`. |
 
-```yaml
-target: programa.com
-entry: NomeDoModulo.PontoDeEntrada
+## 3. Guia Rápido de Uso
 
-resources:
-  - file: recurso.bin
-    bank: N
-    size: TAMANHO
-    desc: "descrição livre"
+### 3.1. Compilando Programa em Pascal:
+```bash
+# 1. Compila Pascal para objeto relocável .mob
+wirth80 sample/pascal/hello.pas -o sample/pascal/hello.mob
 
-modules:
-  - name: NomeDoModulo
-    source: arquivo-fonte
-    compiler: kaji80 | wirth80 | dignac
-    bank: N        # 0 = area comum fixa; 1..N = banco paginavel
-    size: TAMANHO
-
-link:
-  tool: musubi
-  map: nome.map     # relatorio de enderecos + trampolins gerados
-  trampoline: auto   # MUSUBI decide sozinho onde precisa
-
-library:
-  tool: hako
-  archive: runtime.hlib
+# 2. Linka com a biblioteca padrão (elimina código não utilizado automaticamente)
+musubi -v -m sample/pascal/hello.map -o sample/pascal/hello.com \
+  sample/pascal/hello.mob lib/msxlib.hlib
 ```
 
-## 3. Comandos
+### 3.2. Compilando Programa em Assembly Z80:
+```bash
+# 1. Monta o Assembly
+kaji80 sample/hello.asm -o sample/hello.mob
 
-| Comando       | O que faz                                                  |
-|---------------|--------------------------------------------------------------|
-| `obi build`   | Compila todos os módulos e linka o `.COM` final              |
-| `obi clean`   | Remove artefatos intermediários (`.mob`, `.map`)              |
-| `obi map`     | Mostra o mapa de memória/bancos resultante do último build   |
-| `kaji80 arq.asm`  | Compila um módulo Assembly isoladamente para `.mob`       |
-| `wirth80 arq.pas` | Compila um módulo/unit Pascal isoladamente para `.mob`    |
-| `dignac arq.bas`  | Compila um módulo BASIC Dignified isoladamente para `.mob`|
-| `musubi *.mob -o saida.com` | Linka objetos `.mob` diretamente, sem `Obifile`  |
-| `hako pack runtime.hlib arq1.mob arq2.mob` | Empacota objetos numa biblioteca |
+# 2. Linka gerando o executável .COM
+musubi -v -o sample/hello.com sample/hello.mob
+```
 
 ## 4. Interoperabilidade entre linguagens
 

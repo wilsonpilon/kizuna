@@ -94,8 +94,8 @@ func installKizuna(reader *bufio.Reader) {
 
 	fmt.Printf("\nInstalando KIZUNA em: %s...\n", targetDir)
 
-	// Copiar pastas bin, sample, docs e LICENSE
-	itemsToCopy := []string{"bin", "sample", "docs", "LICENSE"}
+	// Copiar pastas bin, lib, sample, docs e LICENSE
+	itemsToCopy := []string{"bin", "lib", "sample", "docs", "LICENSE"}
 	for _, item := range itemsToCopy {
 		srcPath := filepath.Join(srcDir, item)
 		dstPath := filepath.Join(targetDir, item)
@@ -176,7 +176,7 @@ func testInstallation() {
 	srcDir := getSourceDir()
 	binDir := filepath.Join(srcDir, "bin")
 
-	tools := []string{"kaji80", "musubi", "mobdump"}
+	tools := []string{"kaji80", "musubi", "mobdump", "hako", "wirth80"}
 	for _, tool := range tools {
 		exeName := tool
 		if runtime.GOOS == "windows" {
@@ -260,11 +260,12 @@ KIZUNA ("laço", "vínculo") é uma toolchain moderna para MSX2+ / MSX-DOS 2,
 projetada para permitir a escrita de programas combinando Assembly Z80,
 Pascal (Turbo Pascal 4 style) e MSX-BASIC, linkados em um único binário .COM.
 
-Destaques da Release Akatsuki (Fase 4):
-  * Linker Multi-Banco com suporte oficial à Memory Mapper do MSX-DOS 2.
-  * Descoberta dinâmica de vetores da BIOS via EXTBIO (Device ID 4).
-  * Chaveamento seguro na Página 2 (0x8000..0xBFFF) com trampolins automáticos.
-  * Alinhamento automático de slots via porta 0xA8 para cartuchos externos de DOS.
+Destaques da Release Akatsuki (v4.4.0):
+  * WIRTH80: Compilador Pascal para MSX2+ emitindo objetos .MOB.
+  * HAKO: Empacotador e bibliotecário de objetos estáticos (.hlib).
+  * MSXLIB: Biblioteca padrão (BDOS, BIOS, VDP, PSG, String, Math 16-bit).
+  * MUSUBI: Linker com Smart-Linking e suporte à Memory Mapper do MSX-DOS 2.
+  * KAJI80: Assembler Z80 multi-banco com relocações e controle de segmentos.
 
 Documentação completa disponível na pasta 'docs/':
   - README.md: Apresentação e arquitetura do projeto.

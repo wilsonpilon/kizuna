@@ -294,6 +294,56 @@ O KIZUNA inclui uma biblioteca de rotinas padrão prontas para uso em `lib/msxli
 musubi -v -m app.map -o app.com main.mob msxlib.hlib
 ```
 
+---
+
+## 12. O Compilador Pascal `WIRTH80`
+
+O **`WIRTH80`** (em homenagem a Niklaus Wirth) é o compilador da linguagem Pascal no estilo Turbo Pascal 4 da toolchain KIZUNA, projetado para produzir módulos objeto `.MOB` nativos para MSX2+ / MSX-DOS 2.
+
+### 12.1. Parâmetros de Linha de Comando
+
+```bash
+wirth80 [opções] <arquivo.pas>
+```
+
+| Opção | Descrição |
+|---|---|
+| `-o <caminho>` | Define o arquivo de saída `.mob` (padrão: mesmo nome com extensão `.mob`). |
+| `-S` | Emite o código intermediário Assembly Z80 formatado (`.asm`) em vez de gerar o `.mob`. Excelente para inspeção, aprendizado e depuração. |
+| `-v` | Modo detalhado (*verbose*): exibe a contagem de segmentos, símbolos, relocações e o assembly gerado internamente. |
+| `--version` | Exibe a versão atual do compilador. |
+| `-h`, `--help` | Exibe a ajuda detalhada de uso. |
+
+### 12.2. Recursos e Sintaxe Suportada (v4.4.0)
+
+- **Estrutura de Programa**: `program <Nome>;` seguido de declarações e bloco `begin ... end.`.
+- **Declarações de Variáveis**: Bloco `var` suportando `Integer` (16 bits sinalizado em Little-Endian) e `Char` / `Boolean` (8 bits).
+- **Controle de Fluxo e Comandos**:
+  - Atribuição: `identificador := expressao;`
+  - Impressão: `Write(...)` e `WriteLn(...)` suportando literais de string e expressões inteiras, além de `WriteLn;` (quebra de linha).
+  - Condicionais: `if cond then comando [else comando]`
+  - Laços: `while cond do comando`
+  - Blocos aninhados: `begin ... end;`
+- **Expressões e Operadores**:
+  - Aritmética de 16 bits: Adição (`+`), subtração (`-`), multiplicação (`*` via chamada a `Mul16` da MSXLIB) e divisão (`div` via `Div16`).
+  - Comparações relacionais: Igual (`=`), diferente (`<>`), menor (`<`), menor ou igual (`<=`), maior (`>`) e maior ou igual (`>=`).
+  - Constantes: Inteiros decimais (`123`), hexadecimais com prefixo `$` (`$FF`), e literais de string (`'texto'`).
+  - Comentários: Suporte a `{ bloco }`, `(* bloco *)` e `// linha`.
+
+### 12.3. Ciclo Completo de Compilação Pascal:
+
+```bash
+# 1. Compilar o código-fonte Pascal gerando o módulo objeto .mob
+wirth80 -v sample/pascal/hello.pas -o sample/pascal/hello.mob
+
+# 2. Linkar com a biblioteca padrão msxlib.hlib para gerar o executável MSX-DOS
+musubi -v -m sample/pascal/hello.map -o sample/pascal/hello.com \
+  sample/pascal/hello.mob lib/msxlib.hlib
+
+# 3. Executar o binário gerado no MSX2+ ou emulador!
+```
+
+
 
 
 

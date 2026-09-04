@@ -178,17 +178,16 @@ convenção de registradores do Turbo Pascal original).
   BASIC Dignified leem/escrevem esse mesmo layout, sem conversão nas
   fronteiras.
 
-## 8. Ordem de implementação sugerida
+## 8. Status e Ordem de Implementação
 
-1. Structs do formato `.MOB` (leitura/escrita) — base de tudo.
-2. `KAJI80` mínimo: assembler Z80 com subconjunto de mnemônicos, já
-   emitindo `.MOB`, validando o pipeline ponta a ponta.
-3. `MUSUBI` resolvendo um único banco (sem trampolim) → gera `.COM` simples.
-4. Suporte a múltiplos bancos + geração automática de trampolins.
-5. `WIRTH80` (Pascal/TP4-like) e `DIGNAC` (BASIC Dignified) como frontends
-   adicionais emitindo o mesmo `.MOB`.
-6. `HAKO` e bibliotecas de runtime comuns.
-7. `OBI` como orquestrador declarativo (`Obifile`).
+1. [x] **Fase 1**: Formato `.MOB` (especificação, structs, leitor/escritor e utilitário `MOBDUMP`).
+2. [x] **Fase 2**: `KAJI80` assembler Z80 nativo emitindo `.MOB`.
+3. [x] **Fase 3**: `MUSUBI` linker monobanco gerando `.COM` para MSX-DOS 2.
+4. [x] **Fase 4**: Suporte multi-banco com paginação na Página 2, trampolins automáticos e Memory Mapper via EXTBIO.
+5. [x] **Fase 5.1**: `HAKO` (bibliotecário de `.HLIB`), Smart-Linking e Biblioteca Padrão `MSXLIB` (`msxlib.hlib`).
+6. [x] **Fase 5.2**: `WIRTH80` (compilador Pascal / TP4-like) gerando `.MOB` e integrando com `MSXLIB`.
+7. [ ] **Fase 5.3**: `DIGNAC` (compilador do MSX-BASIC Dignified para Z80).
+8. [ ] **Fase 6**: `OBI` como orquestrador declarativo (`Obifile`).
 
 ## 9. Fora de escopo nesta versão (ideias registradas para o futuro)
 

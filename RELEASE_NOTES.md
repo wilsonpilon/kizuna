@@ -1,42 +1,72 @@
-# Release Notes — KIZUNA v0.0.0 "Hatsumusubi"
+# Release Notes — KIZUNA v4.4.0 "Akatsuki" (暁)
 
-**Hatsumusubi** (初結び) — "o primeiro nó/laço amarrado". Nome escolhido em
-harmonia com `MUSUBI`, o linker do projeto: esta é a primeira vez que a
-ideia inteira do KIZUNA fica "amarrada" num documento coerente, mesmo sem
-nenhuma linha de código funcional ainda.
+**Akatsuki** (暁) — "o amanhecer, a aurora". Nome que simboliza o nascimento da primeira linguagem de alto nível funcional da toolchain: o compilador Pascal **WIRTH80**, integrando-se nativamente com a biblioteca padrão **MSXLIB** e o linker **MUSUBI**.
+
+---
 
 ## O que é esta release
 
-Uma release **puramente conceitual**. Não há binários, não há compilador
-funcionando — o que existe é a especificação completa do projeto e um
-croqui de como um programa real usaria a toolchain depois de pronta.
+Esta é a release oficial **v4.4.0 pre-alpha**, trazendo uma toolchain Z80 completa para MSX2+ / MSX-DOS 2 com suporte à compilação de código **Assembly Z80** e **Pascal (Turbo Pascal 4 style)**, geração de objetos relocáveis `.MOB`, criação de bibliotecas `.HLIB`, eliminação de código morto (Smart-Linking) e suporte à Memory Mapper do MSX-DOS 2.
 
-## Destaques
+---
 
-- **Nome e identidade do projeto**: KIZUNA (絆, "laço/vínculo"), com as
-  seis ferramentas nomeadas em torno do mesmo tema japonês retrô já usado
-  no `msxbasica` (`KAJI80`, `WIRTH80`, `DIGNAC`, `MUSUBI`, `HAKO`, `OBI`).
-- **Especificação técnica** (`SPEC.md`) cobrindo:
-  - Escopo da linguagem Pascal (fiel ao Turbo Pascal 4, com units)
-  - Modelo de memória MSX2+ de 256Kb ou mais com bank switching
-  - Formato de objeto relocável próprio `.MOB`
-  - Mecanismo de trampolim automático entre bancos
-  - ABI própria (pilha, `IX` como frame pointer, retorno em `A`/`HL`)
-- **Manual conceitual** (`MANUAL.md`) descrevendo o fluxo de uso
-  pretendido e a sintaxe do `Obifile`.
-- **Demo ilustrativa** (`demo/`): um programa hipotético em três
-  linguagens (Pascal + Assembly + BASIC Dignified) linkado num único
-  `.COM`, com receita de build de exemplo.
+## Destaques da Release
 
-## O que NÃO está nesta release
+1. **WIRTH80 (Compilador Pascal Z80)**:
+   - Compila programas Pascal nativamente para módulos `.MOB`.
+   - Suporte a `program`, declaração de variáveis `Integer`, `Char` e `Boolean`, blocos `begin ... end.`.
+   - Atribuição `:=`, `Write`, `WriteLn`, condicionais `if ... then ... else` e laços `while ... do`.
+   - Expressões aritméticas de 16 bits (`+`, `-`, `*`, `div`) e comparações relacionais (`=`, `<>`, `<`, `<=`, `>`, `>=`).
+   - Opção `-S` para inspecionar o código Assembly Z80 gerado pelo compilador.
 
-- Nenhum compilador, assembler ou linker funcional.
-- Nenhum teste em emulador ou hardware real.
-- Formato `.MOB` ainda não tem parser/serializador de referência — só a
-  descrição em `SPEC.md`.
+2. **HAKO (Bibliotecário de Objetos)**:
+   - Empacota múltiplos módulos `.MOB` em arquivos de biblioteca estática `.HLIB`.
+   - Tabela global de símbolos com validação anti-duplicação.
 
-## Próxima release planejada
+3. **MSXLIB (Biblioteca Padrão MSX)**:
+   - Coleção de 6 módulos modulares e reutilizáveis (`bdos`, `bios`, `vdp`, `psg`, `string`, `math 16-bit`).
+   - Multiplicação e divisão inteira de 16 bits rápida (`Mul16`, `Div16`).
+   - Formatação e conversão de números para decimal com supressão de zeros (`PrintDec16`).
+   - Controle do gerador de som PSG (AY-3-8910) e do processador de vídeo VDP.
 
-Foco em `KAJI80` mínimo (assembler Z80 com subconjunto de mnemônicos) e
-`MUSUBI` sem suporte a múltiplos bancos, para validar o pipeline
-`.asm → .mob → .com` ponta a ponta antes de atacar `WIRTH80` e `DIGNAC`.
+4. **MUSUBI com Smart-Linking & Multi-Banco**:
+   - Resolução inteligente de dependências: extrai da biblioteca apenas o código que seu programa realmente utiliza, reduzindo drasticamente o tamanho do `.COM` final.
+   - Suporte a paginação de memória na Página 2 (`0x8000..0xBFFF`) com chaveamento e trampolins automáticos via porta `0xFE` do MSX-DOS 2.
+
+5. **Instalador TUI**:
+   - Utilitário interativo `install.exe` e atalho `install.cmd` para instalação com 2 cliques e configuração automática do `PATH` no Windows.
+
+---
+
+## Conteúdo do Pacote de Distribuição (`kizuna-v4.4.0-dist.zip`)
+
+```
+distribute/
+  ├── bin/
+  │    ├── kaji80.exe     (Assembler Z80)
+  │    ├── wirth80.exe    (Compilador Pascal)
+  │    ├── musubi.exe     (Linker)
+  │    ├── hako.exe       (Bibliotecário)
+  │    └── mobdump.exe    (Inspecionador de objetos)
+  ├── lib/
+  │    └── msxlib.hlib    (Biblioteca Padrão MSX)
+  ├── sample/
+  │    ├── hello.asm      (Exemplo Assembly monobanco)
+  │    ├── multibank/     (Exemplo Assembly multi-banco com 3 módulos)
+  │    ├── libdemo/       (Exemplo Assembly consumindo MSXLIB)
+  │    └── pascal/        (Exemplos em Pascal: hello.pas e calc.pas)
+  ├── docs/
+  │    ├── README.md
+  │    ├── HELP.md
+  │    └── CHANGELOG.md
+  ├── install.exe / install.cmd
+  └── LICENSE
+```
+
+---
+
+## Próximos Passos
+
+- **Fase 5.3**: Início do compilador **DIGNAC** (MSX-BASIC Dignified para Z80).
+- **Fase 6**: Orquestrador de build declarativo **OBI** (`Obifile`).
+
