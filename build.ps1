@@ -56,7 +56,7 @@ New-Item -ItemType Directory -Path $LibDistDir -Force | Out-Null
 # 3. Compilar executáveis da toolchain
 Write-Host "[2/7] Compilando executaveis da toolchain (Go -> .exe)..." -ForegroundColor Yellow
 
-$Tools = @("kaji80", "musubi", "mobdump", "hako")
+$Tools = @("kaji80", "musubi", "mobdump", "hako", "wirth80")
 foreach ($t in $Tools) {
     $outExe = Join-Path $BinDir "$t.exe"
     Write-Host "      - Compilando $t -> $outExe..." -ForegroundColor Gray
@@ -102,6 +102,12 @@ $LibDemoDir = Join-Path $SampDir "libdemo"
 New-Item -ItemType Directory -Path $LibDemoDir -Force | Out-Null
 Copy-Item -Path "$RootDir/sample/libdemo/main.asm" -Destination "$LibDemoDir/main.asm"
 Copy-Item -Path "$RootDir/sample/libdemo/build.ps1" -Destination "$LibDemoDir/build.ps1"
+
+$PascalDir = Join-Path $SampDir "pascal"
+New-Item -ItemType Directory -Path $PascalDir -Force | Out-Null
+Copy-Item -Path "$RootDir/sample/pascal/hello.pas" -Destination "$PascalDir/hello.pas"
+Copy-Item -Path "$RootDir/sample/pascal/calc.pas" -Destination "$PascalDir/calc.pas"
+Copy-Item -Path "$RootDir/sample/pascal/build.ps1" -Destination "$PascalDir/build.ps1"
 
 # 8. Gerar pacote compactado .ZIP
 Write-Host "[7/7] Criando arquivo compactado $ZipFileName..." -ForegroundColor Yellow

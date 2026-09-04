@@ -8,6 +8,27 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 - **MINOR**: Incrementado a cada feature ou subsistema novo adicionado.
 - **COMPILAÇÃO (BUILD)**: Incrementado a cada compilação / build realizado no projeto.
 
+## [4.4.0] - 2026-09-04 - Compilador Pascal WIRTH80
+
+### Adicionado
+- **Compilador Pascal WIRTH80 (`pkg/wirth80` e `cmd/wirth80`)**:
+  - Nova ferramenta da toolchain para compilação de código-fonte Pascal nativo para MSX2+ / MSX-DOS 2, gerando módulos objeto no formato `.MOB`.
+  - **Análise Léxica e Sintática**: Suporte a identificadores, números (decimais e `$hex`), strings literais (`'...'`), comentários (`{ ... }`, `(* ... *)`, `// ...`), `program`, `var`, `begin ... end.`.
+  - **Tipos de Dados**: Suporte a `Integer` (16 bits sinalizado) e `Char` / `Boolean` (8 bits).
+  - **Comandos e Controle de Fluxo**: Atribuição (`:=`), `Write`, `WriteLn`, condicionais `if ... then ... else` e laços `while ... do`.
+  - **Expressões**: Aritmética de 16 bits (`+`, `-`, `*` via `Mul16`, `div` via `Div16`), unários e comparações relacionais (`=`, `<>`, `<`, `<=`, `>`, `>=`).
+  - **Integração com MSXLIB**: Geração automática de chamadas externas para `BDOS_PrintString`, `BDOS_PrintChar`, `PrintDec16`, `Mul16`, `Div16` e `BDOS_Exit`.
+  - **CLI `wirth80`**: Suporte às flags `-o <saida.mob>`, `-S` (emissão de código assembly Z80 legível), `-v` (modo detalhado) e `--version`.
+- **Exemplos em Pascal (`sample/pascal/`)**:
+  - `hello.pas`: Exemplo clássico Hello World em Pascal para MSX.
+  - `calc.pas`: Demonstração de declaração de variáveis, multiplicação de 16 bits e exibição de números decimais.
+  - `build.ps1`: Script de automação para compilação e smart-linking dos exemplos Pascal.
+- **Empacotamento Global**:
+  - `wirth80.exe` integrado ao script mestre [build.ps1](build.ps1) e empacotado em `distribute/bin/`.
+  - Pasta `sample/pascal/` incluída na distribuição oficial.
+
+---
+
 ## [4.3.3] - 2026-09-04
 
 ### Corrigido
