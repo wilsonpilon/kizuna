@@ -58,13 +58,16 @@ demo/               Croqui de exemplo: Pascal + Assembly + BASIC Dignified
   Obifile             Receita de build de exemplo
 ```
 
-## Status
+## Status Atual (Fase 4 Concluída - Release Akatsuki)
 
-Nada aqui compila ainda — é a planta baixa do projeto, documentada para
-servir de referência antes de começar a implementação em Go. Veja
-`SPEC.md` para os detalhes técnicos e `demo/` para uma visão de como um
-programa real usaria o toolchain depois de pronto.
+A base da toolchain está **funcional e testada em hardware real** (MSX 2+ com MSX-DOS 2):
+- **KAJI80**: Assembler Z80 modular emitindo arquivos de objeto `.MOB`.
+- **MUSUBI**: Linker monobanco e multi-banco com paginação na Página 2 (`0x8000..0xBFFF`), trampolins automáticos e suporte oficial à Memory Mapper do MSX-DOS 2 via `EXTBIO`.
+- **MOBDUMP**: Utilitário de inspeção e dump de objetos `.MOB`.
+- **Exemplos Validados**: `sample/hello.asm` (monobanco) e `sample/multibank/` (multi-banco com 3 módulos).
+
+Próximos passos do roadmap: compilador Pascal `WIRTH80`, compilador BASIC `DIGNAC` e bibliotecário `HAKO`.
 
 ## Licença
 
-A definir.
+Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
