@@ -1,0 +1,41 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
+===============================================================================
+
+Modo de Memória: Monobanco
+Bancos Utilizados: [0]
+Endereço Base:     0x0100
+Ponto de Entrada:  0x0100
+Tamanho do .COM:   528 bytes (0x0210)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x01EA | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   234 bytes
+[ 1] 0x01EA - 0x0228 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    62 bytes
+[ 2] 0x0228 - 0x026A | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    66 bytes
+[ 3] 0x026A - 0x0310 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:   166 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x0100 [Banco  0] PROC Start
+0x017F [Banco  0] PROC StrLit_1
+0x01A4 [Banco  0] PROC StrLit_2
+0x01B1 [Banco  0] PROC StrLit_3
+0x01B5 [Banco  0] PROC StrLit_4
+0x01B9 [Banco  0] PROC StrLit_5
+0x01E4 [Banco  0] PROC Var_a
+0x01E6 [Banco  0] PROC Var_b
+0x01E8 [Banco  0] PROC Var_c
+0x01EA [Banco  0] PROC BDOS_Call
+0x01EE [Banco  0] PROC BDOS_PrintChar
+0x0204 [Banco  0] PROC BDOS_PrintString
+0x021A [Banco  0] PROC BDOS_ReadChar
+0x0222 [Banco  0] PROC BDOS_Exit
+0x0228 [Banco  0] PROC Mul16
+0x023D [Banco  0] PROC Div16
+0x026A [Banco  0] PROC StrLen
+0x0278 [Banco  0] PROC StrCopy
+0x0288 [Banco  0] PROC StrToUpper
+0x029F [Banco  0] PROC PrintHex8
+0x02AC [Banco  0] PROC PrintNibble
+0x02BD [Banco  0] PROC PrintHex16
+0x02C8 [Banco  0] PROC PrintDec16
+0x02F2 [Banco  0] PROC PrintDecDigit

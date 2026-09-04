@@ -1,0 +1,15 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA
+===============================================================================
+
+Endereço Base:   0x0100
+Ponto de Entrada: 0x0100
+Endereço Final:  0x01B5
+Tamanho do .COM: 181 bytes (0x00B5)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x01B5 | Banco:  0 | Tipo: CODE | Mod: 0 | Tam:   181 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x0100 [Banco  0] PROC Start
+0x0109 [Banco  0] PROC MsgHello

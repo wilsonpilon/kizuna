@@ -1,0 +1,29 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
+===============================================================================
+
+Modo de Memória: Multi-Banco (Memory Mapper)
+Bancos Utilizados: [0 1 2]
+Endereço Base:     0x0100
+Ponto de Entrada:  0x016F
+Tamanho do .COM:   830 bytes (0x033E)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x016F | Banco:  0 | Tipo: CODE | Mod: -2 | Tam:   111 bytes
+[ 1] 0x016F - 0x02C7 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   344 bytes
+[ 2] 0x8000 - 0x80A0 | Banco:  1 | Tipo: CODE | Mod:  1 | Tam:   160 bytes
+[ 3] 0x8000 - 0x80A0 | Banco:  2 | Tipo: CODE | Mod:  2 | Tam:   160 bytes
+[ 4] 0x02C7 - 0x02FE | Banco:  0 | Tipo: CODE | LINKER-TRAMP | Tam:    55 bytes
+
+--- TRAMPOLINS DE BANK SWITCHING (ÁREA COMUM -> PÁGINA 2) ---
+0x02D8 -> Alvo: 'PrintBank1' no Banco  1 (0x8000) | Tamanho: 19 bytes
+0x02EB -> Alvo: 'PrintBank2' no Banco  2 (0x8000) | Tamanho: 19 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x016F [Banco  0] PROC Start
+0x0186 [Banco  0] PROC MsgCommon
+0x0225 [Banco  0] PROC MsgDone
+0x8000 [Banco  1] PROC PrintBank1
+0x8009 [Banco  1] PROC MsgBank1
+0x8000 [Banco  2] PROC PrintBank2
+0x8009 [Banco  2] PROC MsgBank2

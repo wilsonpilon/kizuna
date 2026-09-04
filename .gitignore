@@ -1,9 +1,9 @@
 # Binários
-*.exe
-*.com
-*.mob
-*.hlib
-*.map
+#*.exe
+#*.com
+#*.mob
+#*.hlib
+#*.map
 
 # IDEs e temporários
 .vscode/
