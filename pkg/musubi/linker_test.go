@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/wilsonpilon/kizuna/pkg/hako"
 	"github.com/wilsonpilon/kizuna/pkg/mob"
 )
 
@@ -239,3 +240,93 @@ func TestDuplicateSymbolError(t *testing.T) {
 		t.Error("Expected error for duplicate symbol, got nil")
 	}
 }
+
+func TestSmartLinkingFromHlib(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// 1. Módulo math_add (exporta Add16 e depende transitivamente de HelperFunc)
+	// CALL HelperFunc; ADD HL, DE; RET (0xCD 0x00 0x00, 0x19, 0xC9)
+	modAdd := mob.NewObjectFile()
+	segAdd := modAdd.AddSegment(mob.SegmentCode, 0, []byte{0xCD, 0x00, 0x00, 0x19, 0xC9}, 0)
+	modAdd.AddSymbol("Add16", mob.SymbolPublic, mob.SymbolProc, segAdd, 0)
+	symHelperExt := modAdd.AddSymbol("HelperFunc", mob.SymbolExtern, mob.SymbolProc, 0, 0)
+	modAdd.AddRelocation(segAdd, 1, symHelperExt, mob.RelocAbs16)
+	addPath := filepath.Join(tmpDir, "math_add.mob")
+	if err := mob.SaveToFile(addPath, modAdd); err != nil {
+		t.Fatalf("Failed to save math_add.mob: %v", err)
+	}
+
+	// 2. Módulo math_helper (exporta HelperFunc)
+	// NOP; RET (0x00, 0xC9)
+	modHelper := mob.NewObjectFile()
+	segHelper := modHelper.AddSegment(mob.SegmentCode, 0, []byte{0x00, 0xC9}, 0)
+	modHelper.AddSymbol("HelperFunc", mob.SymbolPublic, mob.SymbolProc, segHelper, 0)
+	helperPath := filepath.Join(tmpDir, "math_helper.mob")
+	if err := mob.SaveToFile(helperPath, modHelper); err != nil {
+		t.Fatalf("Failed to save math_helper.mob: %v", err)
+	}
+
+	// 3. Módulo math_sub (exporta Sub16 - NÃO deve ser incluído na linkagem!)
+	// OR A; SBC HL, DE; RET (0xB7, 0xED, 0x52, 0xC9)
+	modSub := mob.NewObjectFile()
+	segSub := modSub.AddSegment(mob.SegmentCode, 0, []byte{0xB7, 0xED, 0x52, 0xC9}, 0)
+	modSub.AddSymbol("Sub16", mob.SymbolPublic, mob.SymbolProc, segSub, 0)
+	subPath := filepath.Join(tmpDir, "math_sub.mob")
+	if err := mob.SaveToFile(subPath, modSub); err != nil {
+		t.Fatalf("Failed to save math_sub.mob: %v", err)
+	}
+
+	// 4. Empacotar math.hlib contendo math_add, math_helper e math_sub
+	hlibPath := filepath.Join(tmpDir, "math.hlib")
+	if err := hako.Pack(hlibPath, addPath, helperPath, subPath); err != nil {
+		t.Fatalf("hako.Pack failed: %v", err)
+	}
+
+	// 5. Módulo principal: chama apenas Add16
+	// CALL Add16; RET (0xCD 0x00 0x00, 0xC9)
+	modMain := mob.NewObjectFile()
+	segMain := modMain.AddSegment(mob.SegmentCode, 0, []byte{0xCD, 0x00, 0x00, 0xC9}, 0)
+	modMain.AddSymbol("Start", mob.SymbolPublic, mob.SymbolProc, segMain, 0)
+	symAddExt := modMain.AddSymbol("Add16", mob.SymbolExtern, mob.SymbolProc, 0, 0)
+	modMain.AddRelocation(segMain, 1, symAddExt, mob.RelocAbs16)
+	mainPath := filepath.Join(tmpDir, "main.mob")
+	if err := mob.SaveToFile(mainPath, modMain); err != nil {
+		t.Fatalf("Failed to save main.mob: %v", err)
+	}
+
+	// 6. Linkar main.mob com math.hlib
+	outCom := filepath.Join(tmpDir, "app.com")
+	cfg := DefaultConfig()
+	res, err := LinkToFile(outCom, cfg, mainPath, hlibPath)
+	if err != nil {
+		t.Fatalf("LinkToFile with .hlib failed: %v", err)
+	}
+
+	// 7. Validações
+	// Deve ter resolvido Add16 e HelperFunc transitivamente
+	if res.Symbols["Add16"] == nil {
+		t.Error("Expected Add16 to be resolved from .hlib")
+	}
+	if res.Symbols["HelperFunc"] == nil {
+		t.Error("Expected HelperFunc to be resolved transitively from .hlib")
+	}
+
+	// Sub16 NÃO deve estar presente (Dead-Code Elimination / Smart-Linking)
+	if res.Symbols["Sub16"] != nil {
+		t.Errorf("Sub16 was included, but should have been eliminated as dead code! Symbol: %v", res.Symbols["Sub16"])
+	}
+
+	// O arquivo executável deve existir e ter o tamanho exato de:
+	// main (4 bytes) + math_add (5 bytes) + math_helper (2 bytes) = 11 bytes
+	expectedSize := 4 + 5 + 2
+	if res.TotalSize != expectedSize {
+		t.Errorf("Expected TotalSize %d bytes, got %d", expectedSize, res.TotalSize)
+	}
+
+	// Verificar se a chamada para Add16 aponta para o endereço correto (0x0100 + 4 = 0x0104)
+	callAddTarget := binary.LittleEndian.Uint16(res.Binary[1:3])
+	if callAddTarget != 0x0104 {
+		t.Errorf("Expected CALL Add16 target 0x0104, got 0x%04X", callAddTarget)
+	}
+}
+

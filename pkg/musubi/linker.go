@@ -4,9 +4,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/wilsonpilon/kizuna/pkg/hako"
 	"github.com/wilsonpilon/kizuna/pkg/mob"
 )
 
@@ -130,10 +132,83 @@ func NewLinker(cfg LinkerConfig) *Linker {
 
 // Link realiza a linkagem completa (monobanco ou multi-banco com trampolins).
 func (l *Linker) Link(objects ...*mob.ObjectFile) (*LinkResult, error) {
-	if len(objects) == 0 {
+	return l.LinkWithLibraries(objects, nil)
+}
+
+// LinkWithLibraries realiza a linkagem resolvendo dependências a partir de bibliotecas .HLIB.
+// Módulos não utilizados nas bibliotecas são ignorados (Smart-Linking / Dead-Code Elimination).
+func (l *Linker) LinkWithLibraries(objects []*mob.ObjectFile, archives []*hako.Archive) (*LinkResult, error) {
+	activeObjects := make([]*mob.ObjectFile, len(objects))
+	copy(activeObjects, objects)
+
+	loadedModules := make(map[string]bool)
+
+	// Resolução transitiva a partir dos arquivos .HLIB
+	for len(archives) > 0 {
+		defined := make(map[string]bool)
+		for _, obj := range activeObjects {
+			for _, sym := range obj.Symbols {
+				if sym.Class == mob.SymbolPublic {
+					defined[sym.Name] = true
+				}
+			}
+		}
+
+		needed := make(map[string]bool)
+		if l.config.EntryPoint != "" && !defined[l.config.EntryPoint] {
+			needed[l.config.EntryPoint] = true
+		}
+
+		for _, obj := range activeObjects {
+			for _, reloc := range obj.Relocations {
+				if int(reloc.SymbolIndex) < len(obj.Symbols) {
+					sym := obj.Symbols[reloc.SymbolIndex]
+					if !defined[sym.Name] {
+						needed[sym.Name] = true
+					}
+				}
+			}
+		}
+
+		if len(needed) == 0 {
+			break
+		}
+
+		addedAny := false
+		for symName := range needed {
+			for arcIdx, arc := range archives {
+				if symEntry, found := arc.FindModuleForSymbol(symName); found {
+					key := fmt.Sprintf("%d:%s", arcIdx, symEntry.ModuleName)
+					if !loadedModules[key] {
+						loadedModules[key] = true
+						obj, err := arc.ExtractObject(symEntry.ModuleName)
+						if err != nil {
+							return nil, fmt.Errorf("falha ao extrair módulo '%s' da biblioteca para '%s': %w", symEntry.ModuleName, symName, err)
+						}
+						activeObjects = append(activeObjects, obj)
+						addedAny = true
+						break
+					}
+				}
+			}
+			if addedAny {
+				break
+			}
+		}
+
+		if !addedAny {
+			break // Nenhuma biblioteca pôde resolver os símbolos restantes
+		}
+	}
+
+	if len(activeObjects) == 0 {
 		return nil, fmt.Errorf("nenhum objeto .mob fornecido para linkagem")
 	}
 
+	return l.linkObjects(activeObjects)
+}
+
+func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 	// 1. Descobrir todos os bancos utilizados
 	banksUsedMap := make(map[uint8]bool)
 	bankSegments := make(map[uint8][]segRef)
@@ -771,19 +846,30 @@ func (l *Linker) writeMapFile(filename string, res *LinkResult) error {
 	return os.WriteFile(filename, []byte(sb.String()), 0644)
 }
 
-// LinkToFile é um helper conveniente para linkar arquivos .MOB e gravar diretamente o .COM
-func LinkToFile(outputCom string, cfg LinkerConfig, mobFiles ...string) (*LinkResult, error) {
-	objects := make([]*mob.ObjectFile, 0, len(mobFiles))
-	for _, f := range mobFiles {
-		obj, err := mob.LoadFromFile(f)
-		if err != nil {
-			return nil, fmt.Errorf("falha ao carregar objeto %s: %w", f, err)
+// LinkToFile é um helper conveniente para linkar arquivos .MOB e .HLIB e gravar diretamente o .COM
+func LinkToFile(outputCom string, cfg LinkerConfig, files ...string) (*LinkResult, error) {
+	var objects []*mob.ObjectFile
+	var archives []*hako.Archive
+
+	for _, f := range files {
+		ext := strings.ToLower(filepath.Ext(f))
+		if ext == ".hlib" {
+			arc, err := hako.Open(f)
+			if err != nil {
+				return nil, fmt.Errorf("falha ao carregar biblioteca %s: %w", f, err)
+			}
+			archives = append(archives, arc)
+		} else {
+			obj, err := mob.LoadFromFile(f)
+			if err != nil {
+				return nil, fmt.Errorf("falha ao carregar objeto %s: %w", f, err)
+			}
+			objects = append(objects, obj)
 		}
-		objects = append(objects, obj)
 	}
 
 	linker := NewLinker(cfg)
-	res, err := linker.Link(objects...)
+	res, err := linker.LinkWithLibraries(objects, archives)
 	if err != nil {
 		return nil, err
 	}

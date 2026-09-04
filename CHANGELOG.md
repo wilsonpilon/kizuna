@@ -10,6 +10,28 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [4.2.0] - 2026-09-03 - HAKO & Smart-Linking
+
+### Adicionado
+- **Bibliotecário de Objetos HAKO (`pkg/hako` e `cmd/hako`)**:
+  - Implementação do utilitário `hako` (箱) para gerenciamento de arquivos de biblioteca de objetos relocáveis.
+  - Especificação e codificação do formato binário de arquivo de biblioteca **`.HLIB`**:
+    - Cabeçalho de 14 bytes com Magic `"HLIB"`, versão do formato (`1`), contagem de módulos e apontador para o dicionário global de símbolos.
+    - Tabela de módulos com nomes, offsets e tamanhos dos arquivos `.MOB` brutos embutidos.
+    - Dicionário global de símbolos públicos (`PUBLIC`) mapeando nomes para módulos de origem.
+  - Validação na criação de bibliotecas: rejeita símbolos públicos duplicados entre módulos distintos com mensagem de erro clara.
+  - Interface de linha de comando com opções `-c` (criar/empacotar), `-t` (listar conteúdo e símbolos), `-x` (extrair módulo), `-v` (detalhado) e `--version`.
+- **Smart-Linking e Dead-Code Elimination no Linker MUSUBI**:
+  - Suporte a inclusão de bibliotecas estáticas `.hlib` diretamente na linha de comando do `musubi` (`musubi main.mob math.hlib`).
+  - Resolução transitiva inteligente de símbolos: apenas os módulos do `.hlib` contendo símbolos realmente referenciados por `main` ou por outros módulos ativos são extraídos e incluídos no binário final.
+  - Eliminação de código morto (*dead-code elimination*): módulos não referenciados no `.hlib` são descartados, mantendo o executável `.com` no menor tamanho possível.
+- **Atualização do Script Mestre de Build ([build.ps1](build.ps1))**:
+  - Adicionado `hako` à lista de ferramentas compiladas automaticamente para `distribute/bin/hako.exe` e incluído no pacote `.zip`.
+- **Documentação de Referência ([HELP.md](HELP.md))**:
+  - Adicionada Seção 10 documentando o utilitário `hako`, o formato binário `.HLIB` e os comandos de empacotamento e listagem.
+
+---
+
 ## [4.1.0] - 2026-09-03 - Release "Akatsuki" (暁 - Alvorecer)
 
 ### Adicionado

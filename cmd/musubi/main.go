@@ -16,7 +16,7 @@ func printHelp() {
 	fmt.Println(version.Banner("MUSUBI"))
 	fmt.Print(`
 USO:
-    musubi [opções] <objeto1.mob> [objeto2.mob ...]
+    musubi [opções] <objeto.mob...> [biblioteca.hlib...]
 
 OPÇÕES:
     -o <caminho>   Especifica o executável de saída .com (padrão: baseado no primeiro objeto)
@@ -33,6 +33,9 @@ EXEMPLO:
 
     # Linkar múltiplos módulos
     musubi -o app.com main.mob screen.mob math.mob
+
+    # Linkar com biblioteca estática .HLIB (Smart-Linking)
+    musubi -o app.com main.mob math.hlib
 `)
 }
 

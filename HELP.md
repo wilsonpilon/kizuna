@@ -189,7 +189,7 @@ O `MUSUBI` (*musubi* = atar, amarrar) é o linker do KIZUNA. Ele é responsável
 ### 7.1. Parâmetros de Linha de Comando
 
 ```bash
-musubi [opções] <objeto1.mob> [objeto2.mob ...]
+musubi [opções] <objeto.mob...> [biblioteca.hlib...]
 ```
 
 | Opção | Descrição |
@@ -246,5 +246,31 @@ kaji80 sample/multibank/bank2.asm -o sample/multibank/bank2.mob
 musubi -v -m sample/multibank/multibank.map -o sample/multibank/multibank.com \
   sample/multibank/main.mob sample/multibank/bank1.mob sample/multibank/bank2.mob
 ```
+
+---
+
+## 10. O Bibliotecário de Objetos `HAKO` e o Formato `.HLIB`
+
+O **`HAKO`** (*hako* = caixa/baú) gerencia bibliotecas de arquivos objeto `.MOB` empacotadas no formato **`.HLIB`**.
+
+### 10.1. O Formato `.HLIB`
+- **Cabeçalho (14 bytes):** Magic `"HLIB"`, versão do formato (`1`), contagem de módulos, offset e contagem do dicionário de símbolos públicos.
+- **Tabela de Módulos:** Nome do módulo, offset e tamanho dos dados brutos do `.MOB`.
+- **Dicionário Global de Símbolos:** Mapeia todos os símbolos `PUBLIC` de todos os módulos para seus respectivos módulos de origem. Rejeita símbolos públicos duplicados na criação.
+- **Smart-Linking (Dead-Code Elimination):** Ao linkar com `musubi main.mob lib.hlib`, o linker consulta o dicionário da biblioteca e puxa **apenas os módulos requisitados** direta ou transitivamente pelo programa. Módulos não utilizados são completamente descartados, gerando binários enxutos.
+
+### 10.2. Comandos do `HAKO`
+
+```bash
+# Criar ou atualizar biblioteca a partir de múltiplos arquivos .mob
+hako -c math.hlib math_add.mob math_sub.mob math_trig.mob
+
+# Listar módulos e símbolos contidos na biblioteca
+hako -t math.hlib
+
+# Extrair módulo específico de uma biblioteca
+hako -x math.hlib math_add.mob
+```
+
 
 

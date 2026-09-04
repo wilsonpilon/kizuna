@@ -54,7 +54,7 @@ New-Item -ItemType Directory -Path $SampDir -Force | Out-Null
 # 3. Compilar executáveis da toolchain
 Write-Host "[2/6] Compilando executaveis da toolchain (Go -> .exe)..." -ForegroundColor Yellow
 
-$Tools = @("kaji80", "musubi", "mobdump")
+$Tools = @("kaji80", "musubi", "mobdump", "hako")
 foreach ($t in $Tools) {
     $outExe = Join-Path $BinDir "$t.exe"
     Write-Host "      - Compilando $t -> $outExe..." -ForegroundColor Gray
