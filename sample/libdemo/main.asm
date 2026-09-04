@@ -41,19 +41,22 @@ Start:
     LD E, 0Ah
     CALL BDOS_PrintChar
 
-    ; 5. Tocar uma nota musical no PSG (Canal 0, Tom A440, Volume 12)
+    ; 5. Tocar uma nota musical no PSG (Canal 0, Tom A440, Volume 15)
     LD A, 00h    ; Canal A
-    LD HL, 00EEh ; Periodo aprox. 440 Hz no clock MSX
-    LD E, 0Ch    ; Volume 12
+    LD HL, 00FEh ; Periodo aprox. 440 Hz no clock MSX
+    LD E, 0Fh    ; Volume maximo (15)
     CALL PSG_PlayTone
 
-    ; Pequena pausa / delay em loop (~0.3s)
-    LD BC, 8000h
-DelayLoop:
-    DEC BC
-    LD A, B
-    OR C
-    JR NZ, DelayLoop
+    ; Pausa audivel de aproximadamente meio segundo
+    LD B, 18h
+DelayOuter:
+    LD HL, 0000h
+DelayInner:
+    DEC HL
+    LD A, H
+    OR L
+    JR NZ, DelayInner
+    DJNZ DelayOuter
 
     ; 6. Silenciar som
     CALL PSG_MuteAll

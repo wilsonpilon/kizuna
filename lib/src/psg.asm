@@ -77,6 +77,7 @@ PSG_PlayTone:
 
     ; 2. Escrever parte alta do período (4 bits)
     INC C
+    LD A, C
     OUT (PSG_REG_SEL), A
     LD A, H
     AND 0Fh
@@ -90,10 +91,17 @@ PSG_PlayTone:
     AND 0Fh
     OUT (PSG_DATA_WR), A
 
-    ; 4. Ativar tom no misturador (Reg 7): 0xB8 ativa Canal A com I/O preservado
-    LD A, 0B8h
-    OR B
-    LD E, A
+    ; 4. Ativar tom no misturador (Reg 7):
+    ; Canal 0 -> 0xBE (Tom A), Canal 1 -> 0xBD (Tom B), Canal 2 -> 0xBB (Tom C)
+    LD A, B
+    LD E, 0BEh
+    OR A
+    JR Z, PSG_SetMixer
+    LD E, 0BDh
+    DEC A
+    JR Z, PSG_SetMixer
+    LD E, 0BBh
+PSG_SetMixer:
     LD A, 07h
     CALL PSG_Write
 

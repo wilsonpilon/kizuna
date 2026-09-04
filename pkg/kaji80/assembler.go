@@ -337,13 +337,21 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			if dst == "IX" || dst == "IY" {
 				return 2, nil
 			}
-		}
-		// ALU A, n -> 2 bytes; ALU A, r -> 1 byte
-		if len(ops) == 2 {
 			src := strings.ToUpper(ops[1])
 			if _, ok := reg8Map[src]; ok {
 				return 1, nil
 			}
+			return 2, nil
+		}
+		if len(ops) == 1 {
+			op := strings.ToUpper(ops[0])
+			if _, ok := reg8Map[op]; ok {
+				return 1, nil
+			}
+			if op == "(HL)" {
+				return 1, nil
+			}
+			// Imediato de 8 bits (ex: CP 61h, SUB 20h, AND 0Fh) -> 2 bytes
 			return 2, nil
 		}
 		return 1, nil
@@ -416,6 +424,14 @@ func (a *Assembler) estimateLdSize(ops []string) (uint16, error) {
 	// LD IX, nn / LD IY, nn
 	if dst == "IX" || dst == "IY" {
 		return 4, nil
+	}
+	// LD (BC), A / LD (DE), A
+	if (dst == "(BC)" || dst == "(DE)") && src == "A" {
+		return 1, nil
+	}
+	// LD A, (BC) / LD A, (DE)
+	if dst == "A" && (src == "(BC)" || src == "(DE)") {
+		return 1, nil
 	}
 	// LD A, (nn) / LD (nn), A
 	if (dst == "A" && strings.HasPrefix(src, "(")) || (strings.HasPrefix(dst, "(") && src == "A") {

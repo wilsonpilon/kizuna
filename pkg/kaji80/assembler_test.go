@@ -206,3 +206,30 @@ TestBitOps:
 		t.Errorf("Byte mismatch.\nGot:      % X\nExpected: % X", seg.Data, expected)
 	}
 }
+
+func TestPass1AndPass2Sync(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "lib", "src", "string.asm"))
+	if err != nil {
+		t.Fatalf("Failed to read string.asm: %v", err)
+	}
+
+	asm := NewAssembler()
+	obj, err := asm.Assemble(string(data))
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	t.Logf("Total segment size: %d", len(obj.Segments[0].Data))
+	for _, sym := range obj.Symbols {
+		if sym.Class == mob.SymbolPublic {
+			t.Logf("Symbol %-15s -> Offset: 0x%04X (%d) -> First byte: 0x%02X", sym.Name, sym.Offset, sym.Offset, obj.Segments[0].Data[sym.Offset])
+		}
+	}
+	for _, sym := range obj.Symbols {
+		if sym.Name == "PrintDec16" {
+			if obj.Segments[0].Data[sym.Offset] != 0xF5 {
+				t.Fatalf("Expected PrintDec16 to start with 0xF5 (PUSH AF), got 0x%02X", obj.Segments[0].Data[sym.Offset])
+			}
+		}
+	}
+}

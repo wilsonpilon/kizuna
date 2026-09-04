@@ -10,6 +10,21 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [4.3.2] - 2026-09-04
+
+### Corrigido
+- **Sincronização de Offsets no Assembler KAJI80 ([pkg/kaji80/assembler.go](pkg/kaji80/assembler.go))**:
+  - Corrigida a estimativa de tamanho no Pass 1 para instruções ALU imediatas de 1 operando (ex: `CP n`, `SUB n`, `AND n`), que retornava 1 byte em vez de 2 bytes.
+  - Corrigida a estimativa de tamanho para `LD (DE), A`, `LD (BC), A`, `LD A, (DE)` e `LD A, (BC)` que retornava 3 bytes em vez de 1 byte.
+  - A discrepância acumulada causava desvio de endereço nos símbolos de `string.mob`, fazendo o linker `musubi` calcular chamadas como `PrintDec16` com desvio de 2 a 3 bytes no meio de outra instrução.
+- **Canal de Som do PSG ([lib/src/psg.asm](lib/src/psg.asm))**:
+  - Inserido `LD A, C` após `INC C` no registrador grosso de período da frequência.
+  - Configuração exata do misturador do Registrador 7: ativa Canal A (`0xBE`), Canal B (`0xBD`) e Canal C (`0xBB`) sem afetar as portas de joystick e teclado.
+- **Pausa Audível e Frequência no Demo ([sample/libdemo/main.asm](sample/libdemo/main.asm))**:
+  - Ajustada a frequência para A440 (`0x00FE`), volume máximo 15 (`0x0F`) e loop de pausa aninhado audível (~0.5s).
+
+---
+
 ## [4.3.1] - 2026-09-03
 
 ### Corrigido
