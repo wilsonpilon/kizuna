@@ -161,3 +161,48 @@ MyWord:
 		t.Errorf("Expected 0x34 0x12 for word 0x1234, got 0x%02X 0x%02X", word0Lo, word0Hi)
 	}
 }
+
+func TestRotateShiftBitInstructions(t *testing.T) {
+	src := `
+MODULE BitOps
+BANK 0
+PUBLIC TestBitOps
+
+TestBitOps:
+    rla
+    rra
+    cpl
+    scf
+    ccf
+    neg
+    sla c
+    srl a
+    bit 3, a
+    res 2, b
+    set 7, (hl)
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	expected := []byte{
+		0x17,       // rla
+		0x1F,       // rra
+		0x2F,       // cpl
+		0x37,       // scf
+		0x3F,       // ccf
+		0xED, 0x44, // neg
+		0xCB, 0x21, // sla c
+		0xCB, 0x3F, // srl a
+		0xCB, 0x5F, // bit 3, a
+		0xCB, 0x90, // res 2, b
+		0xCB, 0xFE, // set 7, (hl)
+	}
+
+	seg := obj.Segments[0]
+	if !bytes.Equal(seg.Data, expected) {
+		t.Errorf("Byte mismatch.\nGot:      % X\nExpected: % X", seg.Data, expected)
+	}
+}

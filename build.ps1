@@ -46,13 +46,15 @@ if (Test-Path $DistDir) {
 $BinDir  = Join-Path $DistDir "bin"
 $DocsDir = Join-Path $DistDir "docs"
 $SampDir = Join-Path $DistDir "sample"
+$LibDistDir = Join-Path $DistDir "lib"
 
 New-Item -ItemType Directory -Path $BinDir -Force | Out-Null
 New-Item -ItemType Directory -Path $DocsDir -Force | Out-Null
 New-Item -ItemType Directory -Path $SampDir -Force | Out-Null
+New-Item -ItemType Directory -Path $LibDistDir -Force | Out-Null
 
 # 3. Compilar executáveis da toolchain
-Write-Host "[2/6] Compilando executaveis da toolchain (Go -> .exe)..." -ForegroundColor Yellow
+Write-Host "[2/7] Compilando executaveis da toolchain (Go -> .exe)..." -ForegroundColor Yellow
 
 $Tools = @("kaji80", "musubi", "mobdump", "hako")
 foreach ($t in $Tools) {
@@ -63,7 +65,7 @@ foreach ($t in $Tools) {
 }
 
 # 4. Compilar instalador interativo TUI
-Write-Host "[3/6] Compilando instalador TUI (install.exe)..." -ForegroundColor Yellow
+Write-Host "[3/7] Compilando instalador TUI (install.exe)..." -ForegroundColor Yellow
 $InstallExe = Join-Path $DistDir "install.exe"
 & go build -ldflags="-s -w" -o $InstallExe "$RootDir/cmd/installer"
 if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar o instalador TUI" }
@@ -72,15 +74,21 @@ if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar o instalador TUI" }
 $InstallCmd = Join-Path $DistDir "install.cmd"
 Set-Content -Path $InstallCmd -Value "@echo off`r`ncd /d `"%~dp0`"`r`ninstall.exe`r`npause`r`n" -Encoding ASCII
 
-# 5. Copiar documentação essencial e licença
-Write-Host "[4/6] Copiando documentacao de usuario e licenca..." -ForegroundColor Yellow
+# 5. Construir a Biblioteca Padrão MSXLIB
+Write-Host "[4/7] Construindo Biblioteca Padrao MSXLIB (msxlib.hlib)..." -ForegroundColor Yellow
+& powershell -ExecutionPolicy Bypass -File "$RootDir/lib/build.ps1"
+if ($LASTEXITCODE -ne 0) { throw "Falha ao construir a biblioteca MSXLIB" }
+Copy-Item -Path "$RootDir/lib/msxlib.hlib" -Destination "$LibDistDir/msxlib.hlib"
+
+# 6. Copiar documentação essencial e licença
+Write-Host "[5/7] Copiando documentacao de usuario e licenca..." -ForegroundColor Yellow
 Copy-Item -Path "$RootDir/README.md" -Destination "$DocsDir/README.md"
 Copy-Item -Path "$RootDir/HELP.md" -Destination "$DocsDir/HELP.md"
 Copy-Item -Path "$RootDir/CHANGELOG.md" -Destination "$DocsDir/CHANGELOG.md"
 Copy-Item -Path "$RootDir/LICENSE" -Destination "$DistDir/LICENSE"
 
-# 6. Copiar exemplos (limpos e organizados)
-Write-Host "[5/6] Copiando exemplos de codigo (sample/)..." -ForegroundColor Yellow
+# 7. Copiar exemplos (limpos e organizados)
+Write-Host "[6/7] Copiando exemplos de codigo (sample/)..." -ForegroundColor Yellow
 Copy-Item -Path "$RootDir/sample/hello.asm" -Destination "$SampDir/hello.asm"
 
 $MultiSampDir = Join-Path $SampDir "multibank"
@@ -90,8 +98,13 @@ Copy-Item -Path "$RootDir/sample/multibank/bank1.asm" -Destination "$MultiSampDi
 Copy-Item -Path "$RootDir/sample/multibank/bank2.asm" -Destination "$MultiSampDir/bank2.asm"
 Copy-Item -Path "$RootDir/sample/multibank/build.ps1" -Destination "$MultiSampDir/build.ps1"
 
-# 7. Gerar pacote compactado .ZIP
-Write-Host "[6/6] Criando arquivo compactado $ZipFileName..." -ForegroundColor Yellow
+$LibDemoDir = Join-Path $SampDir "libdemo"
+New-Item -ItemType Directory -Path $LibDemoDir -Force | Out-Null
+Copy-Item -Path "$RootDir/sample/libdemo/main.asm" -Destination "$LibDemoDir/main.asm"
+Copy-Item -Path "$RootDir/sample/libdemo/build.ps1" -Destination "$LibDemoDir/build.ps1"
+
+# 8. Gerar pacote compactado .ZIP
+Write-Host "[7/7] Criando arquivo compactado $ZipFileName..." -ForegroundColor Yellow
 if (Test-Path $ZipFilePath) {
     Remove-Item -Path $ZipFilePath -Force
 }

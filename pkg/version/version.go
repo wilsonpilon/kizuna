@@ -8,7 +8,7 @@ import "fmt"
 // BUILD: Cada compilação ou incremento de build realizado
 const (
 	Major    = 4
-	Minor    = 2
+	Minor    = 3
 	Build    = 0
 	Codename = "Akatsuki (暁)"
 )

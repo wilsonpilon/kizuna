@@ -293,12 +293,16 @@ func (a *Assembler) parseLine(tokens []Token) (parsedLine, error) {
 
 func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uint16, error) {
 	switch mnem {
-	case "NOP", "HALT", "DI", "EI", "RET", "EXX":
+	case "NOP", "HALT", "DI", "EI", "RET", "EXX", "RLCA", "RRCA", "RLA", "RRA", "CPL", "SCF", "CCF":
 		if len(ops) > 0 {
 			// RET cc
 			return 1, nil
 		}
 		return 1, nil
+	case "NEG":
+		return 2, nil
+	case "RLC", "RRC", "RL", "RR", "SLA", "SRA", "SRL", "BIT", "RES", "SET":
+		return 2, nil
 	case "EX":
 		return 1, nil
 	case "PUSH", "POP":
@@ -437,6 +441,61 @@ func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token,
 		a.emit(0xFB)
 	case "EXX":
 		a.emit(0xD9)
+	case "RLCA":
+		a.emit(0x07)
+	case "RRCA":
+		a.emit(0x0F)
+	case "RLA":
+		a.emit(0x17)
+	case "RRA":
+		a.emit(0x1F)
+	case "CPL":
+		a.emit(0x2F)
+	case "SCF":
+		a.emit(0x37)
+	case "CCF":
+		a.emit(0x3F)
+	case "NEG":
+		a.emit(0xED, 0x44)
+	case "RLC", "RRC", "RL", "RR", "SLA", "SRA", "SRL":
+		if len(ops) != 1 {
+			return fmt.Errorf("%s requer 1 operando", mnem)
+		}
+		rStr := strings.ToUpper(ops[0])
+		r, ok := reg8Map[rStr]
+		if !ok && rStr == "(HL)" {
+			r = 6
+			ok = true
+		}
+		if !ok {
+			return fmt.Errorf("registrador inválido para %s: %s", mnem, ops[0])
+		}
+		cbMap := map[string]uint8{
+			"RLC": 0x00, "RRC": 0x08, "RL": 0x10, "RR": 0x18,
+			"SLA": 0x20, "SRA": 0x28, "SRL": 0x38,
+		}
+		a.emit(0xCB, cbMap[mnem]|r)
+	case "BIT", "RES", "SET":
+		if len(ops) != 2 {
+			return fmt.Errorf("%s requer 2 operandos (bit, reg)", mnem)
+		}
+		bitVal := a.parseImm8(ops[0])
+		if bitVal > 7 {
+			return fmt.Errorf("bit deve estar entre 0 e 7: %d", bitVal)
+		}
+		rStr := strings.ToUpper(ops[1])
+		r, ok := reg8Map[rStr]
+		if !ok && rStr == "(HL)" {
+			r = 6
+			ok = true
+		}
+		if !ok {
+			return fmt.Errorf("registrador inválido para %s: %s", mnem, ops[1])
+		}
+		baseMap := map[string]uint8{
+			"BIT": 0x40, "RES": 0x80, "SET": 0xC0,
+		}
+		a.emit(0xCB, baseMap[mnem]|(bitVal<<3)|r)
 	case "EX":
 		if len(ops) == 2 && strings.EqualFold(ops[0], "DE") && strings.EqualFold(ops[1], "HL") {
 			a.emit(0xEB)

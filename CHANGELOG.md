@@ -10,6 +10,28 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [4.3.0] - 2026-09-03 - Biblioteca Padrão MSXLIB
+
+### Adicionado
+- **Biblioteca Padrão MSXLIB (`lib/src/` e `lib/msxlib.hlib`)**:
+  - Pacote de 6 módulos modulares escritos em Z80 Assembly e empacotados em arquivo de biblioteca `.HLIB`:
+    - `bdos`: Rotinas de chamada ao kernel MSX-DOS (`BDOS_Call`, `BDOS_PrintChar`, `BDOS_PrintString`, `BDOS_ReadChar`, `BDOS_Exit`).
+    - `bios`: Chamadas inter-slot seguras à Main-ROM via `CALSLT` (`BIOS_Call`, `BIOS_CHPUT`, `BIOS_CHGET`, `BIOS_CLS`, `BIOS_POSIT`, `BIOS_BEEP`, `BIOS_INIT32`).
+    - `vdp`: Controle de portas e registradores do processador de vídeo TMS9918/V9938/V9958 (`VDP_WriteReg`, `VDP_SetWriteAddr`, `VDP_SetReadAddr`, `VDP_FillVRAM`, `VDP_WriteVRAM`, `VDP_ReadVRAM`, `VDP_SetColor`).
+    - `psg`: Manipulação do gerador de som programável AY-3-8910 (`PSG_Write`, `PSG_Read`, `PSG_MuteAll`, `PSG_PlayTone`).
+    - `string`: Funções de texto e conversão numérica rápida com supressão de zeros (`StrLen`, `StrCopy`, `StrToUpper`, `PrintHex8`, `PrintHex16`, `PrintDec16`).
+    - `math`: Multiplicação e divisão inteira não sinalizada de 16 bits (`Mul16`, `Div16`).
+- **Suporte a Novas Instruções Z80 no Assembler KAJI80 (`pkg/kaji80`)**:
+  - Instruções de rotação e deslocamento: `RLCA`, `RRCA`, `RLA`, `RRA`, `RLC`, `RRC`, `RL`, `RR`, `SLA`, `SRA`, `SRL`.
+  - Operações bit-a-bit: `BIT`, `RES`, `SET`.
+  - Flags e complemento aritmético: `CPL`, `SCF`, `CCF`, `NEG`.
+- **Exemplo Prático com Smart-Linking ([sample/libdemo](sample/libdemo))**:
+  - Exemplo demonstrativo em Assembly importando e executando rotinas da `msxlib.hlib`, comprovando eliminação de código morto no mapa de memória.
+- **Integração no Script de Distribuição ([build.ps1](build.ps1))**:
+  - Geração automática de `msxlib.hlib` e inclusão em `distribute/lib/` e no pacote ZIP de distribuição.
+
+---
+
 ## [4.2.0] - 2026-09-03 - HAKO & Smart-Linking
 
 ### Adicionado

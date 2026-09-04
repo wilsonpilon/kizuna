@@ -272,5 +272,28 @@ hako -t math.hlib
 hako -x math.hlib math_add.mob
 ```
 
+---
+
+## 11. A Biblioteca Padrão `MSXLIB` (`msxlib.hlib`)
+
+O KIZUNA inclui uma biblioteca de rotinas padrão prontas para uso em `lib/msxlib.hlib`:
+
+| Módulo | Símbolos Exportados | Descrição |
+|---|---|---|
+| **`bdos`** | `BDOS_Call`, `BDOS_PrintChar`, `BDOS_PrintString`, `BDOS_ReadChar`, `BDOS_Exit` | Chamadas diretas ao kernel MSX-DOS (BDOS 0x0005). |
+| **`bios`** | `BIOS_Call`, `BIOS_CHPUT`, `BIOS_CHGET`, `BIOS_CLS`, `BIOS_POSIT`, `BIOS_BEEP`, `BIOS_INIT32` | Chamadas inter-slot seguras à Main-ROM BIOS via `CALSLT (0x0024)` preservando o estado do MSX-DOS. |
+| **`vdp`** | `VDP_WriteReg`, `VDP_SetWriteAddr`, `VDP_SetReadAddr`, `VDP_FillVRAM`, `VDP_WriteVRAM`, `VDP_ReadVRAM`, `VDP_SetColor` | Manipulação das portas I/O do processador de vídeo TMS9918 / V9938 / V9958 e acesso direto à VRAM. |
+| **`psg`** | `PSG_Write`, `PSG_Read`, `PSG_MuteAll`, `PSG_PlayTone` | Controle dos registradores de som do AY-3-8910 / YM2149, reprodução de notas e silenciamento. |
+| **`string`** | `StrLen`, `StrCopy`, `StrToUpper`, `PrintHex8`, `PrintHex16`, `PrintDec16` | Manipulação de textos terminados em zero (`\0`) e conversão de números para hexadecimal e decimal formatado. |
+| **`math`** | `Mul16`, `Div16` | Multiplicação e divisão inteira não sinalizada de 16 bits rápida por deslocamento e soma. |
+
+### Exemplo de Uso com Smart-Linking:
+```bash
+# Linkando seu programa com a biblioteca MSXLIB
+# O MUSUBI inclui no .COM apenas os módulos utilizados pelo seu código
+musubi -v -m app.map -o app.com main.mob msxlib.hlib
+```
+
+
 
 
