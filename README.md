@@ -10,7 +10,7 @@ num único executável — inclusive distribuindo módulos por bancos de
 memória diferentes, com troca de banco resolvida automaticamente pelo
 linker.
 
-Versão Atual: `v4.4.0` — Release **Akatsuki (暁)**.
+Versão Atual: `v4.4.0` — Release **Hinode (日の出)**.
 
 ## Por quê
 

@@ -1,6 +1,6 @@
-# Release Notes — KIZUNA v4.4.0 "Akatsuki" (暁)
+# Release Notes — KIZUNA v4.4.0 "Hinode" (日の出)
 
-**Akatsuki** (暁) — "o amanhecer, a aurora". Nome que simboliza o nascimento da primeira linguagem de alto nível funcional da toolchain: o compilador Pascal **WIRTH80**, integrando-se nativamente com a biblioteca padrão **MSXLIB** e o linker **MUSUBI**.
+**Hinode** (日の出) — "o nascer do sol, a alvorada radiante". Seguindo a transição poética iniciada em *Akatsuki* (a aurora antes do amanhecer), *Hinode* representa o sol surgindo plenamente no horizonte, iluminando a toolchain com o nascimento de sua primeira linguagem de alto nível: o compilador Pascal **WIRTH80**, integrando-se nativamente com a biblioteca padrão **MSXLIB** e o linker **MUSUBI**.
 
 ---
 

@@ -10,7 +10,7 @@ const (
 	Major    = 4
 	Minor    = 4
 	Build    = 0
-	Codename = "Akatsuki (暁)"
+	Codename = "Hinode (日の出)"
 )
 
 // String retorna a versão formatada como major.minor.compilacao
