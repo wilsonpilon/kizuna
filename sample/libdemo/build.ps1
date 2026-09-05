@@ -19,15 +19,16 @@ Write-Host "=================================================================" -
 # 1. Montar main.asm
 $asmFile = Join-Path $SampleDir "main.asm"
 $mobFile = Join-Path $SampleDir "main.mob"
+$logFile = Join-Path $SampleDir "libdemo.log"
 Write-Host "[1/2] Montando main.asm -> main.mob..." -ForegroundColor Yellow
-& go run "$RootDir/cmd/kaji80" -v -o $mobFile $asmFile
+& go run "$RootDir/cmd/kaji80" -v --log-file $logFile -o $mobFile $asmFile
 if ($LASTEXITCODE -ne 0) { throw "Falha na montagem de $asmFile" }
 
 # 2. Linkar com a biblioteca msxlib.hlib
 $outCom = Join-Path $SampleDir "libdemo.com"
 $mapFile = Join-Path $SampleDir "libdemo.map"
 Write-Host "[2/2] Linkando main.mob com msxlib.hlib (Smart-Linking)..." -ForegroundColor Yellow
-& go run "$RootDir/cmd/musubi" -v -m $mapFile -o $outCom $mobFile $LibPath
+& go run "$RootDir/cmd/musubi" -v --log-file $logFile -m $mapFile -o $outCom $mobFile $LibPath
 if ($LASTEXITCODE -ne 0) { throw "Falha na linkagem" }
 
 Write-Host ""

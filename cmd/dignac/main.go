@@ -8,16 +8,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wilsonpilon/kizuna/pkg/dignac"
 	"github.com/wilsonpilon/kizuna/pkg/mob"
 	"github.com/wilsonpilon/kizuna/pkg/version"
-	"github.com/wilsonpilon/kizuna/pkg/wirth80"
 )
 
 func printHelp() {
-	fmt.Println(version.Banner("WIRTH80"))
+	fmt.Println(version.Banner("DIGNAC"))
 	fmt.Print(`
 USO:
-    wirth80 [opções] <arquivo.pas>
+    dignac [opções] <arquivo.bas>
 
 OPÇÕES:
     -o <caminho>   Especifica o arquivo de saída .mob (padrão: mesmo nome com extensão .mob)
@@ -29,17 +29,17 @@ OPÇÕES:
     -h, --help     Exibe esta ajuda completa
 
 EXEMPLO:
-    wirth80 hello.pas
-    wirth80 --log hello.pas
-    wirth80 -S hello.pas -o hello.asm
-    musubi hello.mob msxlib.hlib -o hello.com
+    dignac chart.bas
+    dignac --log chart.bas
+    dignac -S chart.bas -o chart.asm
+    musubi chart.mob msxlib.hlib -o chart.com
 `)
 }
 
 func main() {
 	help := flag.Bool("help", false, "Exibe ajuda detalhada")
 	shortHelp := flag.Bool("h", false, "Exibe ajuda detalhada")
-	verFlag := flag.Bool("version", false, "Exibe versão do WIRTH80")
+	verFlag := flag.Bool("version", false, "Exibe versão do DIGNAC")
 	outPath := flag.String("o", "", "Caminho do arquivo de saída .mob ou .asm")
 	emitAsm := flag.Bool("S", false, "Emite arquivo Assembly Z80 intermediário (.asm)")
 	verbose := flag.Bool("v", false, "Modo detalhado")
@@ -54,14 +54,14 @@ func main() {
 	}
 
 	if *verFlag {
-		fmt.Printf("WIRTH80 v%s\n", version.FullVersion())
+		fmt.Printf("DIGNAC v%s\n", version.FullVersion())
 		os.Exit(0)
 	}
 
 	args := flag.Args()
 	if len(args) < 1 {
 		fmt.Fprintln(os.Stderr, "Erro: nenhum arquivo de entrada fornecido.")
-		fmt.Fprintln(os.Stderr, "Use 'wirth80 --help' para instruções de uso.")
+		fmt.Fprintln(os.Stderr, "Use 'dignac --help' para instruções de uso.")
 		os.Exit(1)
 	}
 
@@ -73,21 +73,21 @@ func main() {
 	}
 
 	// 1. Lexer & Parser
-	lexer := wirth80.NewLexer(string(content))
-	parser, err := wirth80.NewParser(lexer)
+	lexer := dignac.NewLexer(string(content))
+	parser, err := dignac.NewParser(lexer)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Erro ao inicializar parser: %v\n", err)
 		os.Exit(1)
 	}
 
-	prog, err := parser.ParseProgram()
+	mod, err := parser.ParseModule()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Erro sintático em '%s':\n  %v\n", inputPath, err)
 		os.Exit(1)
 	}
 
 	// 2. Codegen
-	cg := wirth80.NewCodeGenerator(prog)
+	cg := dignac.NewCodeGenerator(mod)
 
 	getLogDest := func(defaultOut string) string {
 		if *logPath != "" {
@@ -111,7 +111,7 @@ func main() {
 		asmCode, err := cg.GenerateAsm()
 		if err != nil {
 			if logDest := getLogDest(targetOut); logDest != "" {
-				_ = writeCompilationLog(logDest, inputPath, targetOut, prog, nil, "", err, *logPath != "")
+				_ = writeCompilationLog(logDest, inputPath, targetOut, mod, nil, "", err, *logPath != "")
 			}
 			fmt.Fprintf(os.Stderr, "Erro na geração de código Z80: %v\n", err)
 			os.Exit(1)
@@ -119,19 +119,19 @@ func main() {
 
 		if err := os.WriteFile(targetOut, []byte(asmCode), 0644); err != nil {
 			if logDest := getLogDest(targetOut); logDest != "" {
-				_ = writeCompilationLog(logDest, inputPath, targetOut, prog, nil, asmCode, err, *logPath != "")
+				_ = writeCompilationLog(logDest, inputPath, targetOut, mod, nil, asmCode, err, *logPath != "")
 			}
 			fmt.Fprintf(os.Stderr, "Erro ao gravar arquivo assembly '%s': %v\n", targetOut, err)
 			os.Exit(1)
 		}
 
 		if logDest := getLogDest(targetOut); logDest != "" {
-			if logErr := writeCompilationLog(logDest, inputPath, targetOut, prog, nil, asmCode, nil, *logPath != ""); logErr == nil {
-				fmt.Printf("WIRTH80: Log gravado com sucesso -> %s\n", logDest)
+			if logErr := writeCompilationLog(logDest, inputPath, targetOut, mod, nil, asmCode, nil, *logPath != ""); logErr == nil {
+				fmt.Printf("DIGNAC: Log gravado com sucesso -> %s\n", logDest)
 			}
 		}
 
-		fmt.Printf("WIRTH80: Assembly Z80 gerado com sucesso -> %s\n", targetOut)
+		fmt.Printf("DIGNAC: Assembly Z80 gerado com sucesso -> %s\n", targetOut)
 		if *verbose {
 			fmt.Println("\n--- CÓDIGO ASSEMBLY GERADO ---")
 			fmt.Println(asmCode)
@@ -149,7 +149,7 @@ func main() {
 	obj, asmCode, err := cg.Compile()
 	if err != nil {
 		if logDest := getLogDest(targetOut); logDest != "" {
-			_ = writeCompilationLog(logDest, inputPath, targetOut, prog, nil, "", err, *logPath != "")
+			_ = writeCompilationLog(logDest, inputPath, targetOut, mod, nil, "", err, *logPath != "")
 		}
 		fmt.Fprintf(os.Stderr, "Erro de compilação em '%s':\n  %v\n", inputPath, err)
 		os.Exit(1)
@@ -157,21 +157,22 @@ func main() {
 
 	if err := mob.SaveToFile(targetOut, obj); err != nil {
 		if logDest := getLogDest(targetOut); logDest != "" {
-			_ = writeCompilationLog(logDest, inputPath, targetOut, prog, obj, asmCode, err, *logPath != "")
+			_ = writeCompilationLog(logDest, inputPath, targetOut, mod, obj, asmCode, err, *logPath != "")
 		}
 		fmt.Fprintf(os.Stderr, "Erro ao salvar arquivo objeto '%s': %v\n", targetOut, err)
 		os.Exit(1)
 	}
 
 	if logDest := getLogDest(targetOut); logDest != "" {
-		if logErr := writeCompilationLog(logDest, inputPath, targetOut, prog, obj, asmCode, nil, *logPath != ""); logErr == nil {
-			fmt.Printf("WIRTH80: Log gravado com sucesso -> %s\n", logDest)
+		if logErr := writeCompilationLog(logDest, inputPath, targetOut, mod, obj, asmCode, nil, *logPath != ""); logErr == nil {
+			fmt.Printf("DIGNAC: Log gravado com sucesso -> %s\n", logDest)
 		}
 	}
 
-	fmt.Printf("WIRTH80: %s compilado com sucesso -> %s\n", inputPath, targetOut)
+	fmt.Printf("DIGNAC: %s compilado com sucesso -> %s\n", inputPath, targetOut)
 	if *verbose {
-		fmt.Printf("  Programa:     %s\n", prog.Name)
+		fmt.Printf("  Módulo:       %s\n", mod.Name)
+		fmt.Printf("  Banco:        %d\n", mod.Bank)
 		fmt.Printf("  Segmentos:    %d\n", len(obj.Segments))
 		fmt.Printf("  Símbolos:     %d\n", len(obj.Symbols))
 		fmt.Printf("  Relocações:   %d\n", len(obj.Relocations))
@@ -184,13 +185,13 @@ func main() {
 	}
 }
 
-func writeCompilationLog(logPath string, inputPath string, outPath string, prog *wirth80.ProgramNode, obj *mob.ObjectFile, asmCode string, compErr error, appendMode bool) error {
+func writeCompilationLog(logPath string, inputPath string, outPath string, mod *dignac.ModuleNode, obj *mob.ObjectFile, asmCode string, compErr error, appendMode bool) error {
 	var sb strings.Builder
 	sb.WriteString("================================================================================\n")
-	sb.WriteString("              KIZUNA TOOLCHAIN - WIRTH80 COMPILATION LOG\n")
+	sb.WriteString("              KIZUNA TOOLCHAIN - DIGNAC COMPILATION LOG\n")
 	sb.WriteString("================================================================================\n")
 	sb.WriteString(fmt.Sprintf("Timestamp:    %s\n", time.Now().Format("2006-01-02 15:04:05")))
-	sb.WriteString(fmt.Sprintf("Compiler:     WIRTH80 v%s\n", version.FullVersion()))
+	sb.WriteString(fmt.Sprintf("Compiler:     DIGNAC v%s\n", version.FullVersion()))
 	sb.WriteString(fmt.Sprintf("Source File:  %s\n", inputPath))
 	sb.WriteString(fmt.Sprintf("Output File:  %s\n", outPath))
 	if compErr != nil {
@@ -199,16 +200,31 @@ func writeCompilationLog(logPath string, inputPath string, outPath string, prog 
 		sb.WriteString("Status:       SUCCESS\n")
 	}
 	sb.WriteString("\n--------------------------------------------------------------------------------\n")
-	sb.WriteString("PROGRAM INFORMATION\n")
+	sb.WriteString("MODULE INFORMATION\n")
 	sb.WriteString("--------------------------------------------------------------------------------\n")
-	if prog != nil {
-		sb.WriteString(fmt.Sprintf("Program Name: %s\n", prog.Name))
-		sb.WriteString(fmt.Sprintf("Variables:    %d\n", len(prog.Vars)))
-		if prog.Block != nil {
-			sb.WriteString(fmt.Sprintf("Statements:   %d\n", len(prog.Block.Statements)))
+	if mod != nil {
+		sb.WriteString(fmt.Sprintf("Module Name:  %s\n", mod.Name))
+		sb.WriteString(fmt.Sprintf("Target Bank:  %d\n", mod.Bank))
+		sb.WriteString(fmt.Sprintf("Publics:      %s\n", strings.Join(mod.Publics, ", ")))
+		sb.WriteString(fmt.Sprintf("Externs:      %s\n", strings.Join(mod.Externs, ", ")))
+		sb.WriteString(fmt.Sprintf("Procedures:   %d\n", len(mod.Procedures)))
+		for _, proc := range mod.Procedures {
+			kind := "PROCEDURE"
+			if proc.IsFunction {
+				kind = "FUNCTION"
+			}
+			var params []string
+			for _, p := range proc.Params {
+				params = append(params, fmt.Sprintf("%s AS %s", p.Name, p.Type))
+			}
+			ret := ""
+			if proc.IsFunction && proc.ReturnType != "" {
+				ret = " AS " + proc.ReturnType
+			}
+			sb.WriteString(fmt.Sprintf("  - %s %s(%s)%s\n", kind, proc.Name, strings.Join(params, ", "), ret))
 		}
 	} else {
-		sb.WriteString("Program AST not available.\n")
+		sb.WriteString("Module AST not available.\n")
 	}
 
 	if obj != nil {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/wilsonpilon/kizuna/pkg/kaji80"
 	"github.com/wilsonpilon/kizuna/pkg/mob"
@@ -20,6 +21,8 @@ USO:
 
 OPÇÕES:
     -o <caminho>   Especifica o arquivo de saída .mob (padrão: mesmo nome com extensão .mob)
+    --log          Gera ou anexa ao arquivo de log da compilação (<arquivo>.log)
+    --log-file <f> Especifica caminho customizado para o arquivo de log
     -v             Modo detalhado (exibe resumo de segmentos, símbolos e relocações)
     --version      Exibe a versão atual
     -h, --help     Exibe esta ajuda completa
@@ -57,9 +60,11 @@ func main() {
 	verFlag := flag.Bool("version", false, "Exibe versão do KAJI80")
 	outPath := flag.String("o", "", "Caminho do arquivo de saída .mob")
 	verbose := flag.Bool("v", false, "Modo detalhado")
+	logFlag := flag.Bool("log", false, "Gera ou anexa ao arquivo de log (<arquivo>.log)")
+	logPath := flag.String("log-file", "", "Especifica caminho customizado para o log")
 
 	flag.Usage = printHelp
-	flag.Parse()
+	_ = flag.CommandLine.Parse(rearrangeArgs(os.Args[1:]))
 
 	if *verFlag {
 		fmt.Println(version.Banner("KAJI80"))
@@ -89,17 +94,40 @@ func main() {
 		*outPath = strings.TrimSuffix(inPath, ext) + ".mob"
 	}
 
+	getLogDest := func() string {
+		if *logPath != "" {
+			return *logPath
+		}
+		if *logFlag {
+			ext := filepath.Ext(inPath)
+			return strings.TrimSuffix(inPath, ext) + ".log"
+		}
+		return ""
+	}
+
 	asm := kaji80.NewAssembler()
 	obj, err := asm.Assemble(string(content))
 	if err != nil {
+		if logDest := getLogDest(); logDest != "" {
+			_ = appendAssemblerLog(logDest, inPath, *outPath, nil, err)
+		}
 		fmt.Fprintf(os.Stderr, "Erro de montagem: %v\n", err)
 		os.Exit(1)
 	}
 
 	err = mob.SaveToFile(*outPath, obj)
 	if err != nil {
+		if logDest := getLogDest(); logDest != "" {
+			_ = appendAssemblerLog(logDest, inPath, *outPath, obj, err)
+		}
 		fmt.Fprintf(os.Stderr, "Erro ao salvar %s: %v\n", *outPath, err)
 		os.Exit(1)
+	}
+
+	if logDest := getLogDest(); logDest != "" {
+		if logErr := appendAssemblerLog(logDest, inPath, *outPath, obj, nil); logErr == nil {
+			fmt.Printf("KAJI80: Log gravado com sucesso -> %s\n", logDest)
+		}
 	}
 
 	if *verbose {
@@ -111,4 +139,80 @@ func main() {
 			fmt.Printf("  Seg[%d]: %s, Banco %d, Tamanho: %d bytes\n", i, seg.Type, seg.Bank, seg.Size)
 		}
 	}
+}
+
+func appendAssemblerLog(logPath string, inPath string, outPath string, obj *mob.ObjectFile, asmErr error) error {
+	var sb strings.Builder
+	sb.WriteString("--------------------------------------------------------------------------------\n")
+	sb.WriteString("              KIZUNA TOOLCHAIN - KAJI80 ASSEMBLER LOG\n")
+	sb.WriteString("--------------------------------------------------------------------------------\n")
+	sb.WriteString(fmt.Sprintf("Timestamp:    %s\n", time.Now().Format("2006-01-02 15:04:05")))
+	sb.WriteString(fmt.Sprintf("Assembler:    KAJI80 v%s\n", version.FullVersion()))
+	sb.WriteString(fmt.Sprintf("Source File:  %s\n", inPath))
+	sb.WriteString(fmt.Sprintf("Output File:  %s\n", outPath))
+	if asmErr != nil {
+		sb.WriteString(fmt.Sprintf("Status:       FAILED (%v)\n", asmErr))
+	} else {
+		sb.WriteString("Status:       SUCCESS\n")
+	}
+
+	if obj != nil {
+		sb.WriteString("\nOBJECT FILE DETAILS (.MOB)\n")
+		sb.WriteString(fmt.Sprintf("Segments (%d):\n", len(obj.Segments)))
+		for i, seg := range obj.Segments {
+			sb.WriteString(fmt.Sprintf("  [%d] Type: %-6s Bank: %-2d Size: %4d bytes\n",
+				i, seg.Type.String(), seg.Bank, seg.Size))
+		}
+		sb.WriteString(fmt.Sprintf("\nSymbols (%d):\n", len(obj.Symbols)))
+		for _, sym := range obj.Symbols {
+			sb.WriteString(fmt.Sprintf("  - %-20s %-7s %-6s Offset: %04Xh (Seg %d)\n",
+				sym.Name, sym.Class.String(), sym.Kind.String(), sym.Offset, sym.SegmentIndex))
+		}
+		sb.WriteString(fmt.Sprintf("\nRelocations (%d):\n", len(obj.Relocations)))
+		for i, rel := range obj.Relocations {
+			symName := "N/A"
+			if int(rel.SymbolIndex) < len(obj.Symbols) {
+				symName = obj.Symbols[rel.SymbolIndex].Name
+			}
+			sb.WriteString(fmt.Sprintf("  [%2d] Offset: %04Xh Target: %-16s Type: %s (Seg %d)\n",
+				i, rel.Offset, symName, rel.Type.String(), rel.SegmentIndex))
+		}
+	}
+	sb.WriteString("--------------------------------------------------------------------------------\n")
+
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	stat, err := f.Stat()
+	if err == nil && stat.Size() == 0 {
+		_, _ = f.WriteString("================================================================================\n" +
+			"                    KIZUNA TOOLCHAIN COMPILATION LOG\n" +
+			"================================================================================\n\n")
+	} else {
+		_, _ = f.WriteString("\n")
+	}
+
+	_, err = f.WriteString(sb.String())
+	return err
+}
+
+func rearrangeArgs(args []string) []string {
+	var flags []string
+	var nonFlags []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-") {
+			flags = append(flags, arg)
+			if (arg == "-o" || arg == "--log-file" || arg == "-log-file") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++
+				flags = append(flags, args[i])
+			}
+		} else {
+			nonFlags = append(nonFlags, arg)
+		}
+	}
+	return append(flags, nonFlags...)
 }

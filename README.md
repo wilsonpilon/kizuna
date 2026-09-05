@@ -10,7 +10,7 @@ num único executável — inclusive distribuindo módulos por bancos de
 memória diferentes, com troca de banco resolvida automaticamente pelo
 linker.
 
-Versão Atual: `v4.4.0` — Release **Hinode (日の出)**.
+Versão Atual: `v4.5.0` — Release **Hinode (日の出)**.
 
 ## Por quê
 
@@ -31,11 +31,11 @@ BASIC estruturado no mesmo binário `.COM`.
 |-------------|---------------------------------------|---------------------------------|
 | `KAJI80`    | Assembler Z80 modular                 | **Concluído & Validado** (v4.3) |
 | `WIRTH80`   | Compilador Pascal (TP4-like)          | **Concluído & Validado** (v4.4) |
+| `DIGNAC`    | Compilador MSX-BASIC Dignified        | **Concluído & Validado** (v4.5) |
 | `MUSUBI`    | Linker com Smart-Linking e Mapper     | **Concluído & Validado** (v4.3) |
 | `HAKO`      | Bibliotecário / Empacotador (`.hlib`) | **Concluído & Validado** (v4.3) |
 | `MOBDUMP`   | Inspecionador de objetos `.MOB`       | **Concluído & Validado** (v4.2) |
-| `MSXLIB`    | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **Concluído & Validado** (v4.3) |
-| `DIGNAC`    | Compilador do MSX-BASIC Dignified     | *Em planejamento* (Fase 5.3)    |
+| `MSXLIB`    | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **Concluído & Validado** (v4.5) |
 | `OBI`       | Orquestrador de build (`Obifile`)     | *Em planejamento* (Fase 6)      |
 
 Cada compilador/assembler gera um objeto relocável no formato próprio `.MOB`;
@@ -50,6 +50,10 @@ trampolins automáticos de bank switching) e produz o `.COM` final para MSX-DOS 
 - `sample/pascal/`:
   - `hello.pas`: Primeiro Hello World em Pascal nativo para MSX (binário de apenas 326 bytes).
   - `calc.pas`: Programa demonstrando variáveis inteiras, cálculo aritmético de 16 bits e chamadas à biblioteca.
+- `sample/basic/`:
+  - `hello.bas`: Hello World em MSX-BASIC Dignified compilado para `.COM` (apenas 186 bytes).
+  - `calc.bas`: Aritmética de 16 bits, variáveis locais e formatação de texto com smart-linking.
+  - `chart.bas`: Módulo gráfico paginado no banco 2 para desenhar gráficos com `LINE`, `BF` e `PSET`.
 
 ## Instalação Rápida
 

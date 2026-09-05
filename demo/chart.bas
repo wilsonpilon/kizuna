@@ -1,17 +1,25 @@
 ' ============================================================
-' KIZUNA demo -- croqui hipotetico (nao compila / prova de conceito)
+' KIZUNA sample -- Modulo Chart em MSX-BASIC Dignified
 ' Compilador: DIGNAC
 ' Banco: 2 (paginavel)
-' Tamanho estimado: ~5Kb
 ' ============================================================
 
 MODULE Chart
-    PUBLIC Desenhar
+BANK 0
+PUBLIC Main, Desenhar
+EXTERN BIOS_CHGET
 
-    ' Desenhar: recebe um valor (via ABI de pilha do KIZUNA) e traca
-    ' um grafico simples de barras/linha na tela ja ajustada pelo
-    ' modulo ScreenFX (Assembly).
-    PROCEDURE Desenhar(valor%)
+' Ponto de entrada para demonstracao grafica standalone
+PROCEDURE Main()
+    SCREEN 2
+    Desenhar(10)
+    BIOS_CHGET()
+    SCREEN 0
+END PROCEDURE
+
+' Desenhar: recebe um valor (via ABI de pilha do KIZUNA) e traca
+' um grafico simples de barras/linha na tela ajustada em SCREEN 2.
+PROCEDURE Desenhar(valor%)
         LOCAL x%, y%
 
         LINE (0,0)-(255,191), 1, BF

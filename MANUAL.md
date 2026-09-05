@@ -22,7 +22,7 @@ fonte.bas  ──DIGNAC──►  fonte.mob  ─┘
 | **`HAKO`**   | `hako -c lib.hlib *.mob` | **Funcional** | Bibliotecário / empacotador de arquivos estáticos `.HLIB`. |
 | **`MOBDUMP`**| `mobdump arq.mob` | **Funcional** | Despejo legível de cabeçalhos, segmentos, símbolos e relocs. |
 | **`MSXLIB`** | `msxlib.hlib` | **Funcional** | Biblioteca padrão MSX (BDOS, BIOS, VDP, PSG, String, Math). |
-| **`DIGNAC`** | `dignac arq.bas` | *Planejado* | Compilador MSX-BASIC Dignified para Z80. |
+| **`DIGNAC`** | `dignac arq.bas -o arq.mob` | **Funcional** | Compilador MSX-BASIC Dignified para Z80 gerando objetos `.mob`. |
 | **`OBI`**    | `obi build` | *Planejado* | Orquestrador declarativo de build via `Obifile`. |
 
 ## 3. Guia Rápido de Uso
@@ -44,6 +44,15 @@ kaji80 sample/hello.asm -o sample/hello.mob
 
 # 2. Linka gerando o executável .COM
 musubi -v -o sample/hello.com sample/hello.mob
+```
+
+### 3.3. Compilando Programa em MSX-BASIC Dignified:
+```bash
+# 1. Compila BASIC Dignified para objeto relocável .mob
+dignac sample/basic/hello.bas -o sample/basic/hello.mob
+
+# 2. Linka com a biblioteca padrão gerando o executável .COM
+musubi -v -o sample/basic/hello.com sample/basic/hello.mob lib/msxlib.hlib
 ```
 
 ## 4. Interoperabilidade entre linguagens

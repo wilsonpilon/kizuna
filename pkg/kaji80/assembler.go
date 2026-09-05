@@ -2,6 +2,7 @@ package kaji80
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/wilsonpilon/kizuna/pkg/mob"
@@ -443,10 +444,29 @@ func (a *Assembler) estimateLdSize(ops []string) (uint16, error) {
 	dst := strings.ToUpper(ops[0])
 	src := strings.ToUpper(ops[1])
 
-	// LD SP, HL
-	if dst == "SP" && src == "HL" {
-		return 1, nil
+	// LD SP, HL / LD SP, IX / LD SP, IY
+	if dst == "SP" {
+		if src == "HL" {
+			return 1, nil
+		}
+		if src == "IX" || src == "IY" {
+			return 2, nil
+		}
 	}
+
+	// LD r, (IX+d) / LD (IX+d), r / LD (IX+d), n
+	if isIX, isIY, _, ok := parseIndexed(src); ok && (isIX || isIY) {
+		if _, okD := reg8Map[dst]; okD {
+			return 3, nil
+		}
+	}
+	if isIX, isIY, _, ok := parseIndexed(dst); ok && (isIX || isIY) {
+		if _, okS := reg8Map[src]; okS {
+			return 3, nil
+		}
+		return 4, nil // LD (IX+d), n
+	}
+
 	// LD r, r'
 	if _, okD := reg8Map[dst]; okD {
 		if _, okS := reg8Map[src]; okS {
@@ -817,9 +837,47 @@ func (a *Assembler) encodeLd(ops []string) error {
 	dst := strings.ToUpper(ops[0])
 	src := strings.ToUpper(ops[1])
 
-	// LD SP, HL
-	if dst == "SP" && src == "HL" {
-		a.emit(0xF9)
+	// LD SP, HL / LD SP, IX / LD SP, IY
+	if dst == "SP" {
+		if src == "HL" {
+			a.emit(0xF9)
+			return nil
+		}
+		if src == "IX" {
+			a.emit(0xDD, 0xF9)
+			return nil
+		}
+		if src == "IY" {
+			a.emit(0xFD, 0xF9)
+			return nil
+		}
+	}
+
+	// LD r, (IX+d) / LD r, (IY+d)
+	if isIX, isIY, disp, ok := parseIndexed(src); ok && (isIX || isIY) {
+		if d, okD := reg8Map[dst]; okD {
+			prefix := uint8(0xDD)
+			if isIY {
+				prefix = 0xFD
+			}
+			a.emit(prefix, 0x46|(d<<3), uint8(disp))
+			return nil
+		}
+	}
+
+	// LD (IX+d), r / LD (IY+d), r / LD (IX+d), n
+	if isIX, isIY, disp, ok := parseIndexed(dst); ok && (isIX || isIY) {
+		prefix := uint8(0xDD)
+		if isIY {
+			prefix = 0xFD
+		}
+		if s, okS := reg8Map[src]; okS {
+			a.emit(prefix, 0x70|s, uint8(disp))
+			return nil
+		}
+		// LD (IX+d), n
+		val := a.parseImm8(ops[1])
+		a.emit(prefix, 0x36, uint8(disp), val)
 		return nil
 	}
 
@@ -918,6 +976,62 @@ func (a *Assembler) encodeLd(ops []string) error {
 	}
 
 	return fmt.Errorf("forma de LD não suportada: LD %s, %s", ops[0], ops[1])
+}
+
+func parseIndexed(op string) (isIX bool, isIY bool, disp int8, ok bool) {
+	clean := strings.ToUpper(strings.ReplaceAll(op, " ", ""))
+	if !strings.HasPrefix(clean, "(") || !strings.HasSuffix(clean, ")") {
+		return false, false, 0, false
+	}
+	inner := clean[1 : len(clean)-1]
+	var prefix string
+	if strings.HasPrefix(inner, "IX") {
+		isIX = true
+		prefix = "IX"
+	} else if strings.HasPrefix(inner, "IY") {
+		isIY = true
+		prefix = "IY"
+	} else {
+		return false, false, 0, false
+	}
+
+	rest := inner[len(prefix):]
+	if rest == "" {
+		return isIX, isIY, 0, true
+	}
+
+	sign := 1
+	if rest[0] == '+' {
+		rest = rest[1:]
+	} else if rest[0] == '-' {
+		sign = -1
+		rest = rest[1:]
+	} else {
+		return false, false, 0, false
+	}
+
+	var val int64
+	if strings.HasSuffix(rest, "H") {
+		v, err := parseHex(rest[:len(rest)-1])
+		if err != nil {
+			return false, false, 0, false
+		}
+		val = v
+	} else if strings.HasPrefix(rest, "$") || strings.HasPrefix(rest, "#") {
+		v, err := parseHex(rest[1:])
+		if err != nil {
+			return false, false, 0, false
+		}
+		val = v
+	} else {
+		v, err := strconv.ParseInt(rest, 10, 32)
+		if err != nil {
+			return false, false, 0, false
+		}
+		val = v
+	}
+
+	return isIX, isIY, int8(int64(sign) * val), true
 }
 
 func (a *Assembler) emit(bytes ...uint8) {

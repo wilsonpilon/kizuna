@@ -9,6 +9,7 @@
 .vscode/
 .idea/
 *.tmp
+*.log
 
 # Pacotes de distribuição gerados por build.ps1
 distribute/

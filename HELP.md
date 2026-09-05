@@ -343,6 +343,67 @@ musubi -v -m sample/pascal/hello.map -o sample/pascal/hello.com \
 # 3. Executar o binário gerado no MSX2+ ou emulador!
 ```
 
+---
+
+## 13. O Compilador MSX-BASIC Dignified `DIGNAC`
+
+O **`DIGNAC`** (*Dignified-ac*) é o compilador da linguagem **MSX-BASIC Dignified** da toolchain KIZUNA. Ele traduz código BASIC estruturado diretamente para módulos relocáveis `.MOB` compatíveis com o linker `MUSUBI`, com suporte a bancos pagináveis e convenção de chamadas em pilha (ABI).
+
+### 13.1. Parâmetros de Linha de Comando
+
+```bash
+dignac [opções] <arquivo.bas>
+```
+
+| Opção | Descrição |
+|---|---|
+| `-o <caminho>` | Define o arquivo de saída `.mob` (padrão: mesmo nome com extensão `.mob`). |
+| `-S` | Emite o código intermediário Assembly Z80 formatado (`.asm`) em vez de gerar o `.mob`. |
+| `-v` | Modo detalhado (*verbose*): exibe a contagem de segmentos, símbolos, relocações e o assembly gerado internamente. |
+| `--version` | Exibe a versão atual do compilador. |
+| `-h`, `--help` | Exibe a ajuda detalhada de uso. |
+
+### 13.2. Recursos e Sintaxe Suportada (v4.5.0)
+
+- **Módulos & Paginação**:
+  - `MODULE <Nome>` e `END MODULE`: Define a unidade de compilação.
+  - `BANK <n>`: Define o banco de alocação (0 para área comum fixa, 1..N para bancos pagináveis na página 2).
+  - `PUBLIC sym1 [, sym2...]`: Exporta símbolos e sub-rotinas para o linker.
+  - `EXTERN sym1 [, sym2...]`: Declara símbolos importados de outros módulos.
+- **Sub-rotinas & ABI**:
+  - `PROCEDURE Nome([par1%, par2$ ...])` ... `END PROCEDURE` (ou `SUB ... END SUB`).
+  - `FUNCTION Nome([params]) [AS Tipo]` ... `END FUNCTION`.
+  - Passagem de parâmetros em pilha (esquerda para a direita) e quadro de ativação com frame pointer `IX`.
+  - Se houver `PROCEDURE Main`, o compilador gera automaticamente o ponto de entrada `Start` para criação direta de executáveis `.COM`.
+- **Variáveis**:
+  - `LOCAL var1%, var2%`: Variáveis locais alocadas no quadro de pilha (`IX - offset`).
+  - `DIM var1%, var2%`: Variáveis globais com escopo de módulo.
+  - Tipos primitivos: Inteiro de 16 bits (sufixo `%`), strings (sufixo `$`) e booleanos/bytes (sufixo `!`).
+- **Controle de Fluxo**:
+  - `FOR var% = inicio TO fim [STEP passo] ... NEXT [var%]`
+  - `IF condicao THEN ... [ELSE ...] [END IF]` (linha única ou multi-linha).
+  - `WHILE condicao ... WEND` e `DO [WHILE condicao] ... LOOP`.
+- **Primitivas Gráficas & MSX**:
+  - `LINE (x1, y1)-(x2, y2)[, color][, B | BF]`: Traçado de linhas, retângulos vazados e caixas preenchidas (com preenchimento acelerado de tela cheia).
+  - `PSET (x, y)[, color]`: Plotagem de pixel de alta precisão em SCREEN 2.
+  - `PRINT [expressões...]`: Exibição de texto e números via BDOS e MSXLIB.
+  - `CLS`, `BEEP`, `SCREEN modo`, `COLOR fg, bg, bd`.
+- **Expressões & Aritmética**:
+  - Aritmética de 16 bits: `+`, `-`, `*` (via `Mul16`), `/` e operador `MOD` (via `Div16`).
+  - Lógica: `AND`, `OR`, `XOR`, `NOT`.
+  - Operadores relacionais: `=`, `<>`, `<`, `<=`, `>`, `>=`.
+
+### 13.3. Ciclo Completo de Compilação BASIC:
+
+```bash
+# 1. Compilar o código-fonte BASIC gerando o módulo objeto .mob
+dignac -v sample/basic/hello.bas -o sample/basic/hello.mob
+
+# 2. Linkar com a biblioteca padrão msxlib.hlib para gerar o executável .COM
+musubi -v -m sample/basic/hello.map -o sample/basic/hello.com \
+  sample/basic/hello.mob lib/msxlib.hlib
+```
+
 
 
 

@@ -8,6 +8,53 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 - **MINOR**: Incrementado a cada feature ou subsistema novo adicionado.
 - **COMPILAÇÃO (BUILD)**: Incrementado a cada compilação / build realizado no projeto.
 
+## [4.5.1] - 2026-09-04 - Release Kuyashii (悔しい)
+
+### Modificado & Corrigido
+- **MSX-BASIC Dignified DIGNAC (`pkg/dignac`) e MSXLIB (`lib/src/`)**:
+  - **Exportação de Símbolos**: Exportação das rotinas `VDP_PSet`, `VDP_Line`, `VDP_BoxFill` e `VDP_InitScreen2_Tables` na diretiva `PUBLIC` de `lib/src/vdp.asm`, permitindo resolução completa e correta pelo smart-linker `musubi`.
+  - **Suporte de Vídeo e BIOS ([lib/src/bios.asm](lib/src/bios.asm))**:
+    - Ajuste em `BIOS_CHGMOD`: integração com `INIGRP (0072h)` da Main-ROM BIOS para SCREEN 2 e rotinas de tabela VRAM (`VDP_InitScreen2_Tables`).
+    - Integração com `INITXT (006Ch)` e `CHGCLR (0062h)` na saída para SCREEN 0, garantindo restauração da fonte de caracteres ROM e das cores de tela ao retornar ao MSX-DOS.
+    - Temporizador em `BIOS_CHGET` com dreno de caracteres residuais e saída antecipada via tecla `ESC`.
+- **Estado dos Testes Gráficos**:
+  - O pipeline de montagem e linkagem do exemplo gráfico (`sample/basic/chart.bas` -> `chart.com`) compila e empacota perfeitamente de ponta a ponta.
+  - A renderização em tela real/emulador sob o MSX-DOS 2 em hardware MSX2+ permanece em investigação para ajustes de inicialização de VRAM/VDP (motivo do codinome *Kuyashii (悔しい)* — expressando o sentimento de frustração respeitosa e determinação para a próxima sessão).
+
+---
+
+## [4.5.0] - 2026-09-04 - Compilador MSX-BASIC Dignified DIGNAC
+
+### Adicionado
+- **Compilador MSX-BASIC Dignified DIGNAC (`pkg/dignac` e `cmd/dignac`) - Fase 5.3**:
+  - Nova ferramenta da toolchain para compilação de código BASIC estruturado para MSX2+ / MSX-DOS 2, emitindo objetos relocáveis `.MOB`.
+  - **Modularidade e Paginação**: Suporte a diretivas `MODULE`, `BANK`, `PUBLIC` e `EXTERN`.
+  - **Sub-rotinas e ABI Kizuna**: Suporte a `PROCEDURE`, `SUB`, `FUNCTION`, passagem de parâmetros em pilha, alocação de quadro de pilha com frame pointer `IX` e variáveis locais (`LOCAL x%, y%`).
+  - **Ponto de Entrada Automático**: Geração automática do ponto de entrada `Start` chamando `PROCEDURE Main` e finalizando com `BDOS_Exit`, permitindo linkagem direta de `.COM` standalone.
+  - **Controle de Fluxo Estruturado**: Laços `FOR ... TO ... STEP ... NEXT`, `WHILE ... WEND`, `DO ... LOOP`, e condicionais `IF ... THEN ... ELSE ... END IF` (em linha única ou blocos).
+  - **Primitivas Gráficas**: Comandos `LINE (x1,y1)-(x2,y2)[, color][, B | BF]` e `PSET (x, y)[, color]`.
+  - **Expressões e Aritmética de 16 bits**: Operações `+`, `-`, `*` (via `Mul16`), `/` e operador `MOD` (via `Div16`), além de operadores lógicos `AND`, `OR`, `XOR`, `NOT` e comparações relacionais (`=`, `<>`, `<`, `<=`, `>`, `>=`).
+  - **CLI `dignac`**: Suporte às flags `-o <saida.mob>`, `-S` (código assembly intermediário formatado), `-v` (modo detalhado) e `--version`.
+- **Endereçamento Indexado Z80 no Assembler KAJI80 ([pkg/kaji80/assembler.go](pkg/kaji80/assembler.go))**:
+  - Suporte completo a instruções `LD r, (IX+d)` e `LD (IX+d), r` para registradores de 8 bits.
+  - Suporte a `LD (IX+d), n` (imediato).
+  - Suporte análogo para o registrador de índice `IY` (`0xFD`).
+  - Suporte a `LD SP, IX` (`DD F9`) e `LD SP, IY` (`FD F9`).
+- **Primitivas Gráficas na Biblioteca Padrão MSXLIB ([lib/src/vdp.asm](lib/src/vdp.asm))**:
+  - `VDP_PSet`: Cálculo de endereços nas tabelas de padrão e cor em SCREEN 2 (TMS9918/V9938) e plotagem de pixel.
+  - `VDP_BoxFill`: Preenchimento de retângulos e aceleração para limpeza de tela cheia via `VDP_FillVRAM`.
+  - `VDP_Line`: Traçado de segmentos de reta horizontais e diagonais.
+- **Exemplos em BASIC Dignified (`sample/basic/`)**:
+  - `hello.bas`: Hello World em BASIC compilado (apenas 186 bytes).
+  - `calc.bas`: Demonstração de variáveis locais, aritmética de 16 bits, divisão, módulo e exibição decimal.
+  - `chart.bas`: Módulo paginável no banco 2 para traçado de curvas.
+  - `build.ps1`: Automação de compilação e smart-linking dos exemplos BASIC.
+- **Empacotamento Global**:
+  - `dignac.exe` integrado ao script mestre [build.ps1](build.ps1) e empacotado em `distribute/bin/`.
+  - Pasta `sample/basic/` incluída na distribuição oficial.
+
+---
+
 ## [4.4.0] - 2026-09-04 - Compilador Pascal WIRTH80
 
 ### Adicionado

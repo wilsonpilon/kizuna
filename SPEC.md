@@ -186,7 +186,7 @@ convenção de registradores do Turbo Pascal original).
 4. [x] **Fase 4**: Suporte multi-banco com paginação na Página 2, trampolins automáticos e Memory Mapper via EXTBIO.
 5. [x] **Fase 5.1**: `HAKO` (bibliotecário de `.HLIB`), Smart-Linking e Biblioteca Padrão `MSXLIB` (`msxlib.hlib`).
 6. [x] **Fase 5.2**: `WIRTH80` (compilador Pascal / TP4-like) gerando `.MOB` e integrando com `MSXLIB`.
-7. [ ] **Fase 5.3**: `DIGNAC` (compilador do MSX-BASIC Dignified para Z80).
+7. [x] **Fase 5.3**: `DIGNAC` (compilador do MSX-BASIC Dignified para Z80).
 8. [ ] **Fase 6**: `OBI` como orquestrador declarativo (`Obifile`).
 
 ## 9. Fora de escopo nesta versão (ideias registradas para o futuro)

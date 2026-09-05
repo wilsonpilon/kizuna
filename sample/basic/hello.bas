@@ -1,0 +1,9 @@
+MODULE Hello
+BANK 0
+PUBLIC Main
+
+PROCEDURE Main()
+    PRINT "Ola do MSX-BASIC Dignified!"
+    PRINT "Compilado com DIGNAC para MSX2+ / MSX-DOS 2."
+END PROCEDURE
+END MODULE
