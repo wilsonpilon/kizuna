@@ -3,7 +3,26 @@
 Todas as mudanças notáveis deste projeto são documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased] - Investigação gráfica SCREEN 2
+
+### Estado
+
+- Confirmada a entrada em SCREEN 2 no OpenMSX e o retorno ao MSX-DOS 2.
+- Confirmada a escrita direta de dados na VRAM e a exibição de um ponto.
+- Mantida em investigação a origem de artefatos visuais na inicialização e no
+  mapeamento das tabelas de padrões, nomes e cores.
+- `VDP_PSet`, `VDP_Line`, `VDP_BoxFill` e o exemplo `chart.bas` continuam sem
+  status de conclusão visual.
+
+### Próxima sessão
+
+- Reproduzir o teste mínimo com uma única página vertical e uma célula 8x8.
+- Medir os endereços de VRAM antes e depois de cada escrita.
+- Revalidar `VDP_PSet` somente após confirmar o mapeamento da Name Table.
+- Adicionar `VDP_Line` apenas depois de um `PSET` isolado sem artefatos.
+
 ### Política de Versionamento (`MAJOR.MINOR.COMPILAÇÃO`)
+
 - **MAJOR**: Incrementado a cada encerramento de fase da toolchain (ex.: Fase 1 = MOB, Fase 2 = KAJI80, Fase 3 = MUSUBI monobanco, Fase 4 = Multi-banco & Memory Mapper).
 - **MINOR**: Incrementado a cada feature ou subsistema novo adicionado.
 - **COMPILAÇÃO (BUILD)**: Incrementado a cada compilação / build realizado no projeto.
@@ -11,6 +30,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [4.5.1] - 2026-09-04 - Release Kuyashii (悔しい)
 
 ### Modificado & Corrigido
+
 - **MSX-BASIC Dignified DIGNAC (`pkg/dignac`) e MSXLIB (`lib/src/`)**:
   - **Exportação de Símbolos**: Exportação das rotinas `VDP_PSet`, `VDP_Line`, `VDP_BoxFill` e `VDP_InitScreen2_Tables` na diretiva `PUBLIC` de `lib/src/vdp.asm`, permitindo resolução completa e correta pelo smart-linker `musubi`.
   - **Suporte de Vídeo e BIOS ([lib/src/bios.asm](lib/src/bios.asm))**:
@@ -19,13 +39,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
     - Temporizador em `BIOS_CHGET` com dreno de caracteres residuais e saída antecipada via tecla `ESC`.
 - **Estado dos Testes Gráficos**:
   - O pipeline de montagem e linkagem do exemplo gráfico (`sample/basic/chart.bas` -> `chart.com`) compila e empacota perfeitamente de ponta a ponta.
-  - A renderização em tela real/emulador sob o MSX-DOS 2 em hardware MSX2+ permanece em investigação para ajustes de inicialização de VRAM/VDP (motivo do codinome *Kuyashii (悔しい)* — expressando o sentimento de frustração respeitosa e determinação para a próxima sessão).
+  - A renderização em tela real/emulador sob o MSX-DOS 2 em hardware MSX2+ permanece em investigação para ajustes de inicialização de VRAM/VDP (motivo do codinome _Kuyashii (悔しい)_ — expressando o sentimento de frustração respeitosa e determinação para a próxima sessão).
 
 ---
 
 ## [4.5.0] - 2026-09-04 - Compilador MSX-BASIC Dignified DIGNAC
 
 ### Adicionado
+
 - **Compilador MSX-BASIC Dignified DIGNAC (`pkg/dignac` e `cmd/dignac`) - Fase 5.3**:
   - Nova ferramenta da toolchain para compilação de código BASIC estruturado para MSX2+ / MSX-DOS 2, emitindo objetos relocáveis `.MOB`.
   - **Modularidade e Paginação**: Suporte a diretivas `MODULE`, `BANK`, `PUBLIC` e `EXTERN`.
@@ -58,6 +79,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [4.4.0] - 2026-09-04 - Compilador Pascal WIRTH80
 
 ### Adicionado
+
 - **Compilador Pascal WIRTH80 (`pkg/wirth80` e `cmd/wirth80`)**:
   - Nova ferramenta da toolchain para compilação de código-fonte Pascal nativo para MSX2+ / MSX-DOS 2, gerando módulos objeto no formato `.MOB`.
   - **Análise Léxica e Sintática**: Suporte a identificadores, números (decimais e `$hex`), strings literais (`'...'`), comentários (`{ ... }`, `(* ... *)`, `// ...`), `program`, `var`, `begin ... end.`.
@@ -79,6 +101,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [4.3.3] - 2026-09-04
 
 ### Corrigido
+
 - **Suporte Aritmético de 16 bits no Assembler KAJI80 ([pkg/kaji80/assembler.go](pkg/kaji80/assembler.go))**:
   - Implementada a codificação e estimativa precisa de `SBC HL, ss` (`ED 42/52/62/72`) e `ADC HL, ss` (`ED 4A/5A/6A/7A`) de 16 bits.
   - Anteriormente, `SBC HL, DE` caía no caso ALU de 8 bits e montava incorretamente como `0xDE 0x00` (`SBC A, 00h`). Isso fazia o loop de cálculo de dígitos em `PrintDecDigit` entrar em um loop infinito no Z80 sem subtrair HL, travando a máquina antes de imprimir qualquer caractere e impedindo a execução de prosseguir para o som e retorno ao DOS.
@@ -93,6 +116,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [4.3.2] - 2026-09-04
 
 ### Corrigido
+
 - **Sincronização de Offsets no Assembler KAJI80 ([pkg/kaji80/assembler.go](pkg/kaji80/assembler.go))**:
   - Corrigida a estimativa de tamanho no Pass 1 para instruções ALU imediatas de 1 operando (ex: `CP n`, `SUB n`, `AND n`), que retornava 1 byte em vez de 2 bytes.
   - Corrigida a estimativa de tamanho para `LD (DE), A`, `LD (BC), A`, `LD A, (DE)` e `LD A, (BC)` que retornava 3 bytes em vez de 1 byte.
@@ -108,6 +132,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [4.3.1] - 2026-09-03
 
 ### Corrigido
+
 - **Conversão Decimal em `PrintDec16` ([lib/src/string.asm](lib/src/string.asm))**:
   - Reescrita da rotina de conversão para utilizar subtração sucessiva direta de potências de 10 sem endereçamento indexado `(IX+d)`, eliminando falha que impedia a exibição do resultado numérico.
 - **Preservação de Registradores em Chamadas BDOS ([lib/src/bdos.asm](lib/src/bdos.asm))**:
@@ -122,6 +147,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [4.3.0] - 2026-09-03 - Biblioteca Padrão MSXLIB
 
 ### Adicionado
+
 - **Biblioteca Padrão MSXLIB (`lib/src/` e `lib/msxlib.hlib`)**:
   - Pacote de 6 módulos modulares escritos em Z80 Assembly e empacotados em arquivo de biblioteca `.HLIB`:
     - `bdos`: Rotinas de chamada ao kernel MSX-DOS (`BDOS_Call`, `BDOS_PrintChar`, `BDOS_PrintString`, `BDOS_ReadChar`, `BDOS_Exit`).
@@ -144,6 +170,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [4.2.0] - 2026-09-03 - HAKO & Smart-Linking
 
 ### Adicionado
+
 - **Bibliotecário de Objetos HAKO (`pkg/hako` e `cmd/hako`)**:
   - Implementação do utilitário `hako` (箱) para gerenciamento de arquivos de biblioteca de objetos relocáveis.
   - Especificação e codificação do formato binário de arquivo de biblioteca **`.HLIB`**:
@@ -155,7 +182,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 - **Smart-Linking e Dead-Code Elimination no Linker MUSUBI**:
   - Suporte a inclusão de bibliotecas estáticas `.hlib` diretamente na linha de comando do `musubi` (`musubi main.mob math.hlib`).
   - Resolução transitiva inteligente de símbolos: apenas os módulos do `.hlib` contendo símbolos realmente referenciados por `main` ou por outros módulos ativos são extraídos e incluídos no binário final.
-  - Eliminação de código morto (*dead-code elimination*): módulos não referenciados no `.hlib` são descartados, mantendo o executável `.com` no menor tamanho possível.
+  - Eliminação de código morto (_dead-code elimination_): módulos não referenciados no `.hlib` são descartados, mantendo o executável `.com` no menor tamanho possível.
 - **Atualização do Script Mestre de Build ([build.ps1](build.ps1))**:
   - Adicionado `hako` à lista de ferramentas compiladas automaticamente para `distribute/bin/hako.exe` e incluído no pacote `.zip`.
 - **Documentação de Referência ([HELP.md](HELP.md))**:
@@ -166,6 +193,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [4.1.0] - 2026-09-03 - Release "Akatsuki" (暁 - Alvorecer)
 
 ### Adicionado
+
 - **Script Mestre de Build e Empacotamento ([build.ps1](build.ps1))**: Automação completa para compilação da toolchain, preparação do diretório `distribute/` e geração do arquivo compactado `kizuna-v4.1.0-dist.zip`.
 - **Instalador Interativo TUI ([cmd/installer/main.go](cmd/installer/main.go))**: Utilitário em modo texto com identidade visual japonesa, menu interativo, instalação automática dos binários, configuração automática da variável `PATH` do usuário no Windows e rotina de teste/validação da toolchain.
 - **Estrutura de Distribuição Organizada (`distribute/`)**:
@@ -181,6 +209,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [4.0.1] - 2026-09-03
 
 ### Adicionado
+
 - **Suporte Multi-Banco no Linker MUSUBI**: Alocação de módulos em bancos pagináveis (1..N) na Página 2 (`0x8000..0xBFFF`).
 - **Bootstrap Loader Automatizado**: Inserção automática de código de carga em `0x0100` que transfere os bancos embutidos no `.COM` para os segmentos da RAM expandida com indicador de progresso `[L]`.
 - **Alinhamento de Slot via Porta 0xA8**: Configuração automática no bootstrap para que a Página 2 assuma o mesmo slot primário da Página 1 (RAM do TPA), assegurando compatibilidade com cartuchos externos de MSX-DOS 2.
@@ -191,11 +220,13 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 - **Pacote Centralizado de Versão (`pkg/version`)**: Controle semântico unificado com exibição de versão e banner em `kaji80`, `musubi` e `mobdump`.
 
 ### Corrigido
+
 - **Falha/Aborto após `[L]`**: Removida chamada a vetor estático `0xF3A4` (que causava salto para memória não inicializada e aborto ao DOS em cartuchos externos) e substituída pela detecção oficial via `EXTBIO`.
 - **Sobrescrita do Banco 2 durante chamadas BDOS**: Resolvido problema em que rotinas de impressão BDOS (funções 02h e 09h) executadas dentro do Banco 2 faziam o kernel do MSX-DOS 2 restaurar a Página 2 para o Banco 1. Com a integração via `PUT_P2`, o kernel do DOS mantém o banco ativo correto.
 - **Leitura em Porta Somente-Escrita (0xFE)**: Substituída a instrução `IN A, (0xFE)` (que retorna `0xFF` por ser porta write-only na maioria dos mappers) por rastreamento em software na Área Comum.
 
 ### Validado
+
 - Validação completa com execução bem-sucedida em hardware real: MSX 2+ com 2048KB/4096KB de RAM mapeada e cartucho MSX-DOS 2 externo.
 
 ---
@@ -203,6 +234,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [3.0.0] - 2026-09-03
 
 ### Adicionado
+
 - **Linker Monobanco MUSUBI (`pkg/musubi` e `cmd/musubi`)**:
   - Resolução de símbolos globais `PUBLIC` e `EXTERN`.
   - Posicionamento de seções de código e dados a partir de `0x0100` (TPA do MSX-DOS).
@@ -219,9 +251,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [2.0.0] - 2026-09-03
 
 ### Adicionado
+
 - **Assembler Z80 KAJI80 (`pkg/kaji80` e `cmd/kaji80`)**:
   - Lexer modular com suporte a comentários Z80 (`;`), strings com caracteres de escape e múltiplos formatos de literais numéricos (hexadecimal, binário e decimal).
-  - Montador de dois passos (*two-pass assembler*) emitindo arquivos de objeto `.MOB`.
+  - Montador de dois passos (_two-pass assembler_) emitindo arquivos de objeto `.MOB`.
   - Diretivas suportadas: `MODULE`, `BANK`, `PUBLIC`, `EXTERN`, `EQU`, `ORG`, `DB` / `DEFB` / `BYTE`, `DW` / `DEFW` / `WORD`, `DS` / `DEFS` / `BLKB`, `ENDMOD` / `END`.
   - Conjunto de instruções Z80:
     - Controle: `NOP`, `HALT`, `DI`, `EI`, `EXX`, `EX DE, HL`, `EX AF, AF'`.
@@ -238,6 +271,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [1.0.0] - 2026-09-03
 
 ### Adicionado
+
 - **Pacote do Formato de Objeto Relocável .MOB (`pkg/mob`)**:
   - Estrutura binária em Little-Endian com cabeçalho `MOB1` (versão 1).
   - Segmentos tipados (`CODE`, `DATA`, `BSS`) com anotação de banco de memória (`0` = comum, `1..N` = paginável).
@@ -254,6 +288,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 ## [0.0.0] - 2026-09-03
 
 ### Adicionado
+
 - Primeira versão conceitual do projeto: nome, identidade das ferramentas (`KAJI80`, `WIRTH80`, `DIGNAC`, `MUSUBI`, `HAKO`, `OBI`) e especificação técnica inicial (`SPEC.md`).
 - Definição do escopo da linguagem Pascal alvo: fiel ao Turbo Pascal 4, com suporte a units.
 - Definição do modelo de memória: MSX2+, 256Kb ou mais com memory mapper, 4 páginas de 16Kb, janela comutável na página 2.

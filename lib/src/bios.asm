@@ -20,10 +20,13 @@ BDOS_ENTRY EQU 0005h
 BIOS_Call:
     PUSH AF
     PUSH HL
-    LD A, (EXPTBL)
-    LD H, A
-    LD L, 00h
-    PUSH HL
+    ; CALSLT espera em IY o slot-id armazenado em EXPTBL-1 (FCC0h).
+    ; O KAJI80 ainda não aceita LD IY,(nn), então copiamos o word por HL.
+    LD HL, 0FCC0h
+    LD E, (HL)
+    INC HL
+    LD D, (HL)
+    PUSH DE
     POP IY
     POP HL
     POP AF
@@ -181,8 +184,9 @@ BIOS_CHGMOD_Not0:
     CP 02h
     JR NZ, BIOS_CHGMOD_Other
 
-    ; Modo 2 (SCREEN 2): Chama INIGRP (0072h) da BIOS para configurar hardware e tabelas
-    LD IX, 0072h
+    ; Modo 2 (SCREEN 2): CHGMOD (005Fh) seleciona o modo indicado em A.
+    ; INIGRP (0072h) inicializa apenas o modo gráfico padrão (SCREEN 1).
+    LD IX, 005Fh
     CALL BIOS_Call
 
     ; Inicializa tabelas VRAM essenciais (Name Table 3x 0..255, Pattern, Color)

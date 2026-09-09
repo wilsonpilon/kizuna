@@ -55,7 +55,7 @@ Todos os inteiros de 16 bits são codificados em **Little-Endian** (padrão Z80)
 
 ## 2. O Assembler `KAJI80`
 
-O `KAJI80` (*kaji* = ferreiro/forjador) é o montador Z80 nativo do projeto Kizuna, escrito em Go. Ele monta arquivos `.asm` e emite objetos `.mob` compatíveis com paginação de memória.
+O `KAJI80` (_kaji_ = ferreiro/forjador) é o montador Z80 nativo do projeto Kizuna, escrito em Go. Ele monta arquivos `.asm` e emite objetos `.mob` compatíveis com paginação de memória.
 
 ### 2.1. Parâmetros de Linha de Comando
 
@@ -63,13 +63,14 @@ O `KAJI80` (*kaji* = ferreiro/forjador) é o montador Z80 nativo do projeto Kizu
 kaji80 [opções] <arquivo.asm>
 ```
 
-| Opção | Descrição |
-|---|---|
+| Opção            | Descrição                                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
 | `-o <saida.mob>` | Define o nome e caminho do arquivo `.mob` de saída. Por padrão, substitui a extensão `.asm` por `.mob`. |
-| `-v` | Modo detalhado (*verbose*): exibe contagem de segmentos, símbolos, relocações e bancos. |
-| `-h`, `--help` | Exibe a tela de ajuda completa no terminal. |
+| `-v`             | Modo detalhado (_verbose_): exibe contagem de segmentos, símbolos, relocações e bancos.                 |
+| `-h`, `--help`   | Exibe a tela de ajuda completa no terminal.                                                             |
 
 #### Exemplo de uso:
+
 ```bash
 # Montagem padrão
 kaji80 sample/hello.asm
@@ -82,37 +83,42 @@ kaji80 -v -o build/hello.mob sample/hello.asm
 
 ## 3. Diretivas Suportadas pelo `KAJI80`
 
-| Diretiva | Sintaxe | Descrição |
-|---|---|---|
-| `MODULE` | `MODULE <nome>` | Define o identificador do módulo. |
-| `BANK` | `BANK <n>` | Atribui o segmento ao banco de memória: `0` para a área comum fixa (`4000h..7FFFh`), ou `1..N` para bancos trocáveis na janela de paginação (`8000h..BFFFh`). |
-| `PUBLIC` | `PUBLIC sym1 [, sym2...]` | Exporta labels para outros módulos e para o linker. |
-| `EXTERN` | `EXTERN sym1 [, sym2...]` | Declara símbolos externos (importados de outros módulos ou rotinas de BIOS/BDOS). |
-| `EQU` | `<nome> EQU <valor>` | Define uma constante simbólica. Não gera relocation nem ocupa espaço em disco. |
-| `ORG` | `ORG <endereço>` | Ajusta a origem/offset base do segmento atual. |
-| `DB` / `DEFB` / `BYTE` | `DB item1, item2...` | Emite bytes ou strings literais de texto. |
-| `DW` / `DEFW` / `WORD` | `DW val1, val2...` | Emite palavras de 16 bits em Little-Endian. Suporta labels que geram relocações `ABS16`. |
-| `DS` / `DEFS` / `BLKB` | `DS <tamanho>` | Reserva espaço de `N` bytes preenchidos com zeros. |
-| `ENDMOD` / `END` | `ENDMOD` | Finaliza a declaração do módulo (opcional). |
+| Diretiva               | Sintaxe                   | Descrição                                                                                                                                                     |
+| ---------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MODULE`               | `MODULE <nome>`           | Define o identificador do módulo.                                                                                                                             |
+| `BANK`                 | `BANK <n>`                | Atribui o segmento ao banco de memória: `0` para a área comum fixa (`4000h..7FFFh`), ou `1..N` para bancos trocáveis na janela de paginação (`8000h..BFFFh`). |
+| `PUBLIC`               | `PUBLIC sym1 [, sym2...]` | Exporta labels para outros módulos e para o linker.                                                                                                           |
+| `EXTERN`               | `EXTERN sym1 [, sym2...]` | Declara símbolos externos (importados de outros módulos ou rotinas de BIOS/BDOS).                                                                             |
+| `EQU`                  | `<nome> EQU <valor>`      | Define uma constante simbólica. Não gera relocation nem ocupa espaço em disco.                                                                                |
+| `ORG`                  | `ORG <endereço>`          | Ajusta a origem/offset base do segmento atual.                                                                                                                |
+| `DB` / `DEFB` / `BYTE` | `DB item1, item2...`      | Emite bytes ou strings literais de texto.                                                                                                                     |
+| `DW` / `DEFW` / `WORD` | `DW val1, val2...`        | Emite palavras de 16 bits em Little-Endian. Suporta labels que geram relocações `ABS16`.                                                                      |
+| `DS` / `DEFS` / `BLKB` | `DS <tamanho>`            | Reserva espaço de `N` bytes preenchidos com zeros.                                                                                                            |
+| `ENDMOD` / `END`       | `ENDMOD`                  | Finaliza a declaração do módulo (opcional).                                                                                                                   |
 
 ---
 
 ## 4. Sintaxe e Literais Aceitos
 
 ### Comentários
+
 Iniciados pelo caractere `;` até o fim da linha:
+
 ```asm
 ; Isto é um comentário
 ld a, 2 ; comentário inline
 ```
 
 ### Formatos Numéricos
+
 - **Hexadecimal:** `0x100`, `100h`, `100H`, `$100`, `#100`
 - **Binário:** `%10100111`, `0b10100111`, `10100111b`
 - **Decimal:** `42`, `255`, `0`
 
 ### Strings
+
 Delimitadas por aspas duplas `"..."` ou simples `'...'`, com suporte a caracteres de escape:
+
 ```asm
 db "Hello\r\n", 0
 db 'MSX', 0x0D, 0x0A, '$'
@@ -125,6 +131,7 @@ db 'MSX', 0x0D, 0x0A, '$'
 O `KAJI80` cobre todas as instruções essenciais para controle, chamadas, fluxo, aritmética e movimentação:
 
 ### Controle e Estado
+
 - `NOP` (`0x00`)
 - `HALT` (`0x76`)
 - `DI` (`0xF3`), `EI` (`0xFB`)
@@ -132,6 +139,7 @@ O `KAJI80` cobre todas as instruções essenciais para controle, chamadas, fluxo
 - `EX DE, HL` (`0xEB`), `EX AF, AF'` (`0x08`)
 
 ### Fluxo e Chamadas
+
 - `RET` (`0xC9`) e `RET cc` (`NZ`, `Z`, `NC`, `C`, `PO`, `PE`, `P`, `M`)
 - `CALL nn` / `CALL sym` (`0xCD nnL nnH`) e `CALL cc, nn` (gera relocation `ABS16`)
 - `JP nn` / `JP sym` (`0xC3 nnL nnH`) e `JP cc, nn`
@@ -140,15 +148,18 @@ O `KAJI80` cobre todas as instruções essenciais para controle, chamadas, fluxo
 - `DJNZ e` (`0x10 e`)
 
 ### Pilha (Stack)
+
 - `PUSH rr` e `POP rr` para `BC`, `DE`, `HL`, `AF`
 - `PUSH IX` (`0xDD 0xE5`), `POP IX` (`0xDD 0xE1`)
 - `PUSH IY` (`0xFD 0xE5`), `POP IY` (`0xFD 0xE1`)
 
 ### Entrada e Saída (I/O)
+
 - `IN A, (n)` (`0xDB n`)
 - `OUT (n), A` (`0xD3 n`)
 
 ### Aritmética e Lógica
+
 - `INC r`, `DEC r` (8-bit: `A`, `B`, `C`, `D`, `E`, `H`, `L`)
 - `INC rr`, `DEC rr` (16-bit: `BC`, `DE`, `HL`, `SP`, `IX`, `IY`)
 - `ADD A, ...`, `ADC A, ...`, `SUB ...`, `SBC A, ...`, `AND ...`, `XOR ...`, `OR ...`, `CP ...`:
@@ -158,6 +169,7 @@ O `KAJI80` cobre todas as instruções essenciais para controle, chamadas, fluxo
 - `ADD IX, rr` (`BC`, `DE`, `IX`, `SP`)
 
 ### Movimentação de Dados (`LD`)
+
 - `LD r, r'` (cópia entre registradores de 8 bits)
 - `LD r, n` (carregamento imediato de 8 bits)
 - `LD r, (HL)` e `LD (HL), r`
@@ -184,7 +196,7 @@ go run ./cmd/mobdump sample/hello.mob
 
 ## 7. O Linker `MUSUBI`
 
-O `MUSUBI` (*musubi* = atar, amarrar) é o linker do KIZUNA. Ele é responsável por unir múltiplos objetos `.mob`, posicionar os segmentos em memória a partir do endereço base (padrão `0x0100` no MSX-DOS 2), resolver referências cruzadas entre símbolos e aplicar as relocações (`ABS16`, `REL8` e `BANKNUM`).
+O `MUSUBI` (_musubi_ = atar, amarrar) é o linker do KIZUNA. Ele é responsável por unir múltiplos objetos `.mob`, posicionar os segmentos em memória a partir do endereço base (padrão `0x0100` no MSX-DOS 2), resolver referências cruzadas entre símbolos e aplicar as relocações (`ABS16`, `REL8` e `BANKNUM`).
 
 ### 7.1. Parâmetros de Linha de Comando
 
@@ -192,14 +204,14 @@ O `MUSUBI` (*musubi* = atar, amarrar) é o linker do KIZUNA. Ele é responsável
 musubi [opções] <objeto.mob...> [biblioteca.hlib...]
 ```
 
-| Opção | Descrição |
-|---|---|
-| `-o <saida.com>` | Nome do executável de saída (padrão: nome do primeiro arquivo com extensão `.com`). |
-| `-m <mapa.map>` | Gera relatório de mapa de memória e tabela global de símbolos. |
-| `-b <endereço>` | Endereço base de carregamento (padrão: `0x0100` para a TPA do MSX-DOS 2). |
-| `-e <símbolo>` | Símbolo do ponto de entrada do programa (padrão: `Start`). |
-| `-v` | Modo detalhado (*verbose*): exibe relatório na tela com endereço base, ponto de entrada e tamanho final. |
-| `-h`, `--help` | Exibe a ajuda detalhada do linker. |
+| Opção            | Descrição                                                                                                |
+| ---------------- | -------------------------------------------------------------------------------------------------------- |
+| `-o <saida.com>` | Nome do executável de saída (padrão: nome do primeiro arquivo com extensão `.com`).                      |
+| `-m <mapa.map>`  | Gera relatório de mapa de memória e tabela global de símbolos.                                           |
+| `-b <endereço>`  | Endereço base de carregamento (padrão: `0x0100` para a TPA do MSX-DOS 2).                                |
+| `-e <símbolo>`   | Símbolo do ponto de entrada do programa (padrão: `Start`).                                               |
+| `-v`             | Modo detalhado (_verbose_): exibe relatório na tela com endereço base, ponto de entrada e tamanho final. |
+| `-h`, `--help`   | Exibe a ajuda detalhada do linker.                                                                       |
 
 ---
 
@@ -236,6 +248,7 @@ O grande diferencial do KIZUNA é quebrar a barreira dos 64KB através da Memory
 - **Bootstrap Loader:** Programas multi-banco geram um único arquivo `.COM` autocontido que copia os payloads de cada banco para as páginas estendidas de RAM na inicialização.
 
 ### Exemplo de Compilação Multi-Banco:
+
 ```bash
 # Montar cada módulo indicando seu banco no código-fonte (BANK 0, BANK 1, BANK 2...)
 kaji80 sample/multibank/main.asm  -o sample/multibank/main.mob
@@ -251,9 +264,10 @@ musubi -v -m sample/multibank/multibank.map -o sample/multibank/multibank.com \
 
 ## 10. O Bibliotecário de Objetos `HAKO` e o Formato `.HLIB`
 
-O **`HAKO`** (*hako* = caixa/baú) gerencia bibliotecas de arquivos objeto `.MOB` empacotadas no formato **`.HLIB`**.
+O **`HAKO`** (_hako_ = caixa/baú) gerencia bibliotecas de arquivos objeto `.MOB` empacotadas no formato **`.HLIB`**.
 
 ### 10.1. O Formato `.HLIB`
+
 - **Cabeçalho (14 bytes):** Magic `"HLIB"`, versão do formato (`1`), contagem de módulos, offset e contagem do dicionário de símbolos públicos.
 - **Tabela de Módulos:** Nome do módulo, offset e tamanho dos dados brutos do `.MOB`.
 - **Dicionário Global de Símbolos:** Mapeia todos os símbolos `PUBLIC` de todos os módulos para seus respectivos módulos de origem. Rejeita símbolos públicos duplicados na criação.
@@ -278,16 +292,41 @@ hako -x math.hlib math_add.mob
 
 O KIZUNA inclui uma biblioteca de rotinas padrão prontas para uso em `lib/msxlib.hlib`:
 
-| Módulo | Símbolos Exportados | Descrição |
-|---|---|---|
-| **`bdos`** | `BDOS_Call`, `BDOS_PrintChar`, `BDOS_PrintString`, `BDOS_ReadChar`, `BDOS_Exit` | Chamadas diretas ao kernel MSX-DOS (BDOS 0x0005). |
-| **`bios`** | `BIOS_Call`, `BIOS_CHPUT`, `BIOS_CHGET`, `BIOS_CLS`, `BIOS_POSIT`, `BIOS_BEEP`, `BIOS_INIT32` | Chamadas inter-slot seguras à Main-ROM BIOS via `CALSLT (0x0024)` preservando o estado do MSX-DOS. |
-| **`vdp`** | `VDP_WriteReg`, `VDP_SetWriteAddr`, `VDP_SetReadAddr`, `VDP_FillVRAM`, `VDP_WriteVRAM`, `VDP_ReadVRAM`, `VDP_SetColor` | Manipulação das portas I/O do processador de vídeo TMS9918 / V9938 / V9958 e acesso direto à VRAM. |
-| **`psg`** | `PSG_Write`, `PSG_Read`, `PSG_MuteAll`, `PSG_PlayTone` | Controle dos registradores de som do AY-3-8910 / YM2149, reprodução de notas e silenciamento. |
-| **`string`** | `StrLen`, `StrCopy`, `StrToUpper`, `PrintHex8`, `PrintHex16`, `PrintDec16` | Manipulação de textos terminados em zero (`\0`) e conversão de números para hexadecimal e decimal formatado. |
-| **`math`** | `Mul16`, `Div16` | Multiplicação e divisão inteira não sinalizada de 16 bits rápida por deslocamento e soma. |
+| Módulo       | Símbolos Exportados                                                                                                    | Descrição                                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **`bdos`**   | `BDOS_Call`, `BDOS_PrintChar`, `BDOS_PrintString`, `BDOS_ReadChar`, `BDOS_Exit`                                        | Chamadas diretas ao kernel MSX-DOS (BDOS 0x0005).                                                            |
+| **`bios`**   | `BIOS_Call`, `BIOS_CHPUT`, `BIOS_CHGET`, `BIOS_CLS`, `BIOS_POSIT`, `BIOS_BEEP`, `BIOS_INIT32`                          | Chamadas inter-slot seguras à Main-ROM BIOS via `CALSLT (0x0024)` preservando o estado do MSX-DOS.           |
+| **`vdp`**    | `VDP_WriteReg`, `VDP_SetWriteAddr`, `VDP_SetReadAddr`, `VDP_FillVRAM`, `VDP_WriteVRAM`, `VDP_ReadVRAM`, `VDP_SetColor` | Manipulação das portas I/O do processador de vídeo TMS9918 / V9938 / V9958 e acesso direto à VRAM.           |
+| **`psg`**    | `PSG_Write`, `PSG_Read`, `PSG_MuteAll`, `PSG_PlayTone`                                                                 | Controle dos registradores de som do AY-3-8910 / YM2149, reprodução de notas e silenciamento.                |
+| **`string`** | `StrLen`, `StrCopy`, `StrToUpper`, `PrintHex8`, `PrintHex16`, `PrintDec16`                                             | Manipulação de textos terminados em zero (`\0`) e conversão de números para hexadecimal e decimal formatado. |
+| **`math`**   | `Mul16`, `Div16`                                                                                                       | Multiplicação e divisão inteira não sinalizada de 16 bits rápida por deslocamento e soma.                    |
+
+### 11.1. Estado da depuração gráfica
+
+O exemplo [sample/screen2_test.asm](sample/screen2_test.asm) é o teste de
+referência atual. Ele já demonstrou que o executável consegue entrar em SCREEN
+2, escrever na VRAM, exibir um ponto e restaurar SCREEN 0 antes de retornar ao
+MSX-DOS 2.
+
+Ainda existem artefatos visuais cuja origem não foi isolada com segurança. Não
+considerar `VDP_PSet`, `VDP_Line`, `VDP_BoxFill` ou `chart.bas` visualmente
+validados. O `PRINT` da linguagem continua sendo saída textual via BDOS; ele não
+é uma rotina de texto gráfico para SCREEN 2.
+
+Checklist para a próxima sessão:
+
+1. Executar o teste mínimo com uma única célula 8x8.
+2. Comparar bytes de VRAM antes e depois da inicialização.
+3. Confirmar o mapeamento das três páginas verticais da Pattern Table.
+4. Confirmar o índice escrito na Name Table e o byte correspondente na Color
+   Table.
+5. Reintroduzir `VDP_PSet` somente após o teste direto permanecer sem artefatos.
+
+MSXgl e Fusion-C em `resource/` são referências de estudo e não são
+dependências da MSXLIB.
 
 ### Exemplo de Uso com Smart-Linking:
+
 ```bash
 # Linkando seu programa com a biblioteca MSXLIB
 # O MUSUBI inclui no .COM apenas os módulos utilizados pelo seu código
@@ -306,13 +345,13 @@ O **`WIRTH80`** (em homenagem a Niklaus Wirth) é o compilador da linguagem Pasc
 wirth80 [opções] <arquivo.pas>
 ```
 
-| Opção | Descrição |
-|---|---|
-| `-o <caminho>` | Define o arquivo de saída `.mob` (padrão: mesmo nome com extensão `.mob`). |
-| `-S` | Emite o código intermediário Assembly Z80 formatado (`.asm`) em vez de gerar o `.mob`. Excelente para inspeção, aprendizado e depuração. |
-| `-v` | Modo detalhado (*verbose*): exibe a contagem de segmentos, símbolos, relocações e o assembly gerado internamente. |
-| `--version` | Exibe a versão atual do compilador. |
-| `-h`, `--help` | Exibe a ajuda detalhada de uso. |
+| Opção          | Descrição                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `-o <caminho>` | Define o arquivo de saída `.mob` (padrão: mesmo nome com extensão `.mob`).                                                               |
+| `-S`           | Emite o código intermediário Assembly Z80 formatado (`.asm`) em vez de gerar o `.mob`. Excelente para inspeção, aprendizado e depuração. |
+| `-v`           | Modo detalhado (_verbose_): exibe a contagem de segmentos, símbolos, relocações e o assembly gerado internamente.                        |
+| `--version`    | Exibe a versão atual do compilador.                                                                                                      |
+| `-h`, `--help` | Exibe a ajuda detalhada de uso.                                                                                                          |
 
 ### 12.2. Recursos e Sintaxe Suportada (v4.4.0)
 
@@ -347,7 +386,7 @@ musubi -v -m sample/pascal/hello.map -o sample/pascal/hello.com \
 
 ## 13. O Compilador MSX-BASIC Dignified `DIGNAC`
 
-O **`DIGNAC`** (*Dignified-ac*) é o compilador da linguagem **MSX-BASIC Dignified** da toolchain KIZUNA. Ele traduz código BASIC estruturado diretamente para módulos relocáveis `.MOB` compatíveis com o linker `MUSUBI`, com suporte a bancos pagináveis e convenção de chamadas em pilha (ABI).
+O **`DIGNAC`** (_Dignified-ac_) é o compilador da linguagem **MSX-BASIC Dignified** da toolchain KIZUNA. Ele traduz código BASIC estruturado diretamente para módulos relocáveis `.MOB` compatíveis com o linker `MUSUBI`, com suporte a bancos pagináveis e convenção de chamadas em pilha (ABI).
 
 ### 13.1. Parâmetros de Linha de Comando
 
@@ -355,13 +394,13 @@ O **`DIGNAC`** (*Dignified-ac*) é o compilador da linguagem **MSX-BASIC Dignifi
 dignac [opções] <arquivo.bas>
 ```
 
-| Opção | Descrição |
-|---|---|
-| `-o <caminho>` | Define o arquivo de saída `.mob` (padrão: mesmo nome com extensão `.mob`). |
-| `-S` | Emite o código intermediário Assembly Z80 formatado (`.asm`) em vez de gerar o `.mob`. |
-| `-v` | Modo detalhado (*verbose*): exibe a contagem de segmentos, símbolos, relocações e o assembly gerado internamente. |
-| `--version` | Exibe a versão atual do compilador. |
-| `-h`, `--help` | Exibe a ajuda detalhada de uso. |
+| Opção          | Descrição                                                                                                         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `-o <caminho>` | Define o arquivo de saída `.mob` (padrão: mesmo nome com extensão `.mob`).                                        |
+| `-S`           | Emite o código intermediário Assembly Z80 formatado (`.asm`) em vez de gerar o `.mob`.                            |
+| `-v`           | Modo detalhado (_verbose_): exibe a contagem de segmentos, símbolos, relocações e o assembly gerado internamente. |
+| `--version`    | Exibe a versão atual do compilador.                                                                               |
+| `-h`, `--help` | Exibe a ajuda detalhada de uso.                                                                                   |
 
 ### 13.2. Recursos e Sintaxe Suportada (v4.5.0)
 
@@ -403,8 +442,3 @@ dignac -v sample/basic/hello.bas -o sample/basic/hello.mob
 musubi -v -m sample/basic/hello.map -o sample/basic/hello.com \
   sample/basic/hello.mob lib/msxlib.hlib
 ```
-
-
-
-
-

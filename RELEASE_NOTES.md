@@ -4,6 +4,28 @@
 
 A versão **v4.5.1** consolida a integração completa do compilador **`DIGNAC`** (MSX-BASIC Dignified) com o ecossistema KIZUNA, exporta os símbolos de desenho em tela da biblioteca **`MSXLIB`** e prepara o terreno para a depuração fina do subsistema gráfico TMS9918/V9938 na próxima iteração.
 
+## Estado técnico atual - SCREEN 2
+
+- **Validado:** entrada em SCREEN 2, escrita direta na VRAM, exibição de um
+  ponto e retorno ao prompt do MSX-DOS 2.
+- **Em investigação:** artefatos fixos na tela durante a inicialização e o
+  cálculo completo das relações entre Pattern Generator, Name Table, Color
+  Table e as três páginas verticais da SCREEN 2.
+- **Ainda não considerar concluído:** `VDP_PSet`, `VDP_Line`, `VDP_BoxFill`,
+  texto gráfico e o exemplo `sample/basic/chart.bas`.
+
+### Retomada da próxima sessão
+
+1. Reproduzir o teste mínimo e registrar os bytes de VRAM observados.
+2. Executar uma inicialização de SCREEN 2 baseada em uma única página e uma
+   única célula 8x8, sem `PSET` ou `LINE`.
+3. Confirmar o mapeamento entre Name Table, Pattern Table e Color Table.
+4. Revalidar `VDP_PSet` com uma única célula antes de implementar linhas.
+5. Só então avançar para `VDP_Line`, texto gráfico e o `chart.bas`.
+
+As fontes em `resource/MSXgl` e `resource/MSXFusionC` permanecem material de
+referência; não fazem parte do build da MSXLIB.
+
 ---
 
 # Release Notes — KIZUNA v4.5.0 "Hinode" (日の出)
@@ -83,4 +105,3 @@ distribute/
 
 - **Fase 6**: Orquestrador de build declarativo **OBI** (`Obifile`) para compilar e linkar projetos multi-linguagem em um único comando.
 - Construção da demo poliglota completa (`demo/`) unindo Pascal (`main.pas`), Assembly (`screen.asm`) e BASIC (`chart.bas`).
-

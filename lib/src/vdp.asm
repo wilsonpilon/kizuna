@@ -71,7 +71,17 @@ VDP_SetReadAddr:
 ; -----------------------------------------------------------------------------
 VDP_FillVRAM:
     PUSH AF
-    CALL VDP_SetWriteAddr
+    PUSH DE
+    DI
+    LD A, L
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    LD A, H
+    AND 3Fh
+    OR 40h
+    OUT (VDP_CMD), A
+    POP DE
     POP AF
 VDP_Fill_Loop:
     OUT (VDP_DATA), A
@@ -81,6 +91,7 @@ VDP_Fill_Loop:
     OR C
     LD A, D
     JR NZ, VDP_Fill_Loop
+    EI
     RET
 
 ; -----------------------------------------------------------------------------
@@ -214,12 +225,46 @@ VDP_InitScreen2_Tables:
     PUSH DE
     PUSH HL
 
-    ; 1. Inicializa a Pattern Name Table em 1800h (768 bytes = 3x 00h..FFh)
+    ; Reaplica a configuração de SCREEN 2 diretamente no VDP.
+    ; A MSXgl usa estes mesmos endereços: NT=1800h, CT=2000h, PT=0000h.
+    LD B, 02h
+    LD C, 00h
+    CALL VDP_WriteReg
+    LD B, 0E0h
+    LD C, 01h
+    CALL VDP_WriteReg
+    LD B, 06h
+    LD C, 02h
+    CALL VDP_WriteReg
+    LD B, 0FFh
+    LD C, 03h
+    CALL VDP_WriteReg
+    LD B, 03h
+    LD C, 04h
+    CALL VDP_WriteReg
+    LD B, 36h
+    LD C, 05h
+    CALL VDP_WriteReg
+    LD B, 07h
+    LD C, 06h
+    CALL VDP_WriteReg
+    ; Desabilita sprites durante os testes de SCREEN 2.
+    LD B, 02h
+    LD C, 08h
+    CALL VDP_WriteReg
+
+    ; 1. Inicializa a Pattern Name Table com 00h..FFh em cada faixa.
     LD HL, 1800h
-    CALL VDP_SetWriteAddr
+    DI
+    LD A, L
+    OUT (VDP_CMD), A
     NOP
     NOP
-    LD D, 3
+    LD A, H
+    AND 3Fh
+    OR 40h
+    OUT (VDP_CMD), A
+    LD D, 03h
 VDP_Init2_BlockLoop:
     XOR A
 VDP_Init2_ByteLoop:
@@ -232,6 +277,7 @@ VDP_Init2_ByteLoop:
     JR NZ, VDP_Init2_ByteLoop
     DEC D
     JR NZ, VDP_Init2_BlockLoop
+    EI
 
     ; 2. Limpa Pattern Generator Table (0000h..17FFh, 6144 bytes) com 00h
     LD HL, 0000h
@@ -245,15 +291,11 @@ VDP_Init2_ByteLoop:
     LD A, 0F1h
     CALL VDP_FillVRAM
 
-    ; 4. Desativa Sprites (coloca Y=208 em 1B00h)
+    ; 4. Desativa todos os sprites (Y=208 em toda a SAT)
     LD HL, 1B00h
-    CALL VDP_SetWriteAddr
-    NOP
-    NOP
-    NOP
-    NOP
+    LD BC, 0080h
     LD A, 0D0h
-    OUT (VDP_DATA), A
+    CALL VDP_FillVRAM
 
     POP HL
     POP DE
@@ -271,25 +313,46 @@ VDP_PSet:
     PUSH DE
     PUSH HL
 
-    LD (VDP_PSet_Col), A
-
-    ; HL = Pattern Table Address (0000h..17FFh)
-    ; H = Y >> 3
-    ; L = (X & 0xF8) | (Y & 0x07)
+    ; HL = endereço do padrão selecionado pela Name Table.
+    ; SCREEN 2 possui uma página de padrões para cada faixa vertical de 64 px.
+    ; Índice = ((Y >> 3) * 32 + (X >> 3)) & 0xFF; endereço = página + índice * 8 + (Y & 7).
+    LD A, E
+    AND 0C0h
+    RRCA
+    RRCA
+    RRCA
+    LD D, A
     LD A, E
     RRCA
     RRCA
     RRCA
-    AND 1Fh
-    LD H, A
-
-    LD A, C
-    AND 0F8h
+    AND 07h
+    ADD A, A
+    ADD A, A
+    ADD A, A
+    ADD A, A
+    ADD A, A
     LD L, A
+    LD A, C
+    SRL A
+    SRL A
+    SRL A
+    ADD A, L
+    LD L, A
+    LD H, 00h
+    SLA L
+    RL H
+    SLA L
+    RL H
+    SLA L
+    RL H
     LD A, E
     AND 07h
-    OR L
+    ADD A, L
     LD L, A
+    LD A, D
+    ADD A, H
+    LD H, A
 
     ; Bitmask: bit 7 - (X & 7)
     LD A, C
@@ -304,20 +367,8 @@ VDP_PSet_MaskLoop:
 VDP_PSet_MaskDone:
     LD C, A
 
-    ; 1. Lê byte do padrão da VRAM
-    CALL VDP_SetReadAddr
-    NOP
-    NOP
-    NOP
-    NOP
-    NOP
-    NOP
-    NOP
-    IN A, (VDP_DATA)
-    OR C
-    LD B, A
-
-    ; 2. Grava byte do padrão de volta na VRAM
+    ; Escreve diretamente a mascara no byte do padrao.
+    ; Nesta etapa cada ponto ocupa uma celula 8x8 independente.
     CALL VDP_SetWriteAddr
     NOP
     NOP
@@ -326,32 +377,16 @@ VDP_PSet_MaskDone:
     NOP
     NOP
     NOP
-    LD A, B
+    LD A, C
     OUT (VDP_DATA), A
 
-    ; 3. Atualiza Color Table (2000h..37FFh)
-    SET 5, H
-    CALL VDP_SetWriteAddr
-    LD A, (VDP_PSet_Col)
-    AND 0Fh
-    SLA A
-    SLA A
-    SLA A
-    SLA A
-    OR 01h        ; Cor de fundo 1 (preto)
-    NOP
-    NOP
-    NOP
-    NOP
-    OUT (VDP_DATA), A
+    ; A Color Table ja foi inicializada com F1h (branco sobre preto).
+    ; A atualizacao de cor por pixel sera adicionada depois do PSET basico.
 
     POP HL
     POP DE
     POP BC
     RET
-
-VDP_PSet_Col:
-    DB 0Fh
 
 ; -----------------------------------------------------------------------------
 ; VDP_BoxFill: Preenche uma região retangular na tela (SCREEN 2)
