@@ -10,31 +10,31 @@ Tamanho do .COM:   540 bytes (0x021C)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x0197 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   151 bytes
-[ 1] 0x0197 - 0x023D | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:   166 bytes
-[ 2] 0x023D - 0x027F | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    66 bytes
-[ 3] 0x027F - 0x02DE | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:    95 bytes
-[ 4] 0x02DE - 0x031C | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:    62 bytes
+[ 1] 0x0197 - 0x01F6 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    95 bytes
+[ 2] 0x01F6 - 0x0234 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    62 bytes
+[ 3] 0x0234 - 0x02DA | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:   166 bytes
+[ 4] 0x02DA - 0x031C | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:    66 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
 0x013E [Banco  0] PROC MsgIntro
 0x016A [Banco  0] PROC MsgDone
-0x0197 [Banco  0] PROC StrLen
-0x01A5 [Banco  0] PROC StrCopy
-0x01B5 [Banco  0] PROC StrToUpper
-0x01CC [Banco  0] PROC PrintHex8
-0x01D9 [Banco  0] PROC PrintNibble
-0x01EA [Banco  0] PROC PrintHex16
-0x01F5 [Banco  0] PROC PrintDec16
-0x021F [Banco  0] PROC PrintDecDigit
-0x023D [Banco  0] PROC Mul16
-0x0252 [Banco  0] PROC Div16
-0x027F [Banco  0] PROC PSG_Write
-0x0285 [Banco  0] PROC PSG_Read
-0x028A [Banco  0] PROC PSG_MuteAll
-0x02A7 [Banco  0] PROC PSG_PlayTone
-0x02DE [Banco  0] PROC BDOS_Call
-0x02E2 [Banco  0] PROC BDOS_PrintChar
-0x02F8 [Banco  0] PROC BDOS_PrintString
-0x030E [Banco  0] PROC BDOS_ReadChar
-0x0316 [Banco  0] PROC BDOS_Exit
+0x0197 [Banco  0] PROC PSG_Write
+0x019D [Banco  0] PROC PSG_Read
+0x01A2 [Banco  0] PROC PSG_MuteAll
+0x01BF [Banco  0] PROC PSG_PlayTone
+0x01F6 [Banco  0] PROC BDOS_Call
+0x01FA [Banco  0] PROC BDOS_PrintChar
+0x0210 [Banco  0] PROC BDOS_PrintString
+0x0226 [Banco  0] PROC BDOS_ReadChar
+0x022E [Banco  0] PROC BDOS_Exit
+0x0234 [Banco  0] PROC StrLen
+0x0242 [Banco  0] PROC StrCopy
+0x0252 [Banco  0] PROC StrToUpper
+0x0269 [Banco  0] PROC PrintHex8
+0x0276 [Banco  0] PROC PrintNibble
+0x0287 [Banco  0] PROC PrintHex16
+0x0292 [Banco  0] PROC PrintDec16
+0x02BC [Banco  0] PROC PrintDecDigit
+0x02DA [Banco  0] PROC Mul16
+0x02EF [Banco  0] PROC Div16

@@ -10,27 +10,27 @@ Tamanho do .COM:   733 bytes (0x02DD)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x02B7 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   439 bytes
-[ 1] 0x02B7 - 0x02F5 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    62 bytes
-[ 2] 0x02F5 - 0x0337 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    66 bytes
+[ 1] 0x02B7 - 0x02F9 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    66 bytes
+[ 2] 0x02F9 - 0x0337 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    62 bytes
 [ 3] 0x0337 - 0x03DD | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:   166 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
 0x0106 [Banco  0] PROC Main
-0x0202 [Banco  0] PROC StrLit_3
-0x0208 [Banco  0] PROC StrLit_4
-0x020E [Banco  0] PROC StrLit_5
-0x0228 [Banco  0] PROC StrLit_6
-0x0246 [Banco  0] PROC StrLit_7
-0x0265 [Banco  0] PROC StrLit_1
-0x028E [Banco  0] PROC StrLit_2
-0x02B7 [Banco  0] PROC BDOS_Call
-0x02BB [Banco  0] PROC BDOS_PrintChar
-0x02D1 [Banco  0] PROC BDOS_PrintString
-0x02E7 [Banco  0] PROC BDOS_ReadChar
-0x02EF [Banco  0] PROC BDOS_Exit
-0x02F5 [Banco  0] PROC Mul16
-0x030A [Banco  0] PROC Div16
+0x0202 [Banco  0] PROC StrLit_5
+0x021C [Banco  0] PROC StrLit_6
+0x023A [Banco  0] PROC StrLit_7
+0x0259 [Banco  0] PROC StrLit_1
+0x0282 [Banco  0] PROC StrLit_2
+0x02AB [Banco  0] PROC StrLit_3
+0x02B1 [Banco  0] PROC StrLit_4
+0x02B7 [Banco  0] PROC Mul16
+0x02CC [Banco  0] PROC Div16
+0x02F9 [Banco  0] PROC BDOS_Call
+0x02FD [Banco  0] PROC BDOS_PrintChar
+0x0313 [Banco  0] PROC BDOS_PrintString
+0x0329 [Banco  0] PROC BDOS_ReadChar
+0x0331 [Banco  0] PROC BDOS_Exit
 0x0337 [Banco  0] PROC StrLen
 0x0345 [Banco  0] PROC StrCopy
 0x0355 [Banco  0] PROC StrToUpper

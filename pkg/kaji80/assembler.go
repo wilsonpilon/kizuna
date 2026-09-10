@@ -154,9 +154,24 @@ func (a *Assembler) Assemble(source string) (*mob.ObjectFile, error) {
 			// Diretivas já tratadas
 			continue
 		default:
+			// Verificação de consistência interna: o tamanho que o Pass 1
+			// estimou para esta linha (usado para calcular o endereço de
+			// TODO rótulo declarado depois dela) precisa bater exatamente
+			// com o número de bytes que o Pass 2 realmente emite agora.
+			// Uma divergência aqui corrompe silenciosamente a tabela de
+			// símbolos do módulo inteiro (foi exatamente a causa de dois
+			// bugs reais encontrados em 2026-09-10: LD A,(rótulo) e DB
+			// com rótulo, ambos subestimados em 1 byte no Pass 1).
+			estSize, estErr := a.estimateSize(upperMnem, line.operands, line.rawTokens)
+			beforeLen := len(a.codeBytes)
 			err := a.encodeInstruction(upperMnem, line.operands, line.rawTokens, line.lineNum)
 			if err != nil {
 				return nil, fmt.Errorf("linha %d: erro ao codificar '%s': %w", line.lineNum, line.mnemonic, err)
+			}
+			actualSize := uint16(len(a.codeBytes) - beforeLen)
+			if estErr == nil && actualSize != estSize {
+				return nil, fmt.Errorf("linha %d: inconsistência interna do assembler em '%s': Pass 1 estimou %d byte(s), Pass 2 emitiu %d byte(s) -- isso desalinharia os rótulos seguintes no módulo (bug no KAJI80, não no código-fonte)",
+					line.lineNum, line.mnemonic, estSize, actualSize)
 			}
 		}
 	}
@@ -409,8 +424,20 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 	case "LD":
 		return a.estimateLdSize(ops)
 	case "DB", "DEFB", "BYTE":
+		// tokens é a linha inteira, que pode ter um rótulo (+ ':') antes do
+		// mnemônico ("rotulo: DB valor"); tokens[1:] simplesmente pular o
+		// primeiro token não é suficiente nesse caso -- ainda sobra o
+		// próprio token do mnemônico "DB" dentro da fatia, sendo contado
+		// como se fosse mais um operando e inflando o tamanho estimado em
+		// 1 byte (o que desalinha todo rótulo declarado depois no módulo).
+		// Em vez disso, localizamos o token do mnemônico e pulamos ele.
+		start := 0
+		for start < len(tokens) && !strings.EqualFold(tokens[start].Value, mnem) {
+			start++
+		}
+		start++ // pula o próprio mnemônico
 		var total uint16
-		for _, tok := range tokens[1:] {
+		for _, tok := range tokens[start:] {
 			if tok.Type == TokenString {
 				total += uint16(len(tok.Value))
 			} else if tok.Type == TokenNumber || tok.Type == TokenIdentifier {
@@ -475,6 +502,17 @@ func (a *Assembler) estimateLdSize(ops []string) (uint16, error) {
 		// LD r, (HL)
 		if src == "(HL)" {
 			return 1, nil
+		}
+		// LD A, (BC) / LD A, (DE)
+		if dst == "A" && (src == "(BC)" || src == "(DE)") {
+			return 1, nil
+		}
+		// LD A, (nn) -- precisa ser checado antes do fallback "LD r, n"
+		// abaixo, senão um endereco/rotulo entre parenteses e confundido
+		// com um imediato de 8 bits, subestimando o tamanho real (3 bytes)
+		// em 1 byte e desalinhando todos os rotulos seguintes no modulo.
+		if dst == "A" && strings.HasPrefix(src, "(") {
+			return 3, nil
 		}
 		// LD r, n
 		return 2, nil
@@ -782,7 +820,17 @@ func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token,
 	case "LD":
 		return a.encodeLd(ops)
 	case "DB", "DEFB", "BYTE":
-		for _, tok := range tokens[1:] {
+		// Mesmo cuidado do Pass 1 (estimateSize): tokens é a linha inteira,
+		// que pode ter um rótulo (+ ':') antes do mnemônico. tokens[1:]
+		// sozinho ainda deixa o próprio token "DB" na fatia, fazendo-o ser
+		// emitido como se fosse um byte de dado (via parseImm8), gerando
+		// um byte a mais do que o Pass 1 previu.
+		start := 0
+		for start < len(tokens) && !strings.EqualFold(tokens[start].Value, mnem) {
+			start++
+		}
+		start++ // pula o próprio mnemônico
+		for _, tok := range tokens[start:] {
 			if tok.Type == TokenString {
 				for i := 0; i < len(tok.Value); i++ {
 					a.emit(tok.Value[i])

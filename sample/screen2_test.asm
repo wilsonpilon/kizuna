@@ -5,7 +5,7 @@ MODULE Screen2Test
 BANK 0
 PUBLIC Start
 EXTERN VDP_InitScreen2_Tables, VDP_SetWriteAddr
-EXTERN BDOS_ReadChar, BDOS_Exit
+EXTERN BIOS_CHGET, BDOS_Exit
 EXTERN BIOS_CHGMOD
 
 Start:
@@ -20,8 +20,12 @@ Start:
     OUT (0098h), A
 
     ; Mantem a imagem na tela ate uma tecla.
-    CALL BDOS_ReadChar
-    ; Restaura a tela de texto antes de devolver o controle ao DOS.
+    ; NOTA: BDOS_ReadChar (funcao 01h) ativa o cursor piscante de edicao de
+    ; linha do MSX-DOS, que grava/inverte um bloco 8x8 na Name/Pattern Table
+    ; atual -- exatamente a VRAM que a SCREEN 2 esta usando para o desenho.
+    ; BIOS_CHGET (funcao 06h, raw, sem eco/cursor) evita esse efeito colateral.
+    CALL BIOS_CHGET
+    ; A captura da VRAM deve ser feita antes da tecla; depois restaura o DOS.
     XOR A
     CALL BIOS_CHGMOD
     JP BDOS_Exit

@@ -301,26 +301,37 @@ O KIZUNA inclui uma biblioteca de rotinas padrão prontas para uso em `lib/msxli
 | **`string`** | `StrLen`, `StrCopy`, `StrToUpper`, `PrintHex8`, `PrintHex16`, `PrintDec16`                                             | Manipulação de textos terminados em zero (`\0`) e conversão de números para hexadecimal e decimal formatado. |
 | **`math`**   | `Mul16`, `Div16`                                                                                                       | Multiplicação e divisão inteira não sinalizada de 16 bits rápida por deslocamento e soma.                    |
 
-### 11.1. Estado da depuração gráfica
+### 11.1. Estado da depuração gráfica (em aberto)
 
-O exemplo [sample/screen2_test.asm](sample/screen2_test.asm) é o teste de
-referência atual. Ele já demonstrou que o executável consegue entrar em SCREEN
-2, escrever na VRAM, exibir um ponto e restaurar SCREEN 0 antes de retornar ao
-MSX-DOS 2.
+**O traçado em SCREEN 2 ainda não está confiável.** Isolado, um único
+`VDP_PSet` funciona corretamente — inclusive duas chamadas separadas e
+independentes funcionam perfeitamente (ver `sample/basic/pset_test.bas` e
+`sample/basic/pset_two.bas`). O problema está especificamente no laço interno
+de `VDP_Line`/`VDP_BoxFill` (muitos pontos plotados em sequência apertada):
+o resultado sai com pixels dispersos e desconexos em vez de uma linha contínua
+(ver `sample/basic/line_test.bas`, o teste mínimo de reprodução: uma única
+`LINE` horizontal).
 
-Ainda existem artefatos visuais cuja origem não foi isolada com segurança. Não
-considerar `VDP_PSet`, `VDP_Line`, `VDP_BoxFill` ou `chart.bas` visualmente
-validados. O `PRINT` da linguagem continua sendo saída textual via BDOS; ele não
-é uma rotina de texto gráfico para SCREEN 2.
+Já tentado e **descartado** por não resolver: mais `NOP`s de folga entre
+operações de VRAM; tornar o laço inteiro atômico com um único `DI`/`EI` em vez
+de por-chamada; usar o motor de comando de hardware do V9938/V9958
+(registradores 32-46) em vez do cálculo manual de endereço — esse motor só
+funciona nos modos bitmap Graphic 4-7 (SCREEN 5-8), nunca em SCREEN 2
+(confirmado via documentação técnica externa), e fica preservado em
+`VDP_PSet_HW` para quando a MSXLIB ganhar suporte a esses modos. O laço de
+`VDP_Line` foi revisado byte a byte contra o `.MOB` montado e está
+semanticamente correto — a causa raiz segue sem confirmação.
 
-Checklist para a próxima sessão:
+Nessa investigação (2026-09-10) foram encontrados e corrigidos, à parte,
+dois bugs reais de dessincronia Pass 1/Pass 2 no assembler `KAJI80` (que
+corrompiam silenciosamente endereços de rótulo — ver `CHANGELOG.md`) e um bug
+de salto relativo no linker `MUSUBI`. O `KAJI80` agora verifica essa
+consistência internamente a cada montagem.
 
-1. Executar o teste mínimo com uma única célula 8x8.
-2. Comparar bytes de VRAM antes e depois da inicialização.
-3. Confirmar o mapeamento das três páginas verticais da Pattern Table.
-4. Confirmar o índice escrito na Name Table e o byte correspondente na Color
-   Table.
-5. Reintroduzir `VDP_PSet` somente após o teste direto permanecer sem artefatos.
+Próximo passo sugerido: um dump de VRAM (formato texto `0x80, 0x00, ...`,
+como o já usado nesta investigação) tirado durante uma chamada de
+`VDP_Line`, comparando o endereço realmente escrito contra o calculado à mão
+para cada X, para achar onde os dois divergem.
 
 MSXgl e Fusion-C em `resource/` são referências de estudo e não são
 dependências da MSXLIB.

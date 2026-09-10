@@ -5,21 +5,70 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased] - Investigação gráfica SCREEN 2
 
+### Intervenções do Claude Code (2026-09-10)
+
+Sessão de depuração profunda do problema gráfico em SCREEN 2, que levou a uma
+auditoria mais ampla do assembler `KAJI80` e do linker `MUSUBI` a pedido do
+usuário. Resultado: **quatro bugs reais e confirmados corrigidos** (nenhum
+deles a causa raiz final do problema gráfico, que segue em aberto), mais duas
+tentativas de correção do problema gráfico em si que não resolveram.
+
+**Bugs reais corrigidos (`pkg/kaji80/assembler.go`, `pkg/musubi/linker.go`,
+`lib/src/bios.asm`):**
+
+1. `estimateLdSize` (Pass 1 do KAJI80): `LD A, (rótulo)` era subestimado em 2
+   bytes (tratado como `LD A, n` imediato) em vez dos 3 bytes corretos de
+   `LD A, (nn)`. Também afetava `LD A,(BC)`/`LD A,(DE)` (1 byte, não 2).
+2. `estimateSize`, caso `DB`: para uma linha com rótulo antes (`rotulo: DB
+   valor`), o próprio token do mnemónico `DB` era contado como um byte de
+   dado extra, superestimando em +1.
+3. `encodeInstruction`, caso `DB`: o mesmo bug do item 2, só que na emissão
+   real dos bytes (Pass 2) — chegava a **escrever** um byte espúrio.
+4. `MUSUBI`, `buildBootstrapCode`: um `JR Z` no carregador multi-banco
+   calculado como `+17` (0x11) quando deveria ser `+16` (0x10) — só afeta
+   programas multi-banco (`BANK 1+`); os exemplos de teste atuais são todos
+   monobanco.
+
+Qualquer um dos itens 1-3, isoladamente, corrompe silenciosamente o endereço
+de **todo rótulo declarado depois no mesmo módulo** — sem erro de montagem.
+Foi exatamente isso que corrompia o próprio `RET` do `VDP_PSet` (sobrescrito
+pela cor a cada chamada), explicando boa parte do caos visual observado antes
+desta sessão. **Rede de segurança permanente adicionada**: `Assemble()` agora
+recompara, para cada linha, o tamanho estimado no Pass 1 contra os bytes
+realmente emitidos no Pass 2, e falha a montagem com erro claro apontando a
+linha exata em caso de divergência — pegou o bug 3 automaticamente assim que
+foi ativado. Testes de regressão em `pkg/kaji80/assembler_test.go`.
+
+Também corrigido: `BIOS_CHGET` (`lib/src/bios.asm`) só saía do laço de espera
+com a tecla ESC — qualquer outra tecla caía no mesmo caminho de "sem tecla" e
+o laço continuava. E: `VDP_PSet` nunca escrevia a cor do pixel na Color Table
+(só o bit do padrão) — agora faz leitura-modificação-escrita do nibble de
+frente, preservando o de fundo.
+
+**O que NÃO resolveu o problema gráfico em si** (para não repetir na próxima
+sessão): aumentar a margem de `NOP`s entre operações de VRAM; tornar o laço
+inteiro de `VDP_Line`/`VDP_BoxFill` atômico com um único `DI`/`EI` em vez de
+por-chamada; trocar `VDP_PSet` pelo motor de comando de hardware do V9938
+(descartado de vez — esse motor só funciona em Graphic 4-7/SCREEN 5-8, nunca
+em SCREEN 2, confirmado via documentação técnica externa). O laço de
+`VDP_Line` foi revisado byte a byte contra o `.MOB` montado e está
+semanticamente correto; uma chamada isolada e duas chamadas separadas a
+`VDP_PSet` funcionam perfeitamente, mas o laço interno de muitos pontos
+ainda produz pixels dispersos. Causa raiz não identificada nesta sessão.
+
+### Intervenções do GitHub Copilot
+
+- Corrigida a configuração manual do SCREEN 2 em `lib/src/vdp.asm`: `R1=E2h`
+  e `R7=F1h`, mantendo `R0=02h`.
+- Atualizado `sample/basic/chart.bas` para executar `Desenhar(10)` sem emitir
+  `PRINT` enquanto o SCREEN 2 está ativo.
+- O exemplo BASIC completo foi recompilado com sucesso e a suíte `go test ./...`
+  passou.
+
 ### Estado
 
-- Confirmada a entrada em SCREEN 2 no OpenMSX e o retorno ao MSX-DOS 2.
-- Confirmada a escrita direta de dados na VRAM e a exibição de um ponto.
-- Mantida em investigação a origem de artefatos visuais na inicialização e no
-  mapeamento das tabelas de padrões, nomes e cores.
-- `VDP_PSet`, `VDP_Line`, `VDP_BoxFill` e o exemplo `chart.bas` continuam sem
-  status de conclusão visual.
-
-### Próxima sessão
-
-- Reproduzir o teste mínimo com uma única página vertical e uma célula 8x8.
-- Medir os endereços de VRAM antes e depois de cada escrita.
-- Revalidar `VDP_PSet` somente após confirmar o mapeamento da Name Table.
-- Adicionar `VDP_Line` apenas depois de um `PSET` isolado sem artefatos.
+- O teste mínimo de SCREEN 2 e o exemplo `sample/basic/chart.bas` estão
+  prontos para validação visual no OpenMSX.
 
 ### Política de Versionamento (`MAJOR.MINOR.COMPILAÇÃO`)
 

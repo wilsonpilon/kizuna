@@ -7,21 +7,32 @@
 MODULE VDP
 BANK 0
 
-PUBLIC VDP_WriteReg, VDP_SetWriteAddr, VDP_SetReadAddr
+PUBLIC VDP_WriteReg, VDP_WriteReg_Raw, VDP_SetWriteAddr, VDP_SetReadAddr
 PUBLIC VDP_FillVRAM, VDP_WriteVRAM, VDP_ReadVRAM, VDP_CopyVRAM, VDP_SetColor
 PUBLIC VDP_SetScreen, VDP_InitScreen2, VDP_InitScreen1, VDP_InitScreen0, VDP_InitScreen2_Tables
-PUBLIC VDP_PSet, VDP_Line, VDP_BoxFill
+PUBLIC VDP_PSet, VDP_PSet_Raw, VDP_PSet_HW, VDP_CommandWait_Raw, VDP_Line, VDP_BoxFill
 EXTERN BIOS_CHGMOD
 
 VDP_DATA EQU 0098h
 VDP_CMD  EQU 0099h
 
 ; -----------------------------------------------------------------------------
-; VDP_WriteReg: Escreve valor em um registrador do VDP
-; Entrada: C = número do registrador (0..23), B = valor a escrever
+; VDP_WriteReg: Escreve valor em um registrador do VDP (0..46 no V9938/V9958;
+; 0..23 nos MSX1/TMS9918 originais)
+; Entrada: C = número do registrador, B = valor a escrever
 ; -----------------------------------------------------------------------------
 VDP_WriteReg:
     DI
+    CALL VDP_WriteReg_Raw
+    EI
+    RET
+
+; -----------------------------------------------------------------------------
+; VDP_WriteReg_Raw: mesma logica do VDP_WriteReg, sem DI/EI proprios -- para
+; ser chamada em sequencia (varios registradores) dentro de um unico DI/EI
+; externo (ex: VDP_PSet_Raw configurando R#36-46 de uma vez).
+; -----------------------------------------------------------------------------
+VDP_WriteReg_Raw:
     LD A, B
     OUT (VDP_CMD), A
     NOP
@@ -29,7 +40,6 @@ VDP_WriteReg:
     LD A, C
     OR 80h
     OUT (VDP_CMD), A
-    EI
     RET
 
 ; -----------------------------------------------------------------------------
@@ -230,7 +240,7 @@ VDP_InitScreen2_Tables:
     LD B, 02h
     LD C, 00h
     CALL VDP_WriteReg
-    LD B, 0E0h
+    LD B, 0E2h
     LD C, 01h
     CALL VDP_WriteReg
     LD B, 06h
@@ -248,9 +258,8 @@ VDP_InitScreen2_Tables:
     LD B, 07h
     LD C, 06h
     CALL VDP_WriteReg
-    ; Desabilita sprites durante os testes de SCREEN 2.
-    LD B, 02h
-    LD C, 08h
+    LD B, 0F1h
+    LD C, 07h
     CALL VDP_WriteReg
 
     ; 1. Inicializa a Pattern Name Table com 00h..FFh em cada faixa.
@@ -309,6 +318,107 @@ VDP_Init2_ByteLoop:
 ; Preserva: BC, DE, HL
 ; -----------------------------------------------------------------------------
 VDP_PSet:
+    ; Wrapper publico: torna UMA chamada isolada atomica. Rotinas que
+    ; plotam MUITOS pontos em sequencia (VDP_Line, VDP_BoxFill) NAO devem
+    ; usar este wrapper por ponto -- preferem chamar VDP_PSet_Raw
+    ; diretamente dentro do PROPRIO DI/EI (unico, cobrindo o laco inteiro),
+    ; para nao reabrir interrupcoes a cada pixel.
+    ;
+    ; Implementacao: calculo manual de endereco na Pattern/Name/Color
+    ; Table (ver VDP_PSet_Raw). O motor de comando de hardware do
+    ; V9938/V9958 (registradores 36-46) NAO funciona em SCREEN 2 -- so
+    ; opera nos modos bitmap Graphic 4-7 (SCREEN 5-8) -- por isso nao e
+    ; usado aqui; ficou implementado em VDP_PSet_HW para quando a MSXLIB
+    ; ganhar suporte a esses modos.
+    DI
+    CALL VDP_PSet_Raw
+    EI
+    RET
+
+; -----------------------------------------------------------------------------
+; VDP_PSet_HW: motor de comando de hardware do V9938/V9958 (comando PSET,
+; R#36-46) -- sem DI/EI proprios, deve ser chamada apenas com interrupcoes
+; ja desabilitadas pelo chamador. Entrada/Saida: identicas ao VDP_PSet.
+;
+; ATENCAO: o motor de comando do V9938/V9958 SO funciona nos modos bitmap
+; (Graphic 4-7 / SCREEN 5-8) -- confirmado via documentacao tecnica externa
+; em 2026-09-10. Em SCREEN 2 (Graphic 2, modo baseado em Pattern/Name/Color
+; Table como este), os comandos sao aceitos pelos registradores mas NAO tem
+; efeito visivel algum. NAO USAR esta rotina para SCREEN 2 -- mantida aqui
+; apenas para quando a MSXLIB ganhar suporte a SCREEN 5+ (Graphic 4-7).
+; -----------------------------------------------------------------------------
+VDP_PSet_HW:
+    PUSH BC
+    PUSH DE
+    PUSH AF
+    CALL VDP_CommandWait_Raw  ; garante que um comando anterior ja terminou
+
+    LD B, C
+    LD C, 24h                 ; R#36 = X (low)
+    CALL VDP_WriteReg_Raw
+    LD B, 00h
+    LD C, 25h                 ; R#37 = X (high, sempre 0: X < 256)
+    CALL VDP_WriteReg_Raw
+    LD B, E
+    LD C, 26h                 ; R#38 = Y (low)
+    CALL VDP_WriteReg_Raw
+    LD B, D
+    LD C, 27h                 ; R#39 = Y (high, sempre 0: Y < 256)
+    CALL VDP_WriteReg_Raw
+
+    POP AF                    ; recupera a cor original
+    PUSH AF
+    LD B, A
+    LD C, 2Ch                 ; R#44 = Cor
+    CALL VDP_WriteReg_Raw
+    LD B, 00h
+    LD C, 2Dh                 ; R#45 = Argumento (0 = operacao normal)
+    CALL VDP_WriteReg_Raw
+    LD B, 50h                 ; 50h = comando PSET, operacao logica 0 (copia)
+    LD C, 2Eh                 ; R#46 = Comando -- escrever aqui dispara
+    CALL VDP_WriteReg_Raw
+
+    CALL VDP_CommandWait_Raw  ; aguarda ESTE PSET terminar antes de retornar
+
+    POP AF
+    POP DE
+    POP BC
+    RET
+
+; -----------------------------------------------------------------------------
+; VDP_CommandWait_Raw: aguarda o motor de comando do V9938/V9958 ficar
+; livre (bit CE=0 do registrador de status S#2). Sem DI/EI proprios.
+; -----------------------------------------------------------------------------
+VDP_CommandWait_Raw:
+    PUSH AF
+    PUSH BC
+    LD B, 02h
+    LD C, 0Fh
+    CALL VDP_WriteReg_Raw      ; R#15 = 2 (seleciona S#2 para leitura)
+VDP_CommandWait_Loop:
+    IN A, (VDP_CMD)
+    AND 01h                    ; bit0 = CE (Command Executing)
+    JR NZ, VDP_CommandWait_Loop
+    LD B, 00h
+    LD C, 0Fh
+    CALL VDP_WriteReg_Raw      ; restaura R#15 = 0 (leitura de S#0 padrao)
+    POP BC
+    POP AF
+    RET
+
+; -----------------------------------------------------------------------------
+; VDP_PSet_Raw: calcula a celula da Pattern/Name/Color Table na mao e
+; escreve os bytes diretamente -- a UNICA tecnica que funciona em SCREEN 2
+; (ver nota em VDP_PSet_HW acima sobre o motor de comando nao se aplicar
+; aqui). Sem DI/EI proprios -- deve ser chamada apenas com interrupcoes ja
+; desabilitadas pelo chamador (VDP_PSet acima, ou o DI unico que VDP_Line/
+; VDP_BoxFill colocam em volta do laco inteiro de multiplos pontos).
+; Entrada/Saida: identicas ao VDP_PSet.
+; -----------------------------------------------------------------------------
+VDP_PSet_Raw:
+    ; A (Cor) e sobrescrito pelos calculos de endereco logo abaixo;
+    ; precisa ser salvo antes de qualquer outra coisa.
+    LD (VDP_PSet_ColorArg), A
     PUSH BC
     PUSH DE
     PUSH HL
@@ -369,7 +479,16 @@ VDP_PSet_MaskDone:
 
     ; Escreve diretamente a mascara no byte do padrao.
     ; Nesta etapa cada ponto ocupa uma celula 8x8 independente.
-    CALL VDP_SetWriteAddr
+    ; (Sequencia de VDP_SetWriteAddr inlined -- sem DI/EI proprios, ja
+    ; estamos dentro do DI unico desta rotina.)
+    LD A, L
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    LD A, H
+    AND 3Fh
+    OR 40h
+    OUT (VDP_CMD), A
     NOP
     NOP
     NOP
@@ -380,13 +499,67 @@ VDP_PSet_MaskDone:
     LD A, C
     OUT (VDP_DATA), A
 
-    ; A Color Table ja foi inicializada com F1h (branco sobre preto).
-    ; A atualizacao de cor por pixel sera adicionada depois do PSET basico.
+    ; Atualiza o nibble de frente (foreground) do byte correspondente na
+    ; Color Table, preservando o nibble de fundo (background) existente.
+    ; A Color Table tem exatamente o mesmo layout/offset da Pattern
+    ; Generator Table, só que baseada em 2000h em vez de 0000h — por isso
+    ; HL (ainda válido aqui, intocado pela sequencia acima) só precisa
+    ; somar 2000h para apontar para a célula de cor correspondente.
+    LD DE, 2000h
+    ADD HL, DE
+
+    ; Endereco de LEITURA (sem OR 40h) -- sequencia de VDP_SetReadAddr inlined.
+    LD A, L
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    LD A, H
+    AND 3Fh
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    IN A, (VDP_DATA)
+    AND 0Fh
+    LD B, A
+    LD A, (VDP_PSet_ColorArg)
+    AND 0Fh
+    SLA A
+    SLA A
+    SLA A
+    SLA A
+    OR B
+    LD C, A
+
+    ; Endereco de ESCRITA (com OR 40h) -- reaponta para o mesmo byte de cor.
+    LD A, L
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    LD A, H
+    AND 3Fh
+    OR 40h
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    LD A, C
+    OUT (VDP_DATA), A
 
     POP HL
     POP DE
     POP BC
     RET
+
+VDP_PSet_ColorArg: DB 00h
 
 ; -----------------------------------------------------------------------------
 ; VDP_BoxFill: Preenche uma região retangular na tela (SCREEN 2)
@@ -441,7 +614,11 @@ VDP_BoxFill:
     JR VDP_BoxFill_Exit
 
 VDP_BoxFill_General:
-    ; Preenchimento por linhas e colunas
+    ; Preenchimento por linhas e colunas. DI unico cobrindo o preenchimento
+    ; inteiro: com muitos pontos em sequencia, deixar cada ponto reabrir
+    ; interrupcoes (como o VDP_PSet publico faz) da chance da interrupcao
+    ; de ~60Hz do MSX corromper registradores entre um ponto e outro.
+    DI
     LD E, (IX+10) ; Y = Y1
 VDP_BoxFill_YLoop:
     LD C, (IX+12) ; X = X1
@@ -449,7 +626,7 @@ VDP_BoxFill_XLoop:
     LD B, 00h
     LD D, 00h
     LD A, (IX+4)
-    CALL VDP_PSet
+    CALL VDP_PSet_Raw
     INC C
     LD A, C
     CP (IX+8)
@@ -460,7 +637,7 @@ VDP_BoxFill_XLast:
     LD B, 00h
     LD D, 00h
     LD A, (IX+4)
-    CALL VDP_PSet
+    CALL VDP_PSet_Raw
 VDP_BoxFill_YNext:
     INC E
     LD A, E
@@ -474,7 +651,7 @@ VDP_BoxFill_XLastLoop:
     LD B, 00h
     LD D, 00h
     LD A, (IX+4)
-    CALL VDP_PSet
+    CALL VDP_PSet_Raw
     INC C
     LD A, C
     CP (IX+8)
@@ -485,9 +662,10 @@ VDP_BoxFill_XLastFinal:
     LD B, 00h
     LD D, 00h
     LD A, (IX+4)
-    CALL VDP_PSet
+    CALL VDP_PSet_Raw
 
 VDP_BoxFill_Exit:
+    EI
     POP HL
     POP DE
     POP BC
@@ -530,10 +708,12 @@ VDP_Line_H_X1_Le_X2:
     LD (VDP_Line_H_End), A
     LD E, (IX+10) ; Y
     LD D, 00h
+    ; DI unico cobrindo a linha inteira (ver comentario em VDP_BoxFill_General).
+    DI
 VDP_Line_HLoop:
     LD B, 00h
     LD A, (IX+4)  ; Cor
-    CALL VDP_PSet
+    CALL VDP_PSet_Raw
     LD A, (VDP_Line_H_End)
     CP C
     JP Z, VDP_Line_Exit
@@ -553,9 +733,10 @@ VDP_Line_V_Y1_Le_Y2:
     LD C, (IX+12) ; X
     LD B, 00h
     LD D, 00h
+    DI
 VDP_Line_VLoop:
     LD A, (IX+4)  ; Cor
-    CALL VDP_PSet
+    CALL VDP_PSet_Raw
     LD A, (VDP_Line_H_End)
     CP E
     JP Z, VDP_Line_Exit
@@ -623,6 +804,7 @@ VDP_Line_CalcErr:
     LD A, (IX+10)
     LD (VDP_Line_CurY), A
 
+    DI
 VDP_Line_Loop:
     ; Plota ponto atual
     LD A, (VDP_Line_CurX)
@@ -632,7 +814,7 @@ VDP_Line_Loop:
     LD E, A
     LD D, 00h
     LD A, (IX+4)
-    CALL VDP_PSet
+    CALL VDP_PSet_Raw
 
     ; Verifica se chegou ao fim: CurX == X2 && CurY == Y2
     LD A, (VDP_Line_CurX)
@@ -689,6 +871,7 @@ VDP_Line_CheckE2DX:
     JR VDP_Line_Loop
 
 VDP_Line_Exit:
+    EI
     POP HL
     POP DE
     POP BC

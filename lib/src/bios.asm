@@ -80,12 +80,7 @@ BIOS_CHGET_Inner:
     LD E, 0FFh
     CALL BDOS_ENTRY
     OR A
-    JR Z, BIOS_CHGET_NoKey
-    CP 1Bh               ; Verifica se é tecla ESC (ASCII 27 / 1Bh)
-    JR Z, BIOS_CHGET_Key ; Se for ESC, sai imediatamente!
-    ; Qualquer outra tecla é ignorada e a contagem continua
-
-BIOS_CHGET_NoKey:
+    JR NZ, BIOS_CHGET_Key ; Qualquer tecla pressionada sai imediatamente
     DJNZ BIOS_CHGET_Inner
 
     DEC HL

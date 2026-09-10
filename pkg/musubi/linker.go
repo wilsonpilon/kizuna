@@ -698,7 +698,7 @@ func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint1
 		0x11, 0x02, 0x04, // LD DE, 0x0402 (D=4: Mapper, E=2: Obter Tabela)
 		0xCD, 0xCA, 0xFF, // CALL 0xFFCA (EXTBIO -> HL = Tabela, A = total segmentos)
 		0xB7,             // OR A
-		0x28, 0x11,       // JR Z, +17 (salta se nenhum segmento)
+		0x28, 0x10,       // JR Z, +16 (salta se nenhum segmento)
 		0xE5,             // PUSH HL
 		0x11, 0x24, 0x00, // LD DE, 0x0024 (+24h = PUT_P2)
 		0x19,             // ADD HL, DE

@@ -234,6 +234,77 @@ func TestPass1AndPass2Sync(t *testing.T) {
 	}
 }
 
+// TestLabelAfterLdAIndirectAndDb cobre os dois bugs de dessincronia Pass1/Pass2
+// encontrados em 2026-09-10: "LD A, (rotulo)" era subestimado em 1 byte no
+// Pass 1 (tratado como "LD A, n" imediato de 2 bytes em vez de "LD A, (nn)"
+// de 3 bytes), e "rotulo: DB valor" tinha o proprio token do mnemonico "DB"
+// contado como se fosse um byte de dado extra, tanto no Pass 1 quanto na
+// emissao real do Pass 2. Qualquer rotulo declarado depois desses padroes
+// ficava com o endereco errado na tabela de simbolos -- silenciosamente,
+// sem erro de montagem -- corrompendo referencias cruzadas resolvidas pelo
+// linker. O Assemble() agora verifica essa consistencia internamente; este
+// teste fixa o comportamento correto dos rotulos em si.
+func TestLabelAfterLdAIndirectAndDb(t *testing.T) {
+	src := `
+MODULE LabelSync
+BANK 0
+PUBLIC Start, AfterLdA, Scratch, AfterDb
+
+Start:
+    ld   a, (Scratch)
+AfterLdA:
+    nop
+Scratch: db 00h
+AfterDb:
+    nop
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	offsets := make(map[string]uint16)
+	for _, sym := range obj.Symbols {
+		offsets[sym.Name] = sym.Offset
+	}
+
+	// LD A,(nn) = 3 bytes (0x3A + endereco de 16 bits)
+	if offsets["AfterLdA"] != 3 {
+		t.Errorf("AfterLdA: esperado offset 3 (LD A,(nn) = 3 bytes), obtido %d", offsets["AfterLdA"])
+	}
+	// + NOP (1 byte)
+	if offsets["Scratch"] != 4 {
+		t.Errorf("Scratch: esperado offset 4, obtido %d", offsets["Scratch"])
+	}
+	// DB 00h = exatamente 1 byte, nao 2
+	if offsets["AfterDb"] != 5 {
+		t.Errorf("AfterDb: esperado offset 5 (DB 00h = 1 byte), obtido %d", offsets["AfterDb"])
+	}
+}
+
+// TestMsxlibModulesAssembleConsistently monta todos os fontes da MSXLIB e
+// depende da verificacao interna de consistencia Pass1/Pass2 dentro de
+// Assemble() para pegar qualquer futura dessincronia de tamanho de
+// instrucao antes que ela corrompa silenciosamente algum rotulo.
+func TestMsxlibModulesAssembleConsistently(t *testing.T) {
+	libDir := filepath.Join("..", "..", "lib", "src")
+	files := []string{"bdos.asm", "bios.asm", "vdp.asm", "psg.asm", "string.asm", "math.asm"}
+
+	for _, f := range files {
+		t.Run(f, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join(libDir, f))
+			if err != nil {
+				t.Fatalf("failed to read %s: %v", f, err)
+			}
+			asm := NewAssembler()
+			if _, err := asm.Assemble(string(data)); err != nil {
+				t.Fatalf("Assemble(%s) failed: %v", f, err)
+			}
+		})
+	}
+}
+
 func Test16BitAluInstructions(t *testing.T) {
 	src := `
 MODULE Test16
