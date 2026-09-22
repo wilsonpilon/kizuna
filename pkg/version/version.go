@@ -9,8 +9,8 @@ import "fmt"
 const (
 	Major    = 4
 	Minor    = 5
-	Build    = 2
-	Codename = "Yoake (夜明け)"
+	Build    = 3
+	Codename = "Kaisei (快晴)"
 )
 
 // String retorna a versão formatada como major.minor.compilacao

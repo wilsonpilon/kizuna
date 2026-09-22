@@ -10,7 +10,7 @@ num único executável — inclusive distribuindo módulos por bancos de
 memória diferentes, com troca de banco resolvida automaticamente pelo
 linker.
 
-Versão Atual: `v4.5.2` — Release **Yoake (夜明け)**.
+Versão Atual: `v4.5.3` — Release **Kaisei (快晴)**.
 
 ## Por quê
 
@@ -35,7 +35,7 @@ BASIC estruturado no mesmo binário `.COM`.
 | `MUSUBI`  | Linker com Smart-Linking e Mapper     | **Concluído & Validado** (v4.3)   |
 | `HAKO`    | Bibliotecário / Empacotador (`.hlib`) | **Concluído & Validado** (v4.3)   |
 | `MOBDUMP` | Inspecionador de objetos `.MOB`       | **Concluído & Validado** (v4.2)   |
-| `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **SCREEN 2 corrigida, aguardando confirmação em hardware** (v4.5.2) |
+| `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **Concluído & Validado, SCREEN 2 confirmada em hardware** (v4.5.3) |
 | `OBI`     | Orquestrador de build (`Obifile`)     | _Em planejamento_ (Fase 6)        |
 
 Cada compilador/assembler gera um objeto relocável no formato próprio `.MOB`;
@@ -55,12 +55,13 @@ trampolins automáticos de bank switching) e produz o `.COM` final para MSX-DOS 
   - `calc.bas`: Aritmética de 16 bits, variáveis locais e formatação de texto com smart-linking.
   - `chart.bas`: Módulo gráfico paginado no banco 2 para desenhar gráficos com `LINE`, `BF` e `PSET`.
 
-### Estado atual da SCREEN 2 (causa raiz encontrada — aguardando confirmação em hardware)
+### Estado atual da SCREEN 2 (causa raiz encontrada e confirmada em hardware)
 
 **A causa raiz real do traçado gráfico bagunçado em SCREEN 2 foi encontrada e
 corrigida na v4.5.2, após várias sessões investigando na direção errada
 (timing de VRAM, atomicidade de interrupção, motor de comando de hardware do
-V9938 — nenhuma delas era o problema).** Eram **dois bugs independentes**:
+V9938 — nenhuma delas era o problema), e confirmada visualmente em
+hardware/emulador real na v4.5.3.** Eram **dois bugs independentes**:
 
 1. **`KAJI80` codificava operações ALU com operando indexado
    (`CP (IX+d)`, `SUB (IX+d)`, etc.) como se fossem um imediato de 8 bits —
@@ -81,9 +82,9 @@ V9938 — nenhuma delas era o problema).** Eram **dois bugs independentes**:
    (só teria efeito visível depois de corrigi-lo).
 
 Confirmado por remontagem e leitura direta dos bytes do `.MOB` (não apenas
-análise estática); ambos corrigidos juntos. **Ainda não confirmado em
-hardware/emulador real** — próximo passo é rodar `sample/basic/chart.bas`
-novamente e verificar visualmente.
+análise estática); ambos corrigidos juntos. **Confirmado visualmente em
+hardware/emulador real na v4.5.3** — ver a captura de tela e a listagem
+completa de `sample/basic/chart.bas` na seção seguinte.
 
 De brinde, a mesma auditoria encontrou (e corrigiu) mais dois pontos de
 robustez no linker `MUSUBI`, nenhum deles relacionado ao bug gráfico:
@@ -121,6 +122,100 @@ isolado às rotinas gráficas de VDP da MSXLIB, não à toolchain em si.
 O MSXgl e o Fusion-C em `resource/` são usados somente como referências de
 hardware e algoritmos. A implementação final continuará na ABI própria da
 MSXLIB, compartilhada por Assembly, Pascal e BASIC.
+
+## Mostra: evolução do kit — de `.bas` a SCREEN 2 real
+
+Como evidência concreta do estado atual, o exemplo `sample/basic/chart.bas`
+abaixo — escrito em MSX-BASIC Dignified, compilado pelo `DIGNAC`, linkado com
+a `MSXLIB` pelo `MUSUBI` e rodando sem qualquer edição manual do `.COM`
+resultante — mostra o pipeline completo funcionando de ponta a ponta:
+
+```basic
+' ============================================================
+' KIZUNA sample -- Modulo Chart em MSX-BASIC Dignified
+' Compilador: DIGNAC
+' ============================================================
+
+MODULE Chart
+BANK 0
+PUBLIC Main, Desenhar
+EXTERN BIOS_CHGET
+
+' Ponto de entrada para demonstracao grafica standalone
+PROCEDURE Main()
+    SCREEN 2
+    Desenhar(10)
+    BIOS_CHGET()
+    SCREEN 0
+END PROCEDURE
+
+' Desenhar: recebe um valor e traça um gráfico com moldura,
+' eixos cartesianos, grade e curva calculada.
+PROCEDURE Desenhar(valor%)
+    LOCAL x%, y%
+
+    ' Checkpoints: um PSET de cor unica por etapa, na coluna x=2 (fora da
+    ' area da moldura/eixos/grade/curva, ninguem mais escreve ali), cada um
+    ' numa linha Y diferente para nao dar color clash entre eles.
+    ' Ordem/cores: 15 branco, 8 vermelho medio, 5 azul claro, 11 amarelo
+    ' claro, 13 magenta, 7 ciano, 3 verde claro, 10 amarelo escuro,
+    ' 6 vermelho escuro, 12 verde escuro, 9 rosa/vermelho claro.
+
+    ' 1. Limpa a tela com fundo preto
+    LINE (0,0)-(255,191), 1, BF
+    PSET (2, 2), 15   ' checkpoint 1: BoxFill (limpar tela) OK
+    BIOS_CHGET()
+
+    ' 2. Moldura retangular externa branca (cor 15)
+    LINE (8, 8)-(247, 8), 15
+    PSET (2, 6), 8    ' checkpoint 2: borda topo OK
+    BIOS_CHGET()
+    LINE (247, 8)-(247, 183), 15
+    PSET (2, 10), 5   ' checkpoint 3: borda direita OK
+    BIOS_CHGET()
+    LINE (247, 183)-(8, 183), 15
+    PSET (2, 14), 11  ' checkpoint 4: borda baixo OK
+    BIOS_CHGET()
+    LINE (8, 183)-(8, 8), 15
+    PSET (2, 18), 13  ' checkpoint 5: borda esquerda OK
+    BIOS_CHGET()
+
+    ' 3. Eixos cartesianos em Ciano (cor 7)
+    LINE (24, 20)-(24, 165), 7
+    PSET (2, 22), 7   ' checkpoint 6: eixo vertical OK
+    BIOS_CHGET()
+    LINE (24, 165)-(236, 165), 7
+    PSET (2, 26), 3   ' checkpoint 7: eixo horizontal OK
+    BIOS_CHGET()
+
+    ' 4. Linhas de grade horizontais em Cinza (cor 14)
+    LINE (24, 130)-(236, 130), 14
+    PSET (2, 30), 10  ' checkpoint 8: grade 1 OK
+    BIOS_CHGET()
+    LINE (24, 95)-(236, 95), 14
+    PSET (2, 34), 6   ' checkpoint 9: grade 2 OK
+    BIOS_CHGET()
+    LINE (24, 60)-(236, 60), 14
+    PSET (2, 38), 12  ' checkpoint 10: grade 3 OK
+    BIOS_CHGET()
+
+    ' 5. Curva de pontos do grafico em Amarelo (cor 10)
+    FOR x% = 25 TO 235
+        y% = 160 - (x% MOD (valor% + 1)) * 9
+        PSET (x%, y%), 10
+    NEXT x%
+    PSET (2, 42), 9   ' checkpoint 11: curva (loop completo) OK
+    BIOS_CHGET()
+
+END PROCEDURE
+END MODULE
+```
+
+Resultado da execução em openMSX (MSX2+ Boosted, SCREEN 2, 256x192) —
+moldura branca, eixos em ciano, grade cinza e curva de pontos amarela, todos
+renderizados corretamente:
+
+![chart.bas rodando em SCREEN 2 no openMSX](images/kizuna-00.png)
 
 ## Instalação Rápida
 

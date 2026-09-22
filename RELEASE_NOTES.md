@@ -1,3 +1,153 @@
+# Release Notes — KIZUNA v4.5.3 "Kaisei" (快晴)
+
+**Kaisei** (快晴) — "céu completamente limpo, tempo perfeito, sem uma nuvem".
+O fechamento natural do arco iniciado em *Kuyashii* (悔しい, a frustração) e
+continuado em *Yoake* (夜明け, o instante em que a escuridão cede): agora que
+o sol nasceu, o céu está limpo — **o bug gráfico de SCREEN 2 foi confirmado
+visualmente, em hardware/emulador real, pela primeira vez em toda a saga**.
+
+A v4.5.2 já havia encontrado e corrigido, em software, os dois bugs reais que
+explicavam o caos visual em `VDP_Line`/`VDP_BoxFill` (endereçamento indexado
+`(IX+d)` mal codificado como imediato no `KAJI80`, e `VDP_PSet_Raw`
+sobrescrevendo o byte inteiro do padrão em vez de preservar os demais pixels
+da célula) — mas isso havia sido validado só por remontagem e leitura direta
+dos bytes do `.MOB`, sem confirmação visual. A v4.5.3 fecha essa lacuna: o
+pipeline completo **BASIC (`chart.bas`) → `DIGNAC` → `MUSUBI` → SCREEN 2**
+agora desenha moldura, eixos, grade e curva corretamente na tela, sem nenhum
+artefato — ver a captura de tela ao final destas notas.
+
+Esta versão também traz uma correção de robustez encontrada na mesma
+investigação, sem relação direta com o bug gráfico: `KAJI80` gravava a tabela
+de símbolos `PUBLIC`/`EXTERN` do `.MOB` iterando um `map` do Go, cuja ordem
+de iteração é embaralhada a cada execução do processo — inofensivo para o
+linker (que resolve símbolos por nome), mas produzia arquivos `.mob`/`.com`/
+`.map` byte-a-byte diferentes a cada remontagem do mesmo fonte, gerando
+diffs espúrios permanentes em builds versionados no Git. Corrigido ordenando
+os nomes alfabeticamente antes de serializar; confirmado remontando toda a
+MSXLIB e os exemplos duas vezes seguidas e comparando os bytes (idênticos).
+
+## Estado técnico atual - SCREEN 2
+
+- **Confirmado.** `sample/basic/chart.bas` renderiza corretamente em
+  hardware/emulador real: moldura, eixos cartesianos, grade e a curva de
+  pontos calculada, sem pixels dispersos nem artefatos.
+- Toda a toolchain (`KAJI80`, `WIRTH80`, `DIGNAC`, `MUSUBI`, `HAKO`,
+  `MOBDUMP`) e a `MSXLIB` (incluindo as rotinas gráficas de VDP) estão agora
+  **concluídas e validadas de ponta a ponta** — o bloqueio que se arrastava
+  desde a v4.5.1 está fechado.
+
+### Não-determinismo residual conhecido (fora de escopo desta release)
+
+A correção de ordenação de símbolos acima resolve o `KAJI80` especificamente.
+`WIRTH80` e `DIGNAC` (que geram Assembly intermediário e chamam o mesmo
+`Assemble()`) têm uma fonte de não-determinismo própria e diferente: a ordem
+dos literais de string na pool de deduplicação desses dois frontends muda
+entre execuções, afetando o layout real do segmento de dados (não só a
+tabela de símbolos). Registrado para uma sessão futura caso builds
+reproduzíveis do lado Pascal/BASIC se tornem prioridade.
+
+### Próximos passos
+
+1. Avançar para a **Fase 6**: `OBI`, o orquestrador de build declarativo
+   (`Obifile`) — última fase pendente do roadmap em `SPEC.md` §8.
+2. Opcionalmente, investigar e eliminar o não-determinismo residual de
+   `WIRTH80`/`DIGNAC` descrito acima.
+
+As fontes em `resource/MSXgl` e `resource/MSXFusionC` permanecem material de
+referência; não fazem parte do build da MSXLIB.
+
+## Confirmação visual: `sample/basic/chart.bas` em SCREEN 2
+
+Listagem completa do programa de exemplo cuja execução está na captura de
+tela logo abaixo:
+
+```basic
+' ============================================================
+' KIZUNA sample -- Modulo Chart em MSX-BASIC Dignified
+' Compilador: DIGNAC
+' ============================================================
+
+MODULE Chart
+BANK 0
+PUBLIC Main, Desenhar
+EXTERN BIOS_CHGET
+
+' Ponto de entrada para demonstracao grafica standalone
+PROCEDURE Main()
+    SCREEN 2
+    Desenhar(10)
+    BIOS_CHGET()
+    SCREEN 0
+END PROCEDURE
+
+' Desenhar: recebe um valor e traça um gráfico com moldura,
+' eixos cartesianos, grade e curva calculada.
+PROCEDURE Desenhar(valor%)
+    LOCAL x%, y%
+
+    ' Checkpoints: um PSET de cor unica por etapa, na coluna x=2 (fora da
+    ' area da moldura/eixos/grade/curva, ninguem mais escreve ali), cada um
+    ' numa linha Y diferente para nao dar color clash entre eles.
+    ' Ordem/cores: 15 branco, 8 vermelho medio, 5 azul claro, 11 amarelo
+    ' claro, 13 magenta, 7 ciano, 3 verde claro, 10 amarelo escuro,
+    ' 6 vermelho escuro, 12 verde escuro, 9 rosa/vermelho claro.
+
+    ' 1. Limpa a tela com fundo preto
+    LINE (0,0)-(255,191), 1, BF
+    PSET (2, 2), 15   ' checkpoint 1: BoxFill (limpar tela) OK
+    BIOS_CHGET()
+
+    ' 2. Moldura retangular externa branca (cor 15)
+    LINE (8, 8)-(247, 8), 15
+    PSET (2, 6), 8    ' checkpoint 2: borda topo OK
+    BIOS_CHGET()
+    LINE (247, 8)-(247, 183), 15
+    PSET (2, 10), 5   ' checkpoint 3: borda direita OK
+    BIOS_CHGET()
+    LINE (247, 183)-(8, 183), 15
+    PSET (2, 14), 11  ' checkpoint 4: borda baixo OK
+    BIOS_CHGET()
+    LINE (8, 183)-(8, 8), 15
+    PSET (2, 18), 13  ' checkpoint 5: borda esquerda OK
+    BIOS_CHGET()
+
+    ' 3. Eixos cartesianos em Ciano (cor 7)
+    LINE (24, 20)-(24, 165), 7
+    PSET (2, 22), 7   ' checkpoint 6: eixo vertical OK
+    BIOS_CHGET()
+    LINE (24, 165)-(236, 165), 7
+    PSET (2, 26), 3   ' checkpoint 7: eixo horizontal OK
+    BIOS_CHGET()
+
+    ' 4. Linhas de grade horizontais em Cinza (cor 14)
+    LINE (24, 130)-(236, 130), 14
+    PSET (2, 30), 10  ' checkpoint 8: grade 1 OK
+    BIOS_CHGET()
+    LINE (24, 95)-(236, 95), 14
+    PSET (2, 34), 6   ' checkpoint 9: grade 2 OK
+    BIOS_CHGET()
+    LINE (24, 60)-(236, 60), 14
+    PSET (2, 38), 12  ' checkpoint 10: grade 3 OK
+    BIOS_CHGET()
+
+    ' 5. Curva de pontos do grafico em Amarelo (cor 10)
+    FOR x% = 25 TO 235
+        y% = 160 - (x% MOD (valor% + 1)) * 9
+        PSET (x%, y%), 10
+    NEXT x%
+    PSET (2, 42), 9   ' checkpoint 11: curva (loop completo) OK
+    BIOS_CHGET()
+
+END PROCEDURE
+END MODULE
+```
+
+Resultado da execução em openMSX (MSX2+ Boosted, SCREEN 2, 256x192):
+
+![chart.bas rodando em SCREEN 2 no openMSX — moldura branca, eixos em ciano, grade cinza e curva de pontos amarela, todos renderizados corretamente](images/kizuna-00.png)
+
+---
+
 # Release Notes — KIZUNA v4.5.2 "Yoake" (夜明け)
 
 **Yoake** (夜明け) — "o romper da madrugada, o instante em que a escuridão
