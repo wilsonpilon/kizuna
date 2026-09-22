@@ -6,11 +6,11 @@ Modo de Memória: Monobanco
 Bancos Utilizados: [0]
 Endereço Base:     0x0100
 Ponto de Entrada:  0x0100
-Tamanho do .COM:   186 bytes (0x00BA)
+Tamanho do .COM:   222 bytes (0x00DE)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x017C | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   124 bytes
-[ 1] 0x017C - 0x01BA | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    62 bytes
+[ 1] 0x017C - 0x01DE | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
@@ -22,3 +22,9 @@ Tamanho do .COM:   186 bytes (0x00BA)
 0x0196 [Banco  0] PROC BDOS_PrintString
 0x01AC [Banco  0] PROC BDOS_ReadChar
 0x01B4 [Banco  0] PROC BDOS_Exit
+0x01BA [Banco  0] PROC BDOS_FileOpen
+0x01C0 [Banco  0] PROC BDOS_FileCreate
+0x01C6 [Banco  0] PROC BDOS_FileClose
+0x01CC [Banco  0] PROC BDOS_FileRead
+0x01D2 [Banco  0] PROC BDOS_FileWrite
+0x01D8 [Banco  0] PROC BDOS_FileSeek

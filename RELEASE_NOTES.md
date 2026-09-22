@@ -1,3 +1,85 @@
+# Release Notes — KIZUNA v4.8.0 "Minori" (実り)
+
+> "A flor de Kaika amadurece: variáveis de verdade, e uma documentação honesta sobre o que ainda não é fruto."
+
+**Minori** (実り) — "colheita, fruição, o fruto que amadurece depois da flor".
+Depois de *Kaika* (開花, o florescimento — sprites, música e arquivo chegando
+na `MSXLIB`), esta release colhe o que sustenta tudo: o `DIGNAC` ganha um
+sistema de tipos de verdade (STRING, INTEGER, SINGLE, DOUBLE), e a
+documentação do projeto inteiro é reorganizada em manuais — inclusive
+documentando, pela primeira vez de forma explícita, o quanto o `WIRTH80`
+ainda está longe da visão original do `SPEC.md`.
+
+## DIGNAC: STRING, INTEGER, SINGLE, DOUBLE — um sistema de tipos de verdade
+
+Até aqui, toda variável não-BOOLEAN no `DIGNAC` era tratada como uma
+palavra de 16 bits, sempre — `LOCAL a%, b$, c!` dava o mesmo tipo pra todos
+(o primeiro sufixo "vencia"), e só literais de string funcionavam de
+verdade. Agora cada variável resolve seu próprio tipo pelo sufixo
+(`%`/`$`/`!`/`#`), e **STRING funciona de ponta a ponta**: declarar,
+atribuir (literal ou outra variável STRING) e imprimir, num buffer de 256
+bytes (1 byte de tamanho + até 255 de dados — o formato "short string" já
+usado nas fronteiras entre as três linguagens do projeto).
+
+SINGLE e DOUBLE usam **IEEE 754** (binary32/binary64), não o MBF do
+MSX-BASIC real — decisão deliberada, já que o `DIGNAC` compila pra código
+nativo standalone. São declaráveis, aceitam literais (`3.14`, `1.5e+10`,
+`2.71828d0`, sufixos `!`/`#`) e são atribuíveis por cópia de bytes — mas
+**qualquer aritmética ou `PRINT` de SINGLE/DOUBLE é um erro de compilação
+claro**, nunca um resultado errado calado. A engine de ponto flutuante
+completa fica para uma sessão futura dedicada — sozinha, é do tamanho de
+uma biblioteca de ponto flutuante em Z80 escrita do zero.
+
+Literais `&O` (octal) e `&B` (binário) também chegam, no mesmo padrão do
+`&H` já existente.
+
+**Confirmado em hardware real pelo usuário**: `sample/basic/types.bas`
+imprimiu as duas strings e os dois valores inteiros corretamente, sem lixo
+na tela.
+
+## Documentação reorganizada em manuais por assunto
+
+`HELP.md` tinha virado um arquivo único e desatualizado (faltava `OBI`,
+faltavam as novidades recentes do `DIGNAC`). Vira quatro manuais novos em
+`docs/`, cada um cobrindo seu próprio assunto e atualizado contra o estado
+real do código:
+
+- **`docs/manual-assembly.md`** — `KAJI80`: diretivas, instruções Z80
+  suportadas, e as formas explicitamente **não** suportadas (erro claro,
+  nunca silencioso).
+- **`docs/manual-basic-dignified.md`** — `DIGNAC`: o sistema de tipos
+  novo, sprites, música (MML), arquivos, e as limitações conhecidas (como
+  `FOR` com `STEP` negativo, que ainda não funciona corretamente).
+- **`docs/manual-pascal.md`** — `WIRTH80`: o escopo **real** hoje, que é
+  bem menor que a visão original do `SPEC.md` sugere.
+- **`docs/manual-ferramentas.md`** — formato `.MOB`/`.MAP`, `MUSUBI`, um
+  capítulo dedicado de bank switching, `HAKO`/`.HLIB`, `MSXLIB`, `OBI`, e
+  um exemplo end-to-end honesto sobre misturar as três linguagens.
+
+**Achado real durante a pesquisa**: `WIRTH80` hoje não tem procedimentos,
+funções, `uses`/units, nem `PUBLIC`/`EXTERN` do lado do programador — só
+compila um programa único e autocontido. O laço `for` tem os tokens
+reservados no lexer mas nenhum caso no parser (é erro de sintaxe hoje). O
+tipo `String` em `var` é aceito mas tratado internamente como `Integer`,
+sem nenhuma semântica de string de verdade. Isso significa que, hoje, só
+`KAJI80`+`DIGNAC` conseguem formar um único `.COM` multi-banco de verdade
+(`sample/obi/Obifile` já faz isso) — `WIRTH80` ainda não pode ser um
+terceiro módulo nesse mesmo binário. `demo/main.pas`/`demo/Obifile`
+continuam sendo, como sempre foram, um croqui hipotético — agora
+documentado de forma explícita, não só implícita.
+
+## Próximos passos
+
+- Corrigir os bugs pequenos que a documentação acabou de expor: `FOR` com
+  `STEP` negativo (o teste de término do laço assume passo positivo),
+  `OPEN ... FOR APPEND` que hoje se comporta igual a `OUTPUT` (não faz
+  seek até o fim do arquivo).
+- Dar ao `WIRTH80` `PUBLIC`/`EXTERN` e procedimentos/funções definidos
+  pelo usuário — o item mais estrutural, e o que destrava o exemplo real
+  das três linguagens num único `.COM`.
+
+---
+
 # Release Notes — KIZUNA v4.7.0 "Kaika" (開花)
 
 > "Depois de fechar o roadmap, o laço floresce: sprites, música e arquivos, provados um por um em hardware real."

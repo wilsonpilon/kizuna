@@ -3,6 +3,73 @@
 Todas as mudanças notáveis deste projeto são documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
+## [4.8.0] - 2026-09-22 - Release Minori (実り)
+
+### DIGNAC ganha um sistema de tipos real: STRING, INTEGER, SINGLE, DOUBLE
+
+Até aqui o `DIGNAC` tratava toda variável não-BOOLEAN como uma palavra de
+16 bits, sempre — `LOCAL a%, b$, c!` dava o mesmo tipo pra todo mundo na
+lista (o primeiro sufixo "vencia"), e só literais de string funcionavam de
+verdade (nenhuma variável STRING existia). `LocalDeclNode`/`DimDeclNode`
+foram redesenhados para `Decls []VarDecl{Name,Type}`, resolvendo o tipo de
+cada variável pelo próprio sufixo (`%`=INTEGER, `$`=STRING, `!`=SINGLE,
+`#`=DOUBLE), com `AS <Tipo>` continuando como override explícito pra toda
+a lista.
+
+STRING funciona de ponta a ponta agora: declarar, atribuir (literal ou
+outra variável STRING) e imprimir — buffer de 256 bytes (1 byte de tamanho
++ até 255 de dados, o mesmo formato "short string" já documentado em
+`SPEC.md` §7), via duas rotinas novas na `MSXLIB`
+(`StrCopyLen`/`BDOS_PrintLenStr`, `lib/src/string.asm`).
+
+SINGLE/DOUBLE usam **IEEE 754** (binary32/binary64), não o MBF que o
+MSX-BASIC real usa internamente — decisão deliberada, já que o `DIGNAC`
+compila pra código nativo standalone, sem necessidade de compatibilidade
+binária com um interpretador. São declaráveis, aceitam literais (ponto
+decimal, expoente `e`/`E`=SINGLE `d`/`D`=DOUBLE, sufixo `!`/`#`) e são
+atribuíveis por cópia crua de bytes — mas **qualquer aritmética ou `PRINT`
+de uma variável SINGLE/DOUBLE é um erro de compilação claro** ("ainda não
+implementada"), nunca um resultado errado calado. A engine de ponto
+flutuante completa (+,-,\*,/, comparação, conversão pra texto decimal) fica
+para uma sessão futura dedicada — sozinha, é do tamanho de escrever uma
+biblioteca de ponto flutuante em Z80 do zero.
+
+Também adiciona literais `&O` (octal) e `&B` (binário), no mesmo padrão do
+`&H` já existente.
+
+Seis testes novos em `pkg/dignac/compiler_test.go`. Novo sample
+`sample/basic/types.bas` — compila, linka e **foi confirmado em hardware
+real (openMSX)**: as duas strings e os dois valores inteiros apareceram
+corretos, sem lixo na tela.
+
+### Documentação reorganizada em manuais por assunto
+
+`HELP.md` tinha virado um arquivo monolítico desatualizado (sem `OBI`, sem
+as novidades recentes do `DIGNAC`). Dividido em quatro manuais novos em
+`docs/`, cada um atualizado contra o estado real do código — não a visão
+aspiracional do `SPEC.md`:
+
+- `docs/manual-assembly.md` (`KAJI80`), `docs/manual-basic-dignified.md`
+  (`DIGNAC`), `docs/manual-pascal.md` (`WIRTH80`) — sintaxe de cada
+  linguagem, incluindo suas próprias limitações conhecidas.
+- `docs/manual-ferramentas.md` — formato `.MOB`/`.MAP`, `MUSUBI`, bank
+  switching, `HAKO`/`.HLIB`, `MSXLIB`, `OBI`, `MOBDUMP`, e um exemplo
+  end-to-end combinando as três linguagens.
+
+`MANUAL.md` e `HELP.md` viraram índices curtos apontando pros manuais.
+
+**Achado real durante a pesquisa para o manual do Pascal**: `WIRTH80` hoje
+é um subconjunto bem menor do que `SPEC.md` descreve — sem
+procedimentos/funções definidos pelo usuário, sem `uses`/units, sem
+`PUBLIC`/`EXTERN` do lado do programador, e o laço `for...to/downto...do`
+tem os tokens reservados no lexer mas **nenhum caso no parser** (usar `for`
+hoje é erro de sintaxe). O tipo `String` em `var` é aceito sintaticamente
+mas tratado internamente como um `Integer` sem nenhuma semântica de string
+— atribuir um literal de string a ele é erro de compilação. `demo/main.pas`
+e `demo/Obifile` (que mostram Pascal chamando um módulo Assembly via
+`{$USES}`) continuam corretamente marcados como "croqui hipotético, não
+compila" — documentado agora de forma explícita em vez de implícita.
+
 ## [4.7.0] - 2026-09-22 - Release Kaika (開花)
 
 ### MSXLIB expandida: sprites, música PSG e I/O de arquivo — todos confirmados em hardware

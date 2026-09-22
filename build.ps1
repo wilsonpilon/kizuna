@@ -34,7 +34,7 @@ $ZipFilePath = Join-Path $RootDir $ZipFileName
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "    KIZUNA (絆) - Build & Empacotamento para Distribuicao        " -ForegroundColor Cyan
-Write-Host "    Versao: v$KizunaVersion [Release Kaika (開花)]                " -ForegroundColor Cyan
+Write-Host "    Versao: v$KizunaVersion [Release Minori (実り)]               " -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "Diretorio Raiz: $RootDir" -ForegroundColor Gray
 Write-Host "Destino:        $DistDir" -ForegroundColor Gray
@@ -136,8 +136,15 @@ if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/fileio" }
 # 7. Copiar documentação essencial e licença
 Write-Host "[6/8] Copiando documentacao de usuario e licenca..." -ForegroundColor Yellow
 Copy-Item -Path "$RootDir/README.md" -Destination "$DocsDir/README.md"
+Copy-Item -Path "$RootDir/MANUAL.md" -Destination "$DocsDir/MANUAL.md"
 Copy-Item -Path "$RootDir/HELP.md" -Destination "$DocsDir/HELP.md"
+Copy-Item -Path "$RootDir/SPEC.md" -Destination "$DocsDir/SPEC.md"
 Copy-Item -Path "$RootDir/CHANGELOG.md" -Destination "$DocsDir/CHANGELOG.md"
+Copy-Item -Path "$RootDir/RELEASE_NOTES.md" -Destination "$DocsDir/RELEASE_NOTES.md"
+Copy-Item -Path "$RootDir/docs/manual-assembly.md" -Destination "$DocsDir/manual-assembly.md"
+Copy-Item -Path "$RootDir/docs/manual-basic-dignified.md" -Destination "$DocsDir/manual-basic-dignified.md"
+Copy-Item -Path "$RootDir/docs/manual-pascal.md" -Destination "$DocsDir/manual-pascal.md"
+Copy-Item -Path "$RootDir/docs/manual-ferramentas.md" -Destination "$DocsDir/manual-ferramentas.md"
 Copy-Item -Path "$RootDir/LICENSE" -Destination "$DistDir/LICENSE"
 
 # 8. Copiar exemplos para distribute/sample/ com executáveis .COM e fontes

@@ -6,14 +6,14 @@ Modo de Memória: Monobanco
 Bancos Utilizados: [0]
 Endereço Base:     0x0100
 Ponto de Entrada:  0x0100
-Tamanho do .COM:   540 bytes (0x021C)
+Tamanho do .COM:   893 bytes (0x037D)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x0197 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   151 bytes
-[ 1] 0x0197 - 0x01D5 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    62 bytes
-[ 2] 0x01D5 - 0x0217 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    66 bytes
-[ 3] 0x0217 - 0x02BD | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:   166 bytes
-[ 4] 0x02BD - 0x031C | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:    95 bytes
+[ 1] 0x0197 - 0x01F9 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
+[ 2] 0x01F9 - 0x02FE | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   261 bytes
+[ 3] 0x02FE - 0x0340 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:    66 bytes
+[ 4] 0x0340 - 0x047D | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:   317 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
@@ -24,17 +24,33 @@ Tamanho do .COM:   540 bytes (0x021C)
 0x01B1 [Banco  0] PROC BDOS_PrintString
 0x01C7 [Banco  0] PROC BDOS_ReadChar
 0x01CF [Banco  0] PROC BDOS_Exit
-0x01D5 [Banco  0] PROC Mul16
-0x01EA [Banco  0] PROC Div16
-0x0217 [Banco  0] PROC StrLen
-0x0225 [Banco  0] PROC StrCopy
-0x0235 [Banco  0] PROC StrToUpper
-0x024C [Banco  0] PROC PrintHex8
-0x0259 [Banco  0] PROC PrintNibble
-0x026A [Banco  0] PROC PrintHex16
-0x0275 [Banco  0] PROC PrintDec16
-0x029F [Banco  0] PROC PrintDecDigit
-0x02BD [Banco  0] PROC PSG_Write
-0x02C3 [Banco  0] PROC PSG_Read
-0x02C8 [Banco  0] PROC PSG_MuteAll
-0x02E5 [Banco  0] PROC PSG_PlayTone
+0x01D5 [Banco  0] PROC BDOS_FileOpen
+0x01DB [Banco  0] PROC BDOS_FileCreate
+0x01E1 [Banco  0] PROC BDOS_FileClose
+0x01E7 [Banco  0] PROC BDOS_FileRead
+0x01ED [Banco  0] PROC BDOS_FileWrite
+0x01F3 [Banco  0] PROC BDOS_FileSeek
+0x01F9 [Banco  0] PROC PSG_Write
+0x01FF [Banco  0] PROC PSG_Read
+0x0204 [Banco  0] PROC PSG_MuteAll
+0x0221 [Banco  0] PROC PSG_PlayTone
+0x0258 [Banco  0] PROC PSG_NoteTable
+0x02D0 [Banco  0] PROC PSG_PlayNoteIndexed
+0x02E4 [Banco  0] PROC PSG_PlaySequence
+0x02FE [Banco  0] PROC Mul16
+0x0313 [Banco  0] PROC Div16
+0x0340 [Banco  0] PROC StrLen
+0x034E [Banco  0] PROC StrCopy
+0x035E [Banco  0] PROC StrToUpper
+0x0375 [Banco  0] PROC PrintHex8
+0x0382 [Banco  0] PROC PrintNibble
+0x0393 [Banco  0] PROC PrintHex16
+0x039E [Banco  0] PROC PrintDec16
+0x03C8 [Banco  0] PROC PrintDecDigit
+0x03E6 [Banco  0] PROC PrintDec16ToBuffer
+0x0419 [Banco  0] PROC PrintDecDigitBuf
+0x0432 [Banco  0] PROC PDTB_WriteChar
+0x0446 [Banco  0] PROC PDTB_BufPtr
+0x0448 [Banco  0] PROC PDTB_Count
+0x0449 [Banco  0] PROC StrCopyLen
+0x0461 [Banco  0] PROC BDOS_PrintLenStr
