@@ -2,12 +2,19 @@
 ' KIZUNA sample -- OBI: modulo BASIC "biblioteca" (sem PROCEDURE Main,
 ' logo sem Start proprio -- nenhum conflito com o Start do KAJI80).
 ' Compilador: DIGNAC
-' Chamado a partir de main.asm (KAJI80, banco 0) via MUSUBI, que gera o
-' trampolim de troca de banco automaticamente.
+' Chamado a partir de main.asm (KAJI80, banco 0) via MUSUBI.
+'
+' BANK 0 (area comum) de proposito: um teste real em hardware mostrou que
+' o bootstrap multi-banco do MUSUBI (troca de pagina via ALL_SEG/EXTBIO,
+' adicionado na v4.5.2) nao roda corretamente -- so tinha sido validado
+' por analise estatica ate entao. Registrado como bug separado do MUSUBI
+' (ver memoria do projeto); este exemplo evita esse caminho de proposito
+' para continuar mostrando KAJI80+DIGNAC+resource+biblioteca orquestrados
+' pelo OBI, sem depender de um bootstrap ainda nao confirmado em execucao.
 ' ============================================================
 
 MODULE ChartLib
-BANK 2
+BANK 0
 PUBLIC Desenhar
 
 ' Desenhar: recebe um valor pela convencao de pilha do KIZUNA (o chamador
