@@ -60,7 +60,7 @@ New-Item -ItemType Directory -Path $LibDistDir -Force | Out-Null
 # 3. Compilar executáveis da toolchain (Go -> .exe)
 Write-Host "[2/8] Compilando executaveis da toolchain (Go -> .exe)..." -ForegroundColor Yellow
 
-$Tools = @("kaji80", "musubi", "mobdump", "hako", "wirth80", "dignac")
+$Tools = @("kaji80", "musubi", "mobdump", "hako", "wirth80", "dignac", "obi")
 foreach ($t in $Tools) {
     $outExe = Join-Path $BinDir "$t.exe"
     Write-Host "      - Compilando $t -> $outExe..." -ForegroundColor Gray
@@ -113,6 +113,11 @@ Write-Host "      - Compilando sample/basic (hello.bas, calc.bas, chart.bas)..."
 & pwsh -ExecutionPolicy Bypass -File "$RootDir/sample/basic/build.ps1"
 if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/basic" }
 
+# 6.6. Exemplo OBI (Obifile declarativo: KAJI80 + DIGNAC + resource + MSXLIB)
+Write-Host "      - Compilando sample/obi (Obifile -> main.com)..." -ForegroundColor Gray
+& pwsh -ExecutionPolicy Bypass -File "$RootDir/sample/obi/build.ps1"
+if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/obi" }
+
 # 7. Copiar documentação essencial e licença
 Write-Host "[6/8] Copiando documentacao de usuario e licenca..." -ForegroundColor Yellow
 Copy-Item -Path "$RootDir/README.md" -Destination "$DocsDir/README.md"
@@ -162,6 +167,16 @@ Copy-Item -Path "$RootDir/sample/basic/calc.com" -Destination "$BasicDir/calc.co
 Copy-Item -Path "$RootDir/sample/basic/chart.bas" -Destination "$BasicDir/chart.bas"
 Copy-Item -Path "$RootDir/sample/basic/chart.com" -Destination "$BasicDir/chart.com"
 Copy-Item -Path "$RootDir/sample/basic/build.ps1" -Destination "$BasicDir/build.ps1"
+
+# OBI (Obifile declarativo: KAJI80 + DIGNAC + resource + biblioteca)
+$ObiDir = Join-Path $SampDir "obi"
+New-Item -ItemType Directory -Path $ObiDir -Force | Out-Null
+Copy-Item -Path "$RootDir/sample/obi/Obifile" -Destination "$ObiDir/Obifile"
+Copy-Item -Path "$RootDir/sample/obi/main.asm" -Destination "$ObiDir/main.asm"
+Copy-Item -Path "$RootDir/sample/obi/chart_lib.bas" -Destination "$ObiDir/chart_lib.bas"
+Copy-Item -Path "$RootDir/sample/obi/banner.txt" -Destination "$ObiDir/banner.txt"
+Copy-Item -Path "$RootDir/sample/obi/main.com" -Destination "$ObiDir/main.com"
+Copy-Item -Path "$RootDir/sample/obi/build.ps1" -Destination "$ObiDir/build.ps1"
 
 # 9. Gerar pacote compactado .ZIP
 Write-Host "[8/8] Criando arquivo compactado $ZipFileName..." -ForegroundColor Yellow

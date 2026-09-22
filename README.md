@@ -36,7 +36,7 @@ BASIC estruturado no mesmo binário `.COM`.
 | `HAKO`    | Bibliotecário / Empacotador (`.hlib`) | **Concluído & Validado** (v4.3)   |
 | `MOBDUMP` | Inspecionador de objetos `.MOB`       | **Concluído & Validado** (v4.2)   |
 | `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **Concluído & Validado, SCREEN 2 confirmada em hardware** (v4.5.3) |
-| `OBI`     | Orquestrador de build (`Obifile`)     | _Em planejamento_ (Fase 6)        |
+| `OBI`     | Orquestrador de build (`Obifile`)     | **Concluído & Validado** (Fase 6) |
 
 Cada compilador/assembler gera um objeto relocável no formato próprio `.MOB`;
 `MUSUBI` linka os módulos (com eliminação de código morto via Smart-Linking e

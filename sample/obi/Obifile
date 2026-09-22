@@ -1,0 +1,33 @@
+# ============================================================
+# KIZUNA sample -- Obifile real (nao ilustrativo -- compila e linka)
+# Constroi main.com combinando KAJI80 (dono do Start) e DIGNAC (modulo
+# biblioteca no banco 2, sem PROCEDURE Main), mais um resource embutido
+# e a MSXLIB via biblioteca .hlib ja empacotada.
+# ============================================================
+
+target: main.com
+entry: Start
+base: 0x0100
+
+resources:
+  - file: banner.txt
+    bank: 0
+    symbol: Res_Banner
+    size: 256
+
+modules:
+  - name: Main
+    source: main.asm
+    compiler: kaji80
+    bank: 0
+
+  - name: ChartLib
+    source: chart_lib.bas
+    compiler: dignac
+    bank: 2
+
+link:
+  map: main.map
+
+libraries:
+  - ../../lib/msxlib.hlib

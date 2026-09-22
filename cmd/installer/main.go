@@ -176,7 +176,7 @@ func testInstallation() {
 	srcDir := getSourceDir()
 	binDir := filepath.Join(srcDir, "bin")
 
-	tools := []string{"kaji80", "musubi", "mobdump", "hako", "wirth80"}
+	tools := []string{"kaji80", "musubi", "mobdump", "hako", "wirth80", "dignac", "obi"}
 	for _, tool := range tools {
 		exeName := tool
 		if runtime.GOOS == "windows" {
