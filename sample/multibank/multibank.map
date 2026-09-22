@@ -5,24 +5,24 @@
 Modo de Memória: Multi-Banco (Memory Mapper)
 Bancos Utilizados: [0 1 2]
 Endereço Base:     0x0100
-Ponto de Entrada:  0x01DB
-Tamanho do .COM:   943 bytes (0x03AF)
+Ponto de Entrada:  0x017E
+Tamanho do .COM:   850 bytes (0x0352)
 
 --- SEGMENTOS ALOCADOS ---
-[ 0] 0x0100 - 0x01DB | Banco:  0 | Tipo: CODE | Mod: -2 | Tam:   219 bytes
-[ 1] 0x01DB - 0x0333 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   344 bytes
+[ 0] 0x0100 - 0x017E | Banco:  0 | Tipo: CODE | Mod: -2 | Tam:   126 bytes
+[ 1] 0x017E - 0x02D6 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   344 bytes
 [ 2] 0x8000 - 0x80A0 | Banco:  1 | Tipo: CODE | Mod:  1 | Tam:   160 bytes
 [ 3] 0x8000 - 0x80A0 | Banco:  2 | Tipo: CODE | Mod:  2 | Tam:   160 bytes
-[ 4] 0x0333 - 0x036F | Banco:  0 | Tipo: CODE | LINKER-TRAMP | Tam:    60 bytes
+[ 4] 0x02D6 - 0x0312 | Banco:  0 | Tipo: CODE | LINKER-TRAMP | Tam:    60 bytes
 
 --- TRAMPOLINS DE BANK SWITCHING (ÁREA COMUM -> PÁGINA 2) ---
-0x0347 -> Alvo: 'PrintBank1' no Banco  1 (0x8000) | Tamanho: 20 bytes
-0x035B -> Alvo: 'PrintBank2' no Banco  2 (0x8000) | Tamanho: 20 bytes
+0x02EA -> Alvo: 'PrintBank1' no Banco  1 (0x8000) | Tamanho: 20 bytes
+0x02FE -> Alvo: 'PrintBank2' no Banco  2 (0x8000) | Tamanho: 20 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
-0x01DB [Banco  0] PROC Start
-0x01F2 [Banco  0] PROC MsgCommon
-0x0291 [Banco  0] PROC MsgDone
+0x017E [Banco  0] PROC Start
+0x0195 [Banco  0] PROC MsgCommon
+0x0234 [Banco  0] PROC MsgDone
 0x8000 [Banco  1] PROC PrintBank1
 0x8009 [Banco  1] PROC MsgBank1
 0x8000 [Banco  2] PROC PrintBank2

@@ -182,17 +182,19 @@ func TestMultiBankTrampolineGeneration(t *testing.T) {
 	}
 }
 
-// TestBootstrapAllocSegStructure decodifica estruturalmente o Bootstrap
-// Loader gerado para um build multi-banco, em vez de só conferir seu
-// tamanho: confirma que o loop de alocação de segmentos reais via ALL_SEG
-// (EXTBIO) e o caminho de fallback sem EXTBIO convergem para os endereços
-// corretos, e que o handler de falha de alocação está de fato fora do
-// fluxo normal de execução. Isto substitui a antiga verificação manual de
-// deslocamentos de JR/JP por contagem de bytes (ver buildBootstrapCode) por
-// uma verificação que lê os próprios bytes gerados -- sem isso, um erro de
-// 1 byte num dos saltos travaria a máquina na inicialização de qualquer
-// programa multi-banco sem que nenhum teste detectasse.
-func TestBootstrapAllocSegStructure(t *testing.T) {
+// TestBootstrapIdentityMappingStructure decodifica estruturalmente o
+// Bootstrap Loader gerado para um build multi-banco, em vez de só conferir
+// seu tamanho: confirma que a detecção de EXTBIO (HOKVLD) e o caminho sem
+// EXTBIO convergem para o MESMO ponto de população de Musubi_BankTable, e
+// que essa população usa o mapeamento identidade (segmento físico = número
+// de banco do linker) -- não mais alocação dinâmica via ALL_SEG, revertida
+// em 2026-09-22 por não funcionar em hardware real (ver o comentário em
+// buildBootstrapCode). Isto substitui a antiga verificação manual de
+// deslocamentos de JR/JP por contagem de bytes por uma verificação que lê
+// os próprios bytes gerados -- sem isso, um erro de 1 byte num dos saltos
+// travaria a máquina na inicialização de qualquer programa multi-banco sem
+// que nenhum teste detectasse.
+func TestBootstrapIdentityMappingStructure(t *testing.T) {
 	mod0 := mob.NewObjectFile()
 	seg0 := mod0.AddSegment(mob.SegmentCode, 0, []byte{0xCD, 0x00, 0x00, 0xC9}, 0)
 	mod0.AddSymbol("Start", mob.SymbolPublic, mob.SymbolProc, seg0, 0x0000)
@@ -219,19 +221,15 @@ func TestBootstrapAllocSegStructure(t *testing.T) {
 	code := boot.Data
 	base := int(boot.BaseAddr)
 
-	// offset 18: Musubi_CallHL = JP (HL) = 0xE9
-	if code[18] != 0xE9 {
-		t.Fatalf("Expected Musubi_CallHL (JP (HL) / 0xE9) at offset 18, got 0x%02X", code[18])
+	// offset 18: LD A,(0xFB20) -- início do teste de HOKVLD, logo após o
+	// bloco de alinhamento de slot da Página 2 (18 bytes, offsets 0-17).
+	if code[18] != 0x3A || code[19] != 0x20 || code[20] != 0xFB {
+		t.Fatalf("Expected LD A,(0FB20h) at offset 18, got %02X %02X %02X", code[18], code[19], code[20])
 	}
 
-	// offset 21: LD A,(0xFB20) -- início do teste de HOKVLD
-	if code[21] != 0x3A || code[22] != 0x20 || code[23] != 0xFB {
-		t.Fatalf("Expected LD A,(0FB20h) at offset 21, got %02X %02X %02X", code[21], code[22], code[23])
-	}
-
-	// offset 24: RRCA
-	if code[24] != 0x0F {
-		t.Fatalf("Expected RRCA (0x0F) at offset 24, got 0x%02X", code[24])
+	// offset 21: RRCA
+	if code[21] != 0x0F {
+		t.Fatalf("Expected RRCA (0x0F) at offset 21, got 0x%02X", code[21])
 	}
 
 	// A partir daqui andamos por um cursor com comprimentos de instrução
@@ -240,37 +238,33 @@ func TestBootstrapAllocSegStructure(t *testing.T) {
 	// também aparece como BYTE DE OPERANDO em outra instrução da mesma
 	// sequência (0xFFCA, o endereço do EXTBIO), então escanear por valor
 	// de byte sem controlar limites de instrução dá falso positivo.
-	pos := 25
-	// JP NC,<fallback> (3 bytes)
+	pos := 22
+	// JP NC,<populateBankTable> (3 bytes)
 	if code[pos] != 0xD2 {
 		t.Fatalf("Expected JP NC,nn (0xD2) at offset %d, got 0x%02X", pos, code[pos])
 	}
-	fallbackTarget := int(binary.LittleEndian.Uint16(code[pos+1:pos+3])) - base
-	if fallbackTarget <= 0 || fallbackTarget >= len(code) {
-		t.Fatalf("JP NC target 0x%04X falls outside the bootstrap segment", fallbackTarget+base)
+	popTarget := int(binary.LittleEndian.Uint16(code[pos+1:pos+3])) - base
+	if popTarget <= 0 || popTarget >= len(code) {
+		t.Fatalf("JP NC target 0x%04X falls outside the bootstrap segment", popTarget+base)
 	}
 	pos += 3
-	// O fallback (mapeamento identidade, sem EXTBIO) começa com "LD A, banco"
-	if code[fallbackTarget] != 0x3E {
-		t.Fatalf("Expected fallback to start with LD A,n (0x3E) at offset %d, got 0x%02X", fallbackTarget, code[fallbackTarget])
-	}
 
 	pos += 1 // XOR A
 	pos += 3 // LD DE,0x0402
 	pos += 3 // CALL 0xFFCA
 	pos += 1 // OR A
 
-	// JP Z,<fallback> (nenhum segmento suportado) -- deve apontar para o MESMO fallback.
+	// JP Z,<populateBankTable> (nenhum segmento suportado) -- deve apontar
+	// para o MESMO destino que o JP NC acima.
 	if code[pos] != 0xCA {
 		t.Fatalf("Expected JP Z,nn (0xCA) at offset %d, got 0x%02X", pos, code[pos])
 	}
 	noSegTarget := int(binary.LittleEndian.Uint16(code[pos+1:pos+3])) - base
-	if noSegTarget != fallbackTarget {
-		t.Fatalf("JP Z target 0x%04X should match JP NC target 0x%04X", noSegTarget+base, fallbackTarget+base)
+	if noSegTarget != popTarget {
+		t.Fatalf("JP Z target 0x%04X should match JP NC target 0x%04X", noSegTarget+base, popTarget+base)
 	}
 	pos += 3
 
-	pos += 3 // LD (Musubi_JumpTableBase),HL
 	pos += 1 // PUSH HL
 	pos += 3 // LD DE,0x0024
 	pos += 1 // ADD HL,DE
@@ -280,33 +274,20 @@ func TestBootstrapAllocSegStructure(t *testing.T) {
 	pos += 1 // ADD HL,DE
 	pos += 3 // LD (Musubi_GetP2+1),HL
 
-	// Loop ALL_SEG (1 banco pagineável neste cenário): LD HL,(scratch) /
-	// XOR A / LD B,0 / CALL Musubi_CallHL / JP C,<falha> / LD (BankTable+banco),A
-	pos += 3 // LD HL,(Musubi_JumpTableBase)
-	pos += 1 // XOR A
-	if code[pos] != 0x06 || code[pos+1] != 0x00 {
-		t.Fatalf("Expected LD B,0 (0x06 0x00, seleciona mapper primário para ALL_SEG) at offset %d, got %02X %02X", pos, code[pos], code[pos+1])
-	}
-	pos += 2 // LD B,0
-	pos += 3 // CALL Musubi_CallHL
-	if code[pos] != 0xDA {
-		t.Fatalf("Expected JP C,nn (0xDA, falha de ALL_SEG) at offset %d, got 0x%02X", pos, code[pos])
-	}
-	failTarget := int(binary.LittleEndian.Uint16(code[pos+1:pos+3])) - base
-	if failTarget <= fallbackTarget || failTarget >= len(code) {
-		t.Fatalf("JP C (falha de ALL_SEG) target 0x%04X should be after the fallback block and inside the bootstrap", failTarget+base)
-	}
-	if code[failTarget] != 0x1E || code[failTarget+1] != '[' {
-		t.Fatalf("Expected ALL_SEG failure handler to start by printing '[' (0x1E 0x5B) at offset %d, got %02X %02X", failTarget, code[failTarget], code[failTarget+1])
+	if pos != popTarget {
+		t.Fatalf("Expected populateBankTable to start right after the EXTBIO patch block at offset %d, got target 0x%04X (offset %d)", pos, popTarget+base, popTarget)
 	}
 
-	// A própria falha nunca deve ser alcançada pelo fluxo normal: a última
-	// instrução antes dela (JP userEntry, incondicional) não pode ser um
-	// salto condicional que "caia" nela por engano -- checamos apenas que
-	// o byte imediatamente anterior a failTarget é o endereço-alvo (hi
-	// byte) do JP incondicional de 3 bytes que sai da rotina normalmente.
-	if code[failTarget-3] != 0xC3 {
-		t.Fatalf("Expected an unconditional JP (0xC3) right before the ALL_SEG failure handler at offset %d, got 0x%02X", failTarget-3, code[failTarget-3])
+	// O bloco de população de Musubi_BankTable (mapeamento identidade)
+	// começa com "LD A, banco" (0x3E) -- NÃO com carregamento da tabela de
+	// saltos do EXTBIO nem qualquer chamada ALL_SEG.
+	if code[popTarget] != 0x3E {
+		t.Fatalf("Expected Musubi_BankTable population to start with LD A,n (0x3E) at offset %d, got 0x%02X", popTarget, code[popTarget])
+	}
+	// LD A,banco (2 bytes) + LD (BankTable+banco),A (3 bytes) = 5 bytes por
+	// banco pagineável; este cenário tem 1 banco (Banco 1).
+	if code[popTarget+2] != 0x32 {
+		t.Fatalf("Expected LD (Musubi_BankTable+banco),A (0x32) at offset %d, got 0x%02X", popTarget+2, code[popTarget+2])
 	}
 }
 

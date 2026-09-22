@@ -749,15 +749,31 @@ func patchJP(code []byte, pos int, target uint16) {
 }
 
 // buildBootstrapCode gera o código do Bootstrap Loader que copia os bancos
-// para a Página 2 e, quando o EXTBIO da Memory Mapper está disponível,
-// aloca um segmento físico REAL por banco pagineável via ALL_SEG antes de
-// usá-lo -- em vez de assumir que o número lógico de banco do MUSUBI (1..N,
-// decidido só pela ordem em que os módulos declaram `BANK N`) já é por si
-// só um número de segmento físico livre do memory mapper, o que poderia
-// colidir com segmentos que o MSX-DOS 2 já usa nas Páginas 0/1/3 (ou com
-// outro processo). O mapeamento banco-lógico -> segmento-físico fica em
-// Musubi_BankTable, preenchida aqui e lida por este mesmo loop de cópia e
-// por todo trampolim gerado por buildTrampolineCode.
+// para a Página 2. O número de segmento físico usado para cada banco
+// pagineável é o próprio número lógico de banco do MUSUBI (mapeamento
+// identidade), gravado em Musubi_BankTable -- lida por este mesmo loop de
+// cópia e por todo trampolim gerado por buildTrampolineCode.
+//
+// NOTA HISTÓRICA (2026-09-22): uma tentativa anterior (v4.5.2 "Yoake")
+// trocou o mapeamento identidade por alocação DINÂMICA de segmento via
+// ALL_SEG do EXTBIO -- em teoria mais correta (evita colidir com um
+// segmento que o MSX-DOS 2 ou outro processo já esteja usando), mas nunca
+// tinha sido executada de verdade, só validada por análise estática/script
+// de conferência de bytes. Dois testes independentes em hardware real
+// confirmaram que ela não funciona (`sample/obi` e o já existente
+// `sample/multibank`, ambos carregam e voltam ao MSX-DOS sem executar nada,
+// nem antes nem depois de corrigir um parâmetro de registrador faltando na
+// chamada ALL_SEG) -- revertido para o mapeamento identidade original, o
+// mesmo usado desde a v4.1.0 "Akatsuki" (quando o suporte multi-banco foi
+// introduzido) e a única versão deste bootstrap já confirmada funcionando
+// em hardware. O custo aceito é não detectar colisão de segmento; para os
+// programas pequenos que esta toolchain gera hoje, os números baixos (1, 2,
+// 3...) usados como segmento estão livres na prática.
+//
+// A patch de Musubi_PutP2/GetP2 para as rotinas oficiais do EXTBIO (quando
+// disponível) é mantida -- não tem relação com a alocação de segmento
+// acima, é só sobre qual mecanismo de troca de página é usado, e não foi
+// implicada em nenhum dos dois testes que falharam.
 //
 // Nenhum salto neste código usa deslocamento relativo (JR) calculado por
 // contagem manual de bytes: cada JP/JP cc é emitido com um endereço de
@@ -775,7 +791,7 @@ func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint1
 	// ---- 1. Alinhamento de Slot da Página 2 (0x8000..0xBFFF) com a
 	// Página 1 (RAM Mapper) via Porta 0xA8 (18 bytes) -- garante que a
 	// Página 2 aponte para o slot do Memory Mapper mesmo com cartuchos de
-	// DOS externos. Inalterado por esta correção. ----
+	// DOS externos. ----
 	code = append(code,
 		0xDB, 0xA8, // IN A, (0xA8)
 		0x47,       // LD B, A
@@ -789,32 +805,17 @@ func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint1
 		0xD3, 0xA8, // OUT (0xA8), A
 	)
 
-	// ---- 2. Duas células fixas usadas só durante o boot: ----
-	// Musubi_CallHL: não existe "CALL (HL)" no Z80 -- para chamar uma
-	// rotina cujo endereço só é conhecido em tempo de execução (ALL_SEG,
-	// dentro da tabela de saltos do EXTBIO, endereço em HL), usa-se
-	// "CALL Musubi_CallHL" (empilha o endereço de retorno correto: a
-	// instrução seguinte a este CALL) seguido deste "JP (HL)" fixo, cujo
-	// destino final devolve o controle via RET normalmente, desempilhando
-	// esse mesmo endereço.
-	callHLAddr := curAddr()
-	code = append(code, 0xE9) // JP (HL)
-	// Musubi_JumpTableBase: guarda a base da tabela de saltos do EXTBIO
-	// (recebida em HL) entre uma chamada de ALL_SEG e outra, já que a
-	// própria rotina do sistema é livre para usar HL internamente e não
-	// garante preservá-lo entre chamadas.
-	jumpTableScratchAddr := curAddr()
-	code = append(code, 0x00, 0x00)
-
-	// ---- 3. HOKVLD: suporte a EXTBIO presente? ----
+	// ---- 2. HOKVLD: suporte a EXTBIO presente? Se sim, consulta a tabela
+	// de saltos (D=4,E=2) e patcheia Musubi_PutP2/GetP2 para as rotinas
+	// oficiais do EXTBIO; se não, os dois seguem apontando para o fallback
+	// de porta I/O direta já embutido em buildDispatcherCode. Em ambos os
+	// casos o fluxo converge para o mesmo ponto (popular Musubi_BankTable
+	// com o mapeamento identidade). ----
 	code = append(code, 0x3A, 0x20, 0xFB) // LD A, (0xFB20) - flag HOKVLD
 	code = append(code, 0x0F)             // RRCA -> Carry = bit0 (1 = EXTBIO presente)
 	jpHokPos := len(code)
-	code = append(code, 0xD2, 0x00, 0x00) // JP NC, <fallback> (placeholder)
+	code = append(code, 0xD2, 0x00, 0x00) // JP NC, <populateBankTable> (placeholder)
 
-	// ---- 4. Bloco EXTBIO: obtém a tabela de saltos da Memory Mapper e
-	// aloca um segmento real por banco pagineável via ALL_SEG (offset 0
-	// da tabela) antes de usar Musubi_PutP2/GetP2. ----
 	putPatchAddr := putP2Addr + 1
 	getPatchAddr := getP2Addr + 1
 
@@ -823,11 +824,9 @@ func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint1
 	code = append(code, 0xCD, 0xCA, 0xFF) // CALL 0xFFCA (EXTBIO -> HL = Tabela, A = total segmentos)
 	code = append(code, 0xB7)             // OR A
 	jpNoSegPos := len(code)
-	code = append(code, 0xCA, 0x00, 0x00) // JP Z, <fallback> (nenhum segmento suportado, placeholder)
+	code = append(code, 0xCA, 0x00, 0x00) // JP Z, <populateBankTable> (nenhum segmento suportado, placeholder)
 
-	code = append(code, 0x22, uint8(jumpTableScratchAddr&0xFF), uint8(jumpTableScratchAddr>>8)) // LD (Musubi_JumpTableBase), HL
-
-	// Patch de Musubi_PutP2 (+24h) e Musubi_GetP2 (+27h) -- como antes desta correção.
+	// Patch de Musubi_PutP2 (+24h) e Musubi_GetP2 (+27h).
 	code = append(code, 0xE5)                                                   // PUSH HL
 	code = append(code, 0x11, 0x24, 0x00)                                       // LD DE, 0x0024 (+24h = PUT_P2)
 	code = append(code, 0x19)                                                   // ADD HL, DE
@@ -837,61 +836,26 @@ func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint1
 	code = append(code, 0x19)                                                   // ADD HL, DE
 	code = append(code, 0x22, uint8(getPatchAddr&0xFF), uint8(getPatchAddr>>8)) // LD (Musubi_GetP2 + 1), HL
 
-	// ALL_SEG por banco pagineável (16 bytes cada): A=0 (tipo=segmento RAM
-	// comum), B=0 (seleciona o mapper PRIMÁRIO -- exigido pela convenção da
-	// rotina ALL_SEG do EXTBIO, ver map.grauw.nl/resources/dos2_environment.php;
-	// antes desta correção B ficava com o que quer que a própria chamada
-	// EXTBIO D=4,E=2 alguns bytes acima tivesse deixado lá -- que segundo a
-	// mesma referência é "B = slot do mapper primário", não necessariamente
-	// 0, corrompendo silenciosamente o parâmetro em qualquer slot != 0),
-	// CALL Musubi_CallHL executa a rotina em (Musubi_JumpTableBase+0);
-	// retorna com Carry setado se não houver segmento livre (ou parâmetro
-	// inválido), senão A=segmento real.
-	var allocFailPositions []int
-	for _, b := range banks {
-		tblEntryAddr := bankTableAddr + uint16(b.Bank)
-		code = append(code, 0x2A, uint8(jumpTableScratchAddr&0xFF), uint8(jumpTableScratchAddr>>8)) // LD HL,(Musubi_JumpTableBase)
-		code = append(code, 0xAF)                                                                   // XOR A (tipo=0: segmento RAM comum)
-		code = append(code, 0x06, 0x00)                                                             // LD B, 0 (mapper primário)
-		code = append(code, 0xCD, uint8(callHLAddr&0xFF), uint8(callHLAddr>>8))                     // CALL Musubi_CallHL -> executa ALL_SEG
-		allocFailPositions = append(allocFailPositions, len(code))
-		code = append(code, 0xDA, 0x00, 0x00)                                       // JP C, <falha de alocação> (placeholder)
-		code = append(code, 0x32, uint8(tblEntryAddr&0xFF), uint8(tblEntryAddr>>8)) // LD (Musubi_BankTable+banco), A
-	}
+	populateBankTableAddr := curAddr()
+	patchJP(code, jpHokPos, populateBankTableAddr)
+	patchJP(code, jpNoSegPos, populateBankTableAddr)
 
-	jpSkipFallbackPos := len(code)
-	code = append(code, 0xC3, 0x00, 0x00) // JP <depois do fallback> (placeholder, incondicional)
-
-	// ---- 5. Fallback sem EXTBIO: mapeamento identidade (comportamento
-	// desta toolchain antes desta correção). Sem um allocator real
-	// disponível não há como saber quais segmentos estão livres; usa o
-	// número de banco do linker diretamente como número de segmento, como
-	// sempre foi feito -- só passou a ir através de Musubi_BankTable
-	// também, para o loop de cópia e os trampolins não precisarem de dois
-	// caminhos de código diferentes conforme EXTBIO esteja disponível ou não. ----
-	fallbackAddr := curAddr()
+	// ---- 3. Popular Musubi_BankTable com o mapeamento identidade
+	// (segmento físico = número de banco do linker; 5 bytes por banco). ----
 	for _, b := range banks {
 		tblEntryAddr := bankTableAddr + uint16(b.Bank)
 		code = append(code, 0x3E, b.Bank)                                           // LD A, banco
 		code = append(code, 0x32, uint8(tblEntryAddr&0xFF), uint8(tblEntryAddr>>8)) // LD (Musubi_BankTable+banco), A
 	}
-	afterFallbackAddr := curAddr()
 
-	patchJP(code, jpHokPos, fallbackAddr)
-	patchJP(code, jpNoSegPos, fallbackAddr)
-	patchJP(code, jpSkipFallbackPos, afterFallbackAddr)
-
-	// ---- 6. Imprimir "[L]" para indicar execução do loader via BDOS
-	// função 02h (21 bytes) -- ponto de convergência: o caminho EXTBIO
-	// bem-sucedido pula até aqui pelo JP incondicional acima, e o
-	// fallback cai aqui direto por continuidade. ----
+	// ---- 4. Imprimir "[L]" para indicar execução do loader via BDOS
+	// função 02h (21 bytes). ----
 	code = append(code, 0x1E, '[', 0x0E, 0x02, 0xCD, 0x05, 0x00)
 	code = append(code, 0x1E, 'L', 0x0E, 0x02, 0xCD, 0x05, 0x00)
 	code = append(code, 0x1E, ']', 0x0E, 0x02, 0xCD, 0x05, 0x00)
 
-	// ---- 7. Copiar os payloads de cada banco para a Página 2 (0x8000),
-	// lendo o segmento REAL de Musubi_BankTable em vez de usar o número
-	// de banco do linker diretamente (17 bytes por banco). ----
+	// ---- 5. Copiar os payloads de cada banco para a Página 2 (0x8000),
+	// lendo o segmento de Musubi_BankTable (17 bytes por banco). ----
 	putLo := uint8(putP2Addr & 0xFF)
 	putHi := uint8(putP2Addr >> 8)
 
@@ -912,7 +876,7 @@ func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint1
 		currSource += size
 	}
 
-	// ---- 8. Chavear Página 2 para o primeiro banco paginável (ex: Banco
+	// ---- 6. Chavear Página 2 para o primeiro banco paginável (ex: Banco
 	// 1), também via Musubi_BankTable (6 bytes) ----
 	firstBank := uint8(1)
 	if len(banks) > 0 {
@@ -922,23 +886,8 @@ func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint1
 	code = append(code, 0x3A, uint8(firstTblEntryAddr&0xFF), uint8(firstTblEntryAddr>>8)) // LD A,(Musubi_BankTable+firstBank)
 	code = append(code, 0xCD, putLo, putHi)                                               // CALL Musubi_PutP2
 
-	// ---- 9. Saltar para o ponto de entrada do usuário (3 bytes) ----
+	// ---- 7. Saltar para o ponto de entrada do usuário (3 bytes) ----
 	code = append(code, 0xC3, uint8(userEntry&0xFF), uint8(userEntry>>8))
-
-	// ---- 10. Handler de falha de ALL_SEG: só alcançável pelos "JP C"
-	// acima, nunca pelo fluxo normal (a instrução anterior é o JP
-	// incondicional do passo 9). Imprime "[NOMEM]" e sai via BDOS
-	// função 00h -- não há memory mapper com segmentos suficientes para
-	// rodar este programa multi-banco. ----
-	failAddr := curAddr()
-	for _, ch := range []byte("[NOMEM]") {
-		code = append(code, 0x1E, ch, 0x0E, 0x02, 0xCD, 0x05, 0x00)
-	}
-	code = append(code, 0x0E, 0x00, 0xCD, 0x05, 0x00) // LD C, 0 / CALL 0x0005 (BDOS_Exit)
-
-	for _, pos := range allocFailPositions {
-		patchJP(code, pos, failAddr)
-	}
 
 	return code
 }
