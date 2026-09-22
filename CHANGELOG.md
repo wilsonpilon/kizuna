@@ -3,6 +3,114 @@
 Todas as mudanças notáveis deste projeto são documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
+## [4.6.0] - 2026-09-22 - Release Kansei (完成)
+
+### Fase 6 concluída: OBI, o orquestrador de build declarativo
+
+Todo o roadmap original (`SPEC.md` Seção 8) está agora implementado. `OBI`
+(`pkg/obi` + `cmd/obi`) lê uma receita `Obifile` declarativa e invoca
+`KAJI80`/`WIRTH80`/`DIGNAC` + `MUSUBI` (ou `HAKO`, quando o alvo é uma
+biblioteca `.hlib`) na ordem certa — tudo **em processo**, reusando
+exatamente as mesmas APIs que `cmd/kaji80`/`cmd/wirth80`/`cmd/dignac`/
+`cmd/musubi`/`cmd/hako` já chamam, sem lançar subprocessos.
+
+- `pkg/obi/parser.go`: micro-parser de linha/indentação para o subconjunto
+  de sintaxe do `Obifile` (não é um parser YAML genérico — o projeto é
+  deliberadamente livre de dependências externas, `go.mod` não tem nenhum
+  `require`, no mesmo espírito hand-rolled do `KAJI80`/`WIRTH80`/`DIGNAC`).
+  Suporta `target`/`entry`/`base` como campos escalares, `resources:`/
+  `modules:` como listas de `- campo: valor`, `link:` como mapa aninhado, e
+  bibliotecas via `library: {archive: x.hlib}` (forma singular, compatível
+  com o `demo/Obifile` ilustrativo original) ou `libraries: [x.hlib, ...]`
+  (forma plural).
+- `pkg/obi/build.go`: compila cada módulo declarado, sintetiza um objeto
+  `.MOB` mínimo por *resource* binário bruto (um segmento `DATA` + um
+  símbolo `PUBLIC`/`DATA`, via a API já existente de `pkg/mob`), resolve
+  bibliotecas `.hlib` e despacha para `musubi.LinkToFile` (`target: *.com`)
+  ou `hako.Pack` (`target: *.hlib`).
+- `sample/obi/`: prova real (não ilustrativa, diferente do `demo/Obifile`
+  original) — `main.asm` (`KAJI80`, banco 0, dono do `Start`) chama
+  `ChartLib.Desenhar`, um módulo `DIGNAC` sem `PROCEDURE Main` (logo sem
+  `Start` próprio, sem conflito de símbolo) no banco 2, com um resource
+  binário embutido e a `MSXLIB` via `.hlib`. `MUSUBI` gera o trampolim de
+  troca de banco automaticamente.
+
+**Achado registrado, fora de escopo**: `WIRTH80` sempre emite seu próprio
+`Start` e não tem sintaxe para declarar/chamar uma rotina externa
+arbitrária — por isso não pode ser um módulo "biblioteca" numa ligação
+multi-módulo hoje (só pode ser o único módulo, dono do programa). É por
+isso que `demo/main.pas` continua só ilustrativo.
+
+### Regressão real encontrada e corrigida: o bootstrap multi-banco do MUSUBI não executava
+
+Construir e testar `sample/obi` em hardware real (banco 0 + banco 2)
+revelou que o programa carregava e voltava limpo ao prompt do MSX-DOS sem
+executar nada — nem imprimir o `[L]` que o bootstrap sempre imprime
+primeiro. O mesmo teste com o já existente `sample/multibank` confirmou:
+**não era específico do OBI, era geral a qualquer programa multi-banco**.
+
+Investigação por histórico do Git: o multi-banco funcionava desde a
+v4.1.0 "Akatsuki" (quando esse suporte foi introduzido) usando um
+mapeamento **identidade** simples — segmento físico da Memory Mapper =
+número de banco do linker. A sessão da v4.5.2 "Yoake" trocou isso por
+alocação **dinâmica** de segmento via `ALL_SEG` do EXTBIO, em teoria mais
+correta (evita colidir com um segmento que o MSX-DOS 2 ou outro processo
+já esteja usando), mas **nunca tinha sido executada de verdade** — só
+validada por análise estática e um script Python de conferência de bytes.
+Essa troca foi a regressão.
+
+Duas tentativas de correção:
+
+1. Confirmado contra a documentação oficial do protocolo EXTBIO
+   ([map.grauw.nl/resources/dos2_environment.php](http://map.grauw.nl/resources/dos2_environment.php))
+   que a rotina `ALL_SEG` exige `B` = seleção de mapper (0 = mapper
+   primário) como parâmetro de entrada, além de `A` = tipo de segmento.
+   `buildBootstrapCode` fazia `XOR A` (`A=0`, correto) mas nunca definia
+   `B` antes de chamar `ALL_SEG` — `B` ficava com o que a chamada EXTBIO
+   anterior (que busca a tabela de saltos) tivesse deixado lá, que segundo
+   a mesma documentação é "o slot do mapper primário", não necessariamente
+   0. Corrigido adicionando `LD B, 0`. **Reteste em hardware: continuou
+   quebrado, sintoma idêntico.**
+2. Com a correção de registrador não resolvendo, e a confirmação de que
+   essa era uma regressão pós-v4.1.0 sem histórico de funcionamento,
+   `buildBootstrapCode` foi revertido por inteiro para o mapeamento
+   identidade original — removida a célula `Musubi_CallHL`/`JP (HL)`, o
+   scratch da tabela de saltos do EXTBIO, o laço de chamadas `ALL_SEG` e o
+   handler `[NOMEM]` (nenhum necessário sem alocação dinâmica). Mantida a
+   detecção de EXTBIO/HOKVLD que ajusta `Musubi_PutP2`/`GetP2` para as
+   rotinas oficiais do EXTBIO quando disponível (ortogonal à numeração de
+   segmento, não implicada em nenhuma das duas falhas) e a resolução de
+   saltos por endereço absoluto via `patchJP()` em vez de deslocamentos
+   `JR` contados à mão (boa prática mantida da v4.5.2).
+
+**Confirmado em hardware real**: `sample/multibank/multibank.com`
+recompilado imprime corretamente `[L]`, a mensagem do Banco 0, a do Banco
+1, a do Banco 2 e a mensagem final do Banco 0, com retorno limpo ao
+MSX-DOS. `sample/obi/chart_lib.bas` voltou de `BANK 0` para `BANK 2` (a
+versão single-bank era só uma mitigação temporária enquanto o bootstrap
+estava sob suspeita), restaurando a demonstração completa de multi-banco
+via OBI.
+
+`TestBootstrapAllocSegStructure` foi reescrito como
+`TestBootstrapIdentityMappingStructure` para o novo layout de bytes
+(menor: sem as células/laço de `ALL_SEG`). `go test ./...` limpo.
+
+### SCREEN 2 confirmada visualmente em hardware (v4.5.3, não documentada até agora)
+
+A causa raiz do bug gráfico de SCREEN 2 (dois bugs independentes,
+encontrados e corrigidos na v4.5.2 — ver entrada abaixo) foi confirmada
+**visualmente**, pela primeira vez em toda a saga, rodando
+`sample/basic/chart.bas` em hardware/emulador real: moldura, eixos,
+grade e curva de pontos todos renderizados corretamente, sem nenhum
+artefato. Ver `README.md` para a captura de tela e a listagem completa.
+De brinde, corrigida uma não-determinismo no `.MOB` gerado pelo `KAJI80`
+(a tabela de símbolos `PUBLIC`/`EXTERN` era serializada iterando um `map`
+do Go, cuja ordem muda a cada execução — inofensivo para o linker, mas
+gerava diffs espúrios em builds versionados a cada remontagem do mesmo
+fonte; corrigido ordenando os nomes alfabeticamente antes de serializar).
+Não-determinismo residual e diferente ainda existe em `WIRTH80`/`DIGNAC`
+(ordem dos literais de string na pool de deduplicação), não corrigido.
+
 ## [4.5.2] - 2026-09-21 - Release Yoake (夜明け)
 
 ### Causa raiz real do bug gráfico de SCREEN 2 encontrada e corrigida

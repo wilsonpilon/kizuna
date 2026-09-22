@@ -1,3 +1,196 @@
+# Release Notes — KIZUNA v4.6.0 "Kansei" (完成)
+
+> "O laço agora amarra até os próprios bancos de memória — e prova, de novo, que só a execução real fecha um bug."
+
+**Kansei** (完成) — "conclusão, obra completa, acabamento". Depois de *Kuyashii*
+(悔しい, a frustração), *Yoake* (夜明け, o amanhecer) e *Kaisei* (快晴, o céu
+limpo) da saga de SCREEN 2, esta release fecha o **roadmap original inteiro**
+(`SPEC.md` Seção 8) com o envio de `OBI` — e, ao testá-lo em hardware real,
+encontra e corrige uma regressão séria e há muito adormecida no suporte
+multi-banco.
+
+## Fase 6: OBI, o orquestrador de build declarativo
+
+`OBI` (`pkg/obi` + `cmd/obi`) lê uma receita `Obifile` e invoca
+`KAJI80`/`WIRTH80`/`DIGNAC` + `MUSUBI` (ou `HAKO`, quando o alvo é uma
+biblioteca `.hlib`) na ordem certa — tudo em processo, reusando as mesmas
+APIs que cada ferramenta já expõe, sem lançar subprocessos. Sem dependências
+externas (o projeto inteiro é zero-dependency), o parser do `Obifile` é
+hand-rolled, no mesmo espírito do `KAJI80`/`WIRTH80`/`DIGNAC`.
+
+`sample/obi/` é a prova: uma receita real (não ilustrativa, diferente do
+`demo/Obifile` original) combinando `KAJI80` (banco 0, dono do `Start`),
+`DIGNAC` (banco 2, módulo biblioteca sem `PROCEDURE Main`), um resource
+binário embutido, e a `MSXLIB` via `.hlib` — tudo com um único comando
+`obi build`.
+
+**Achado fora de escopo, registrado**: `WIRTH80` sempre emite seu próprio
+`Start` e não tem sintaxe para chamar uma rotina externa arbitrária, então
+não pode ser um módulo "biblioteca" numa ligação multi-módulo hoje — é por
+isso que `demo/main.pas` continua só um croqui ilustrativo.
+
+## Regressão real: o bootstrap multi-banco do MUSUBI não executava
+
+Testar `sample/obi` em hardware real revelou um sintoma preocupante: o
+programa carregava e voltava limpo ao prompt do MSX-DOS **sem executar
+nada** — nem imprimir o `[L]` que o bootstrap multi-banco sempre imprime
+primeiro. O mesmo teste com o já existente `sample/multibank` confirmou que
+não era específico do OBI: **era geral a qualquer programa multi-banco**.
+
+Investigação por histórico do Git revelou a causa: o multi-banco funcionava
+desde a v4.1.0 "Akatsuki" com um mapeamento **identidade** simples (segmento
+físico = número de banco do linker). A sessão da v4.5.2 "Yoake" trocou isso
+por alocação **dinâmica** via `ALL_SEG` do EXTBIO — em teoria mais correta,
+mas **nunca executada de verdade**, só validada por análise estática. Essa
+troca foi a regressão.
+
+Uma primeira correção (registrador `B` não inicializado antes de `ALL_SEG`,
+confirmada contra a documentação oficial do protocolo EXTBIO) não resolveu
+o problema. A correção definitiva foi reverter `buildBootstrapCode` para o
+mapeamento identidade original — a única versão deste bootstrap já
+confirmada funcionando em hardware — mantendo as melhorias de qualidade de
+código da v4.5.2 que não tinham relação com o bug.
+
+**Confirmado em hardware real pelo usuário**: `multibank.com` recompilado
+imprime corretamente a sequência completa Banco 0 → Banco 1 → Banco 2 →
+Banco 0, com retorno limpo ao MSX-DOS. Ver a listagem completa e a captura
+de tela ao final destas notas.
+
+## SCREEN 2: confirmação visual documentada (v4.5.3)
+
+A v4.5.3 "Kaisei" já havia confirmado visualmente, em hardware real, os
+dois bugs de SCREEN 2 corrigidos na v4.5.2 — ver a entrada anterior destas
+notas e `README.md` para a listagem e a captura de tela completas.
+
+## Estado do projeto
+
+Com `OBI` enviado e o bootstrap multi-banco confirmado funcionando de novo,
+**todo o roadmap original está implementado e validado em hardware**:
+`KAJI80`, `WIRTH80`, `DIGNAC`, `MUSUBI`, `HAKO`, `MOBDUMP`, `MSXLIB`
+(incluindo SCREEN 2 e multi-banco) e `OBI`.
+
+### Próximos passos
+
+- Expandir a `MSXLIB` (sprites, I/O de arquivo, som mais rico) — a camada
+  que todo programa de aplicação realmente usa.
+- Investigar o não-determinismo residual de `WIRTH80`/`DIGNAC` (ordem dos
+  literais de string na pool de deduplicação).
+- Considerar suporte a units/linkagem externa em `WIRTH80`, o que
+  finalmente tornaria `demo/main.pas` realizável.
+
+## Confirmação visual: bank switching automático real
+
+```asm
+; main.asm -- Banco 0 (Área Comum)
+MODULE MAIN
+BANK 0
+
+PUBLIC Start
+EXTERN PrintBank1, PrintBank2
+
+BDOS       EQU 0x0005
+C_WRITE    EQU 0x09
+
+Start:
+    ; 1. Mensagem a partir do Banco 0 (Área Comum)
+    ld   de, MsgCommon
+    ld   c, C_WRITE
+    call BDOS
+
+    ; 2. Chamada Cross-Bank: Salta para rotina no Banco 1
+    ; O MUSUBI intercepta esta chamada e gera o trampolim automático!
+    call PrintBank1
+
+    ; 3. Chamada Cross-Bank: Salta para rotina no Banco 2
+    ; O MUSUBI intercepta e troca para o Banco 2 na Página 2!
+    call PrintBank2
+
+    ; 4. Mensagem final do Banco 0 e retorno limpo ao MSX-DOS
+    ld   de, MsgDone
+    ld   c, C_WRITE
+    call BDOS
+
+    ret
+
+MsgCommon:
+    db 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "[Banco 0 - Area Comum] KIZUNA Multi-Banco Iniciado", 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "$"
+
+MsgDone:
+    db 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "[Banco 0] Execucao Multi-Banco Concluida com Sucesso!", 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "$"
+
+ENDMOD
+```
+
+```asm
+; bank1.asm -- Banco 1 (paginável na Página 2, 0x8000..0xBFFF)
+MODULE BANK1
+BANK 1
+
+PUBLIC PrintBank1
+
+BDOS       EQU 0x0005
+C_WRITE    EQU 0x09
+
+PrintBank1:
+    ; Imprime mensagem oficial do Banco 1 na Página 2
+    ld   de, MsgBank1
+    ld   c, C_WRITE
+    call BDOS
+    ret
+
+MsgBank1:
+    db 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db ">>> [BANCO 1] ROTINA DO BANCO 1 EXECUTADA!", 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "$"
+
+ENDMOD
+```
+
+```asm
+; bank2.asm -- Banco 2 (paginável na Página 2, 0x8000..0xBFFF)
+MODULE BANK2
+BANK 2
+
+PUBLIC PrintBank2
+
+BDOS       EQU 0x0005
+C_WRITE    EQU 0x09
+
+PrintBank2:
+    ; Imprime mensagem oficial do Banco 2 na Página 2
+    ld   de, MsgBank2
+    ld   c, C_WRITE
+    call BDOS
+    ret
+
+MsgBank2:
+    db 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db ">>> [BANCO 2] ROTINA DO BANCO 2 EXECUTADA!", 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "$"
+
+ENDMOD
+```
+
+Resultado da execução em openMSX (MSX2+ Boosted, MSX-DOS 2) — `[L]` do
+bootstrap, seguido das três mensagens (Banco 0 → Banco 1 → Banco 2 → Banco
+0), e retorno limpo ao prompt:
+
+![multibank.com rodando no openMSX, mostrando a troca de banco 0 -> 1 -> 2 -> 0 com sucesso](images/kizuna-01.png)
+
+---
+
 # Release Notes — KIZUNA v4.5.3 "Kaisei" (快晴)
 
 > "Da frustração ao céu limpo — o mesmo laço que amarra as linguagens agora também desenha certo."

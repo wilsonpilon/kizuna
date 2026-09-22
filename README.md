@@ -10,7 +10,7 @@ num único executável — inclusive distribuindo módulos por bancos de
 memória diferentes, com troca de banco resolvida automaticamente pelo
 linker.
 
-Versão Atual: `v4.5.3` — Release **Kaisei (快晴)**.
+Versão Atual: `v4.6.0` — Release **Kansei (完成)**.
 
 ## Por quê
 
@@ -36,7 +36,7 @@ BASIC estruturado no mesmo binário `.COM`.
 | `HAKO`    | Bibliotecário / Empacotador (`.hlib`) | **Concluído & Validado** (v4.3)   |
 | `MOBDUMP` | Inspecionador de objetos `.MOB`       | **Concluído & Validado** (v4.2)   |
 | `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **Concluído & Validado, SCREEN 2 confirmada em hardware** (v4.5.3) |
-| `OBI`     | Orquestrador de build (`Obifile`)     | **Concluído & Validado** (Fase 6) |
+| `OBI`     | Orquestrador de build (`Obifile`)     | **Concluído & Validado, confirmado em hardware** (v4.6.0) |
 
 Cada compilador/assembler gera um objeto relocável no formato próprio `.MOB`;
 `MUSUBI` linka os módulos (com eliminação de código morto via Smart-Linking e
@@ -54,6 +54,10 @@ trampolins automáticos de bank switching) e produz o `.COM` final para MSX-DOS 
   - `hello.bas`: Hello World em MSX-BASIC Dignified compilado para `.COM` (apenas 186 bytes).
   - `calc.bas`: Aritmética de 16 bits, variáveis locais e formatação de texto com smart-linking.
   - `chart.bas`: Módulo gráfico paginado no banco 2 para desenhar gráficos com `LINE`, `BF` e `PSET`.
+- `sample/obi/`: Receita `Obifile` real (não ilustrativa) orquestrando `KAJI80`
+  (banco 0, dono do `Start`) + `DIGNAC` (banco 2, módulo biblioteca sem
+  `PROCEDURE Main`) + um resource binário embutido + `msxlib.hlib`, tudo com
+  um único comando `obi build`.
 
 ### Estado atual da SCREEN 2 (causa raiz encontrada e confirmada em hardware)
 
@@ -86,19 +90,13 @@ análise estática); ambos corrigidos juntos. **Confirmado visualmente em
 hardware/emulador real na v4.5.3** — ver a captura de tela e a listagem
 completa de `sample/basic/chart.bas` na seção seguinte.
 
-De brinde, a mesma auditoria encontrou (e corrigiu) mais dois pontos de
-robustez no linker `MUSUBI`, nenhum deles relacionado ao bug gráfico:
-- Um segmento `BSS` num banco comum não contribuía bytes reais ao `.COM`
-  (por design do formato `.MOB`), mas o endereço reservava o espaço mesmo
-  assim — em build multi-banco, isso deslocava para trás qualquer coisa
-  posicionada depois dele (dispatcher/trampolins). Corrigido materializando
-  BSS como zeros reais no binário final.
-- O bootstrap multi-banco usava o número lógico de banco do linker (1, 2, 3…)
-  diretamente como número de segmento físico da Memory Mapper, sem checar se
-  esse segmento já estava em uso pelo MSX-DOS 2 nas Páginas 0/1/3. Agora, com
-  EXTBIO disponível, cada banco pagineável é alocado via `ALL_SEG` real antes
-  do uso (com fallback para o comportamento antigo se o EXTBIO não estiver
-  presente).
+De brinde, a mesma auditoria encontrou (e corrigiu) mais um ponto de
+robustez no linker `MUSUBI`, sem relação com o bug gráfico: um segmento
+`BSS` num banco comum não contribuía bytes reais ao `.COM` (por design do
+formato `.MOB`), mas o endereço reservava o espaço mesmo assim — em build
+multi-banco, isso deslocava para trás qualquer coisa posicionada depois
+dele (dispatcher/trampolins). Corrigido materializando BSS como zeros
+reais no binário final.
 
 Bugs históricos já corrigidos em sessões anteriores, mantidos aqui por
 completude:
@@ -216,6 +214,146 @@ moldura branca, eixos em ciano, grade cinza e curva de pontos amarela, todos
 renderizados corretamente:
 
 ![chart.bas rodando em SCREEN 2 no openMSX](images/kizuna-00.png)
+
+## Mostra: bank switching automático real (`sample/multibank/`)
+
+**O bootstrap multi-banco do MUSUBI teve uma regressão real, encontrada e
+corrigida na v4.6.0.** O multi-banco funcionava desde a v4.1.0 "Akatsuki"
+(quando esse suporte foi introduzido) com um mapeamento simples: número de
+segmento físico da Memory Mapper = número de banco do linker. A sessão da
+v4.5.2 "Yoake" trocou isso por alocação dinâmica de segmento via `ALL_SEG`
+do EXTBIO — em teoria mais correta (evita colidir com um segmento que o
+MSX-DOS 2 ou outro processo já esteja usando), mas **nunca tinha sido
+executada de verdade**, só validada por análise estática e um script de
+conferência de bytes. Rodando `sample/multibank` de novo em hardware real
+na v4.6.0, o programa carregava e voltava limpo para o prompt do MSX-DOS
+sem executar nada — uma regressão silenciosa. Confirmado contra a
+documentação oficial do protocolo EXTBIO
+([map.grauw.nl/resources/dos2_environment.php](http://map.grauw.nl/resources/dos2_environment.php))
+que faltava inicializar o registrador `B` (seleção de mapper) antes de
+`ALL_SEG`; corrigido isso e o problema persistiu, confirmando que a
+alocação dinâmica em si era a causa. Revertido para o mapeamento
+identidade original — a única versão deste bootstrap já confirmada
+funcionando em hardware — mantendo as melhorias de qualidade de código da
+v4.5.2 que não tinham relação com o bug (resolução de saltos por endereço
+absoluto via `patchJP()`, em vez de deslocamentos `JR` contados à mão).
+
+O exemplo abaixo — um módulo em Assembly puro por banco, sem biblioteca
+nem outra linguagem envolvida, para isolar só o mecanismo de bank
+switching — mostra o `MUSUBI` gerando o trampolim de troca de banco
+automaticamente: `main.asm` (Banco 0, Área Comum) chama `PrintBank1` e
+`PrintBank2` como se fossem rotinas locais comuns; o linker detecta que
+os símbolos vivem em bancos pagináveis diferentes e insere a troca de
+página sozinho, sem o programador escrever nenhum código de paginação.
+
+```asm
+; main.asm -- Banco 0 (Área Comum)
+MODULE MAIN
+BANK 0
+
+PUBLIC Start
+EXTERN PrintBank1, PrintBank2
+
+BDOS       EQU 0x0005
+C_WRITE    EQU 0x09
+
+Start:
+    ; 1. Mensagem a partir do Banco 0 (Área Comum)
+    ld   de, MsgCommon
+    ld   c, C_WRITE
+    call BDOS
+
+    ; 2. Chamada Cross-Bank: Salta para rotina no Banco 1
+    ; O MUSUBI intercepta esta chamada e gera o trampolim automático!
+    call PrintBank1
+
+    ; 3. Chamada Cross-Bank: Salta para rotina no Banco 2
+    ; O MUSUBI intercepta e troca para o Banco 2 na Página 2!
+    call PrintBank2
+
+    ; 4. Mensagem final do Banco 0 e retorno limpo ao MSX-DOS
+    ld   de, MsgDone
+    ld   c, C_WRITE
+    call BDOS
+
+    ret
+
+MsgCommon:
+    db 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "[Banco 0 - Area Comum] KIZUNA Multi-Banco Iniciado", 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "$"
+
+MsgDone:
+    db 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "[Banco 0] Execucao Multi-Banco Concluida com Sucesso!", 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "$"
+
+ENDMOD
+```
+
+```asm
+; bank1.asm -- Banco 1 (paginável na Página 2, 0x8000..0xBFFF)
+MODULE BANK1
+BANK 1
+
+PUBLIC PrintBank1
+
+BDOS       EQU 0x0005
+C_WRITE    EQU 0x09
+
+PrintBank1:
+    ; Imprime mensagem oficial do Banco 1 na Página 2
+    ld   de, MsgBank1
+    ld   c, C_WRITE
+    call BDOS
+    ret
+
+MsgBank1:
+    db 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db ">>> [BANCO 1] ROTINA DO BANCO 1 EXECUTADA!", 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "$"
+
+ENDMOD
+```
+
+```asm
+; bank2.asm -- Banco 2 (paginável na Página 2, 0x8000..0xBFFF)
+MODULE BANK2
+BANK 2
+
+PUBLIC PrintBank2
+
+BDOS       EQU 0x0005
+C_WRITE    EQU 0x09
+
+PrintBank2:
+    ; Imprime mensagem oficial do Banco 2 na Página 2
+    ld   de, MsgBank2
+    ld   c, C_WRITE
+    call BDOS
+    ret
+
+MsgBank2:
+    db 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db ">>> [BANCO 2] ROTINA DO BANCO 2 EXECUTADA!", 0x0D, 0x0A
+    db "==================================================", 0x0D, 0x0A
+    db "$"
+
+ENDMOD
+```
+
+Resultado da execução em openMSX (MSX2+ Boosted, MSX-DOS 2) — `[L]` do
+bootstrap, seguido das três mensagens (Banco 0 → Banco 1 → Banco 2 → Banco
+0), e retorno limpo ao prompt:
+
+![multibank.com rodando no openMSX, mostrando a troca de banco 0 -> 1 -> 2 -> 0 com sucesso](images/kizuna-01.png)
 
 ## Instalação Rápida
 

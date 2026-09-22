@@ -8,9 +8,9 @@ import "fmt"
 // BUILD: Cada compilação ou incremento de build realizado
 const (
 	Major    = 4
-	Minor    = 5
-	Build    = 3
-	Codename = "Kaisei (快晴)"
+	Minor    = 6
+	Build    = 0
+	Codename = "Kansei (完成)"
 )
 
 // String retorna a versão formatada como major.minor.compilacao
