@@ -407,57 +407,70 @@ Sempre que `lib/src/*.asm` muda:
 pwsh -File lib/build.ps1
 ```
 
-## 10. Exemplo combinando as três linguagens num mesmo projeto
+## 10. Um único ponto de entrada (Main) por executável
 
-**O que funciona hoje**: KAJI80 e DIGNAC podem coexistir num único `.COM`,
-em bancos diferentes, chamando um ao outro através de trampolins gerados
-pelo `MUSUBI` — é exatamente o que `sample/obi/Obifile` (§7.2) já faz de
-verdade (não é ilustrativo). Desde a v4.9.0, `WIRTH80` também ganhou
-`PUBLIC`/`EXTERN` e `procedure`/`function` (ver `docs/manual-pascal.md`
-§4-5) — em princípio, o mesmo mecanismo de exportar/chamar símbolos que já
-liga KAJI80+DIGNAC.
+Um `.COM` só pode ter **um** ponto de entrada (`Start` por padrão — ou o
+nome passado em `-e`/`entry:`), não importa em qual das três linguagens ele
+esteja escrito. As regras, iguais nas três:
 
-**O obstáculo real que sobrou**: todo módulo `WIRTH80` ainda gera seu
-próprio `Start` **incondicionalmente** (o bloco principal `begin...end.` do
-programa) e sempre o exporta como `PUBLIC` — diferente do `DIGNAC`, que só
-gera `Start` quando existe `PROCEDURE Main` (um módulo `DIGNAC` sem `Main`,
-como `sample/obi/chart_lib.bas`, vira uma "biblioteca" pura, sem `Start`
-nenhum). Isso significa que hoje, se um módulo `WIRTH80` entrar no mesmo
-`.COM` que um `KAJI80`/`DIGNAC` que também define `Start` (como
-`sample/obi/main.asm` já faz), o `MUSUBI` recusa a linkagem por símbolo
-duplicado — os dois `Start` colidem. Pra um módulo `WIRTH80` funcionar como
-"biblioteca" (só `PUBLIC`, sem virar o `Start` do `.COM`), ele precisaria da
-mesma condição que o `DIGNAC` já tem — registrado aqui como o próximo passo
-concreto, não feito ainda.
+- **`KAJI80`**: totalmente manual — só existe `Start` se o programador
+  escrever o label e marcar `PUBLIC Start` (ou o nome configurado como
+  ponto de entrada) explicitamente. Um módulo Assembly sem isso é sempre
+  uma "biblioteca".
+- **`DIGNAC`**: automático — `Start` só é gerado se existir
+  `PROCEDURE Main` no módulo. Um módulo sem `Main` (como
+  `sample/obi/chart_lib.bas`) vira biblioteca pura, sem `Start` nenhum.
+- **`WIRTH80`**: automático — `Start` só é gerado se o
+  bloco principal `begin...end.` do programa tiver pelo menos um comando.
+  Um programa com `begin end.` vazio e algum `PUBLIC` declarado vira
+  biblioteca pura, do mesmo jeito que o `DIGNAC`. Antes disso, `WIRTH80`
+  gerava `Start` **incondicionalmente**, e um módulo seu nunca conseguia
+  entrar no mesmo `.COM` que outro módulo que já definia `Start`.
+- **`MUSUBI`**: se, mesmo assim, mais de um módulo linkado definir o mesmo
+  símbolo de ponto de entrada, a linkagem é recusada com um erro específico
+  ("múltiplos pontos de entrada..."), não um erro genérico de símbolo
+  duplicado nem uma escolha silenciosa de qual `Main` vale — decisão
+  deliberada (Wilson: "prefiro que exista apenas um único main"). A
+  detecção acontece na linkagem (`MUSUBI`), o único ponto onde todos os
+  módulos do `.COM` final já estão visíveis juntos.
 
-Até esse ajuste, misturar as três linguagens **no mesmo projeto** funciona
-no nível de "todos compilam pro mesmo formato `.mob`, todos linkam com a
-mesma `msxlib.hlib`, todos fazem parte do mesmo pacote/release" — não ainda
-no nível de "os três num único `.COM`". Um projeto real combinando as três
-linguagens fica assim por enquanto:
+## 11. Exemplo combinando as três linguagens num mesmo `.COM`
 
-```bash
-# 1. KAJI80 + DIGNAC: um único .COM multi-banco, via OBI (real, testado)
-obi build sample/obi/Obifile -v --log
-# -> sample/obi/main.com (Start no banco 0 chama ChartLib.Desenhar no banco 2)
+Com `PUBLIC`/`EXTERN` no `WIRTH80` (`docs/manual-pascal.md` §4-5) e a regra
+do §10 acima, um módulo `KAJI80` dono do `Start` já linka de verdade com um
+módulo-biblioteca `WIRTH80` (sem `Start` próprio) no mesmo `.COM` — testado
+e comprovado (`pkg/wirth80/compiler_test.go`,
+`TestLinkKaji80AndWirth80LibraryTogether`), não apenas teorizado:
 
-# 2. WIRTH80: seu próprio .COM standalone (agora já pode ter suas próprias
-# procedures/functions internas -- ver sample/pascal/procs.pas), linkado
-# com a MESMA MSXLIB
-wirth80 -v sample/pascal/procs.pas -o sample/pascal/procs.mob
-musubi -v -m sample/pascal/procs.map -o sample/pascal/procs.com \
-  sample/pascal/procs.mob lib/msxlib.hlib
+```pascal
+{ lib.pas -- biblioteca WIRTH80 pura, sem Start (begin...end. vazio) }
+program Lib;
+PUBLIC Foo;
 
-# Os dois .COM resultantes fazem parte do mesmo pacote/disco de distribuição,
-# mas são dois executáveis separados -- não um único binário cruzando as 3.
+procedure Foo(a: Integer);
+begin
+  WriteLn(a);
+end;
+
+begin
+end.
 ```
 
-Quando o `Start` do `WIRTH80` virar condicional (mesma regra que o `DIGNAC`
-já aplica), este mesmo exemplo passa a valer com um único `.COM` de verdade
-cruzando as três linguagens, igual ao que `demo/` esboça hoje só como
-intenção.
+```bash
+wirth80 lib.pas -o lib.mob        # sem Start, só PUBLIC Foo
+kaji80 main.asm -o main.mob       # dono do Start, EXTERN Foo, CALL Foo
+musubi -o app.com main.mob lib.mob lib/msxlib.hlib
+```
 
-## 11. Ver também
+O mesmo vale com `DIGNAC` no lugar do `KAJI80` como dono do `Start` — é
+literalmente o mesmo mecanismo que já une `KAJI80`+`DIGNAC` em
+`sample/obi/Obifile` (§7.2), agora também aberto pro `WIRTH80`. `demo/
+main.pas`/`demo/Obifile` (que ainda usam `{$USES}`, sintaxe que não existe)
+continuam sendo só o esboço de uma visão mais distante — `uses`/units de
+verdade cruzando arquivos — mas o mecanismo de exportar/chamar entre as três
+linguagens num único `.COM` já não é mais teórico.
+
+## 12. Ver também
 
 - `SPEC.md` — decisões de design originais (visão completa do projeto,
   incluindo partes ainda não implementadas).

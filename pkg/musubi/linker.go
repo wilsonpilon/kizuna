@@ -377,6 +377,10 @@ func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 
 				absAddr := ps.BaseAddr + sym.Offset
 				if existing, duplicate := globalSymbols[sym.Name]; duplicate {
+					if l.config.EntryPoint != "" && sym.Name == l.config.EntryPoint {
+						return nil, fmt.Errorf("múltiplos pontos de entrada: o símbolo de entrada '%s' está definido em mais de um módulo (Banco %d em 0x%04X e Banco %d em 0x%04X) -- só pode haver um Main/ponto de entrada por executável, esteja ele em Assembly, Pascal ou BASIC Dignified",
+							sym.Name, existing.Bank, existing.Address, ps.Bank, absAddr)
+					}
 					return nil, fmt.Errorf("símbolo duplicado '%s' (já definido no Banco %d em 0x%04X, redefinido no Banco %d em 0x%04X)",
 						sym.Name, existing.Bank, existing.Address, ps.Bank, absAddr)
 				}

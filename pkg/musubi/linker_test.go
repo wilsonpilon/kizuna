@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/wilsonpilon/kizuna/pkg/hako"
@@ -350,6 +351,30 @@ func TestDuplicateSymbolError(t *testing.T) {
 	_, err := linker.Link(mod1, mod2)
 	if err == nil {
 		t.Error("Expected error for duplicate symbol, got nil")
+	}
+}
+
+// TestMultipleEntryPointsError cobre o pedido de Wilson de só permitir um
+// Main por executável, com erro claro (não uma escolha silenciosa nem um
+// prompt interativo) quando mais de um módulo define o ponto de entrada --
+// ex: um módulo KAJI80 com "Start" e um módulo WIRTH80 que também gera seu
+// próprio "Start" (hoje incondicional -- ver pkg/wirth80/codegen.go).
+func TestMultipleEntryPointsError(t *testing.T) {
+	mod1 := mob.NewObjectFile()
+	seg1 := mod1.AddSegment(mob.SegmentCode, 0, []byte{0xC9}, 0)
+	mod1.AddSymbol("Start", mob.SymbolPublic, mob.SymbolProc, seg1, 0)
+
+	mod2 := mob.NewObjectFile()
+	seg2 := mod2.AddSegment(mob.SegmentCode, 0, []byte{0xC9}, 0)
+	mod2.AddSymbol("Start", mob.SymbolPublic, mob.SymbolProc, seg2, 0)
+
+	linker := NewLinker(DefaultConfig())
+	_, err := linker.Link(mod1, mod2)
+	if err == nil {
+		t.Fatal("Esperado erro para múltiplos pontos de entrada, obteve nil")
+	}
+	if !strings.Contains(err.Error(), "múltiplos pontos de entrada") {
+		t.Errorf("Esperado erro mencionando 'múltiplos pontos de entrada', obteve: %v", err)
 	}
 }
 

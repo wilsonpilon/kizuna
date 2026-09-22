@@ -1,10 +1,14 @@
 package wirth80
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/wilsonpilon/kizuna/pkg/kaji80"
 	"github.com/wilsonpilon/kizuna/pkg/mob"
+	"github.com/wilsonpilon/kizuna/pkg/musubi"
 )
 
 func TestLexer(t *testing.T) {
@@ -381,5 +385,135 @@ func TestCompileExternCallCompiles(t *testing.T) {
 	}
 	if !foundExtern {
 		t.Errorf("Símbolo 'Something' não encontrado como EXTERN no .MOB gerado")
+	}
+}
+
+// TestCompileLibraryModuleOmitsStart cobre o pedido de Wilson de só existir
+// um único Main por executável: um módulo WIRTH80 com bloco principal
+// (begin...end.) VAZIO e algum PUBLIC declarado vira uma "biblioteca" pura
+// -- sem símbolo Start nenhum -- mesma regra que o DIGNAC já aplica (só gera
+// Start se existir PROCEDURE Main). Antes desta correção, WIRTH80 sempre
+// gerava Start incondicionalmente, então esse mesmo módulo linkado junto
+// com um módulo KAJI80/DIGNAC que também define Start colidia por símbolo
+// duplicado -- o pkg/musubi agora também dá um erro claro e específico
+// ("múltiplos pontos de entrada") se isso ainda acontecer.
+func TestCompileLibraryModuleOmitsStart(t *testing.T) {
+	src := `
+	program Lib;
+	PUBLIC Foo;
+	procedure Foo(a: Integer);
+	begin
+		WriteLn(a);
+	end;
+	begin
+	end.
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	prog, err := parser.ParseProgram()
+	if err != nil {
+		t.Fatalf("Erro ao parsear programa: %v", err)
+	}
+
+	cg := NewCodeGenerator(prog)
+	obj, asmSource, err := cg.Compile()
+	if err != nil {
+		t.Fatalf("Erro ao compilar módulo-biblioteca até .MOB: %v\nAssembly:\n%s", err, asmSource)
+	}
+	if obj == nil {
+		t.Fatalf("Objeto .MOB gerado é nulo")
+	}
+
+	for _, sym := range obj.Symbols {
+		if sym.Name == "Start" {
+			t.Errorf("Módulo-biblioteca (begin...end. vazio) não deveria exportar 'Start', mas exporta: %+v", sym)
+		}
+	}
+
+	var foundFoo bool
+	for _, sym := range obj.Symbols {
+		if sym.Name == "Foo" && sym.Class == mob.SymbolPublic {
+			foundFoo = true
+		}
+	}
+	if !foundFoo {
+		t.Errorf("Símbolo 'Foo' não encontrado como PUBLIC no .MOB gerado")
+	}
+}
+
+// TestLinkKaji80AndWirth80LibraryTogether é o teste end-to-end que confirma
+// o objetivo final: um módulo KAJI80 que já define Start agora linka de
+// verdade com um módulo-biblioteca WIRTH80 (sem Start próprio) no mesmo
+// .COM -- o obstáculo real documentado em docs/manual-ferramentas.md §10
+// antes desta correção.
+func TestLinkKaji80AndWirth80LibraryTogether(t *testing.T) {
+	libSrc := `
+	program Lib;
+	PUBLIC Foo;
+	procedure Foo(a: Integer);
+	begin
+		WriteLn(a);
+	end;
+	begin
+	end.
+	`
+	lexer := NewLexer(libSrc)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	prog, err := parser.ParseProgram()
+	if err != nil {
+		t.Fatalf("Erro ao parsear programa: %v", err)
+	}
+	libObj, _, err := NewCodeGenerator(prog).Compile()
+	if err != nil {
+		t.Fatalf("Erro ao compilar módulo-biblioteca: %v", err)
+	}
+
+	kaji80Src := `
+	MODULE Main
+	BANK 0
+	PUBLIC Start
+	EXTERN BDOS_Exit
+
+	Start:
+	    CALL BDOS_Exit
+	ENDMOD
+	`
+	kaji80Asm := kaji80.NewAssembler()
+	mainObj, err := kaji80Asm.Assemble(kaji80Src)
+	if err != nil {
+		t.Fatalf("Erro ao montar módulo KAJI80: %v", err)
+	}
+
+	libPath := "../../lib/msxlib.hlib"
+	if _, err := os.Stat(libPath); os.IsNotExist(err) {
+		t.Skipf("msxlib.hlib não encontrado em %s, pulando teste de linkagem", libPath)
+		return
+	}
+
+	tmpDir := t.TempDir()
+	mainMob := filepath.Join(tmpDir, "main.mob")
+	libMob := filepath.Join(tmpDir, "lib.mob")
+	if err := mob.SaveToFile(mainMob, mainObj); err != nil {
+		t.Fatalf("Erro ao gravar %s: %v", mainMob, err)
+	}
+	if err := mob.SaveToFile(libMob, libObj); err != nil {
+		t.Fatalf("Erro ao gravar %s: %v", libMob, err)
+	}
+
+	outCom := filepath.Join(tmpDir, "out.com")
+	cfg := musubi.LinkerConfig{BaseAddress: 0x0100, EntryPoint: "Start"}
+	res, err := musubi.LinkToFile(outCom, cfg, mainMob, libMob, libPath)
+	if err != nil {
+		t.Fatalf("Falha ao linkar KAJI80 (Start) + biblioteca WIRTH80 (sem Start) juntos: %v", err)
+	}
+	if len(res.Binary) == 0 {
+		t.Fatalf("Executável binário gerado está vazio")
 	}
 }

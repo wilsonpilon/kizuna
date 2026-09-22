@@ -105,14 +105,27 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 	cg.asm.WriteString(fmt.Sprintf("MODULE %s\n", modName))
 	cg.asm.WriteString("BANK 0\n\n")
 
-	// PUBLIC: Start sempre presente (ponto de entrada do .COM) + os nomes
-	// que o programa declarou via PUBLIC (procedures/functions exportadas
-	// pra outros módulos KAJI80/DIGNAC/WIRTH80 chamarem).
-	publics := []string{"Start"}
+	// PUBLIC: "Start" só entra se o bloco principal (begin...end.) tiver
+	// algum comando -- mesma regra que o DIGNAC já usa (só gera Start se
+	// existir PROCEDURE Main). Um programa com bloco principal vazio e
+	// PUBLIC declarado vira uma "biblioteca" pura, sem ponto de entrada
+	// próprio -- necessário pra poder entrar num .COM que já tem Start
+	// definido em outro módulo (KAJI80/DIGNAC): só pode haver UM Main por
+	// executável, e MUSUBI recusa a linkagem com um erro claro se mais de
+	// um módulo tentar definir o mesmo ponto de entrada.
+	hasMain := cg.prog.Block != nil && len(cg.prog.Block.Statements) > 0
+
+	var publics []string
+	if hasMain {
+		publics = append(publics, "Start")
+	}
 	for _, p := range cg.prog.Publics {
 		if !containsString(publics, p) {
 			publics = append(publics, p)
 		}
+	}
+	if len(publics) == 0 {
+		return "", fmt.Errorf("módulo Pascal sem bloco principal (begin...end. vazio) e sem nenhum PUBLIC declarado -- nada seria exportado")
 	}
 	cg.asm.WriteString(fmt.Sprintf("PUBLIC %s\n\n", strings.Join(publics, ", ")))
 
@@ -165,19 +178,26 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 	if cg.needsDiv16 {
 		externs = append(externs, "Div16")
 	}
-	externs = append(externs, "BDOS_Exit")
+	if hasMain {
+		externs = append(externs, "BDOS_Exit")
+	}
 	for _, e := range cg.prog.Externs {
 		if !containsString(externs, e) {
 			externs = append(externs, e)
 		}
 	}
 
-	cg.asm.WriteString(fmt.Sprintf("EXTERN %s\n\n", strings.Join(externs, ", ")))
+	if len(externs) > 0 {
+		cg.asm.WriteString(fmt.Sprintf("EXTERN %s\n\n", strings.Join(externs, ", ")))
+	}
 
-	// Ponto de entrada
-	cg.asm.WriteString("Start:\n")
-	cg.asm.WriteString(body.String())
-	cg.asm.WriteString("    CALL BDOS_Exit\n\n")
+	// Ponto de entrada -- só emitido se este módulo for de fato o Main (ver
+	// o comentário acima da lista de PUBLIC).
+	if hasMain {
+		cg.asm.WriteString("Start:\n")
+		cg.asm.WriteString(body.String())
+		cg.asm.WriteString("    CALL BDOS_Exit\n\n")
+	}
 
 	// Procedures/functions definidas pelo usuário
 	cg.asm.WriteString(procsAsm.String())

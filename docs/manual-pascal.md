@@ -10,7 +10,7 @@
 ## 1. Escopo atual vs. visão do projeto
 
 `WIRTH80` compila um **programa Pascal único por arquivo** — sem units, sem
-`uses`, sem arrays/records, sem heap (`New`/`Dispose`). Desde a v4.9.0, um
+`uses`, sem arrays/records, sem heap (`New`/`Dispose`). Um
 programa pode declarar suas próprias `procedure`/`function` (§4) e exportar
 ou importar símbolos via `PUBLIC`/`EXTERN` (§5) — antes disso, todo programa
 só virava seu próprio `Start` isolado, sem nenhuma sub-rotina própria. A
