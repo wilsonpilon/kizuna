@@ -2,74 +2,84 @@
   KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
 ===============================================================================
 
-Modo de Memória: Monobanco
-Bancos Utilizados: [0]
+Modo de Memória: Multi-Banco (Memory Mapper)
+Bancos Utilizados: [0 2]
 Endereço Base:     0x0100
-Ponto de Entrada:  0x0100
-Tamanho do .COM:   1698 bytes (0x06A2)
+Ponto de Entrada:  0x0168
+Tamanho do .COM:   1942 bytes (0x0796)
 
 --- SEGMENTOS ALOCADOS ---
-[ 0] 0x0100 - 0x011E | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:    30 bytes
-[ 1] 0x011E - 0x01DF | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:   193 bytes
-[ 2] 0x01DF - 0x021D | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:    62 bytes
-[ 3] 0x021D - 0x0663 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:  1094 bytes
-[ 4] 0x0663 - 0x0716 | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:   179 bytes
-[ 5] 0x0716 - 0x0758 | Banco:  0 | Tipo: CODE | Mod:  6 | Tam:    66 bytes
-[ 6] 0x0758 - 0x07A2 | Banco:  0 | Tipo: DATA | Mod:  2 | Tam:    74 bytes
+[ 0] 0x0100 - 0x0168 | Banco:  0 | Tipo: CODE | Mod: -2 | Tam:   104 bytes
+[ 1] 0x0168 - 0x0186 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:    30 bytes
+[ 2] 0x0186 - 0x01C4 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:    62 bytes
+[ 3] 0x01C4 - 0x060A | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:  1094 bytes
+[ 4] 0x060A - 0x06BD | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:   179 bytes
+[ 5] 0x06BD - 0x06FF | Banco:  0 | Tipo: CODE | Mod:  6 | Tam:    66 bytes
+[ 6] 0x06FF - 0x0749 | Banco:  0 | Tipo: DATA | Mod:  2 | Tam:    74 bytes
+[ 7] 0x8000 - 0x80C1 | Banco:  2 | Tipo: CODE | Mod:  1 | Tam:   193 bytes
+[ 8] 0x0749 - 0x07D5 | Banco:  0 | Tipo: CODE | LINKER-TRAMP | Tam:   140 bytes
+
+--- TRAMPOLINS DE BANK SWITCHING (ÁREA COMUM -> PÁGINA 2) ---
+0x075D -> Alvo: 'Desenhar' no Banco  2 (0x8000) | Tamanho: 20 bytes
+0x0771 -> Alvo: 'VDP_BoxFill' no Banco  0 (0x040D) | Tamanho: 20 bytes
+0x0785 -> Alvo: 'VDP_Line' no Banco  0 (0x04B0) | Tamanho: 20 bytes
+0x0799 -> Alvo: 'Div16' no Banco  0 (0x06D2) | Tamanho: 20 bytes
+0x07AD -> Alvo: 'Mul16' no Banco  0 (0x06BD) | Tamanho: 20 bytes
+0x07C1 -> Alvo: 'VDP_PSet' no Banco  0 (0x02FD) | Tamanho: 20 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
-0x0100 [Banco  0] PROC Start
-0x011E [Banco  0] PROC Desenhar
-0x016C [Banco  0] PROC For_Start_1
-0x0181 [Banco  0] PROC For_Ok_3
-0x01DA [Banco  0] PROC For_End_2
-0x01DF [Banco  0] PROC BDOS_Call
-0x01E3 [Banco  0] PROC BDOS_PrintChar
-0x01F9 [Banco  0] PROC BDOS_PrintString
-0x020F [Banco  0] PROC BDOS_ReadChar
-0x0217 [Banco  0] PROC BDOS_Exit
-0x021D [Banco  0] PROC VDP_WriteReg
-0x0223 [Banco  0] PROC VDP_WriteReg_Raw
-0x022E [Banco  0] PROC VDP_SetWriteAddr
-0x023D [Banco  0] PROC VDP_SetReadAddr
-0x024A [Banco  0] PROC VDP_FillVRAM
-0x0266 [Banco  0] PROC VDP_WriteVRAM
-0x0279 [Banco  0] PROC VDP_ReadVRAM
-0x028E [Banco  0] PROC VDP_CopyVRAM
-0x02AC [Banco  0] PROC VDP_SetColor
-0x02C3 [Banco  0] PROC VDP_SetScreen
-0x02C6 [Banco  0] PROC VDP_InitScreen2
-0x02CB [Banco  0] PROC VDP_InitScreen0
-0x02CF [Banco  0] PROC VDP_InitScreen1
-0x02D5 [Banco  0] PROC VDP_InitScreen2_Tables
-0x0356 [Banco  0] PROC VDP_PSet
-0x035C [Banco  0] PROC VDP_PSet_HW
-0x0398 [Banco  0] PROC VDP_CommandWait_Raw
-0x03B1 [Banco  0] PROC VDP_PSet_Raw
-0x03F6 [Banco  0] PROC VDP_PSet_MaskDone
-0x0465 [Banco  0] PROC VDP_PSet_ColorArg
-0x0466 [Banco  0] PROC VDP_BoxFill
-0x0509 [Banco  0] PROC VDP_Line
-0x05DD [Banco  0] PROC VDP_Line_Loop
-0x0626 [Banco  0] PROC VDP_Line_CheckE2DX
-0x0650 [Banco  0] PROC VDP_Line_Exit
-0x0657 [Banco  0] PROC VDP_Line_H_End
-0x0658 [Banco  0] PROC VDP_Line_DX
-0x0659 [Banco  0] PROC VDP_Line_SX
-0x065A [Banco  0] PROC VDP_Line_DY
-0x065C [Banco  0] PROC VDP_Line_SY
-0x065D [Banco  0] PROC VDP_Line_Err
-0x065F [Banco  0] PROC VDP_Line_E2
-0x0661 [Banco  0] PROC VDP_Line_CurX
-0x0662 [Banco  0] PROC VDP_Line_CurY
-0x0663 [Banco  0] PROC BIOS_Call
-0x0675 [Banco  0] PROC BIOS_CHPUT
-0x0684 [Banco  0] PROC BIOS_CHGET
-0x06AE [Banco  0] PROC BIOS_CLS
-0x06B5 [Banco  0] PROC BIOS_POSIT
-0x06B6 [Banco  0] PROC BIOS_BEEP
-0x06C6 [Banco  0] PROC BIOS_INIT32
-0x06CE [Banco  0] PROC BIOS_CHGMOD
-0x0716 [Banco  0] PROC Mul16
-0x072B [Banco  0] PROC Div16
-0x0758 [Banco  0] DATA Res_Banner
+0x0168 [Banco  0] PROC Start
+0x0186 [Banco  0] PROC BDOS_Call
+0x018A [Banco  0] PROC BDOS_PrintChar
+0x01A0 [Banco  0] PROC BDOS_PrintString
+0x01B6 [Banco  0] PROC BDOS_ReadChar
+0x01BE [Banco  0] PROC BDOS_Exit
+0x01C4 [Banco  0] PROC VDP_WriteReg
+0x01CA [Banco  0] PROC VDP_WriteReg_Raw
+0x01D5 [Banco  0] PROC VDP_SetWriteAddr
+0x01E4 [Banco  0] PROC VDP_SetReadAddr
+0x01F1 [Banco  0] PROC VDP_FillVRAM
+0x020D [Banco  0] PROC VDP_WriteVRAM
+0x0220 [Banco  0] PROC VDP_ReadVRAM
+0x0235 [Banco  0] PROC VDP_CopyVRAM
+0x0253 [Banco  0] PROC VDP_SetColor
+0x026A [Banco  0] PROC VDP_SetScreen
+0x026D [Banco  0] PROC VDP_InitScreen2
+0x0272 [Banco  0] PROC VDP_InitScreen0
+0x0276 [Banco  0] PROC VDP_InitScreen1
+0x027C [Banco  0] PROC VDP_InitScreen2_Tables
+0x02FD [Banco  0] PROC VDP_PSet
+0x0303 [Banco  0] PROC VDP_PSet_HW
+0x033F [Banco  0] PROC VDP_CommandWait_Raw
+0x0358 [Banco  0] PROC VDP_PSet_Raw
+0x039D [Banco  0] PROC VDP_PSet_MaskDone
+0x040C [Banco  0] PROC VDP_PSet_ColorArg
+0x040D [Banco  0] PROC VDP_BoxFill
+0x04B0 [Banco  0] PROC VDP_Line
+0x0584 [Banco  0] PROC VDP_Line_Loop
+0x05CD [Banco  0] PROC VDP_Line_CheckE2DX
+0x05F7 [Banco  0] PROC VDP_Line_Exit
+0x05FE [Banco  0] PROC VDP_Line_H_End
+0x05FF [Banco  0] PROC VDP_Line_DX
+0x0600 [Banco  0] PROC VDP_Line_SX
+0x0601 [Banco  0] PROC VDP_Line_DY
+0x0603 [Banco  0] PROC VDP_Line_SY
+0x0604 [Banco  0] PROC VDP_Line_Err
+0x0606 [Banco  0] PROC VDP_Line_E2
+0x0608 [Banco  0] PROC VDP_Line_CurX
+0x0609 [Banco  0] PROC VDP_Line_CurY
+0x060A [Banco  0] PROC BIOS_Call
+0x061C [Banco  0] PROC BIOS_CHPUT
+0x062B [Banco  0] PROC BIOS_CHGET
+0x0655 [Banco  0] PROC BIOS_CLS
+0x065C [Banco  0] PROC BIOS_POSIT
+0x065D [Banco  0] PROC BIOS_BEEP
+0x066D [Banco  0] PROC BIOS_INIT32
+0x0675 [Banco  0] PROC BIOS_CHGMOD
+0x06BD [Banco  0] PROC Mul16
+0x06D2 [Banco  0] PROC Div16
+0x06FF [Banco  0] DATA Res_Banner
+0x8000 [Banco  2] PROC Desenhar
+0x804E [Banco  2] PROC For_Start_1
+0x8063 [Banco  2] PROC For_Ok_3
+0x80BC [Banco  2] PROC For_End_2

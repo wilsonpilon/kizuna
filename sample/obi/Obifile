@@ -1,12 +1,10 @@
 # ============================================================
 # KIZUNA sample -- Obifile real (nao ilustrativo -- compila e linka)
-# Constroi main.com combinando KAJI80 (dono do Start) e DIGNAC (modulo
-# biblioteca, sem PROCEDURE Main), mais um resource embutido e a MSXLIB
-# via biblioteca .hlib ja empacotada.
-#
-# Tudo no banco 0 de proposito (single-bank): o bootstrap multi-banco do
-# MUSUBI (ALL_SEG/EXTBIO, v4.5.2) ainda nao foi confirmado em execucao
-# real -- ver chart_lib.bas e a memoria do projeto para o achado.
+# Constroi main.com combinando KAJI80 (banco 0, dono do Start) e DIGNAC
+# (modulo biblioteca no banco 2, sem PROCEDURE Main), mais um resource
+# embutido e a MSXLIB via biblioteca .hlib ja empacotada. O MUSUBI gera
+# o trampolim de troca de banco automaticamente para a chamada cruzando
+# bancos (Main -> ChartLib.Desenhar).
 # ============================================================
 
 target: main.com
@@ -28,7 +26,7 @@ modules:
   - name: ChartLib
     source: chart_lib.bas
     compiler: dignac
-    bank: 0
+    bank: 2
 
 link:
   map: main.map
