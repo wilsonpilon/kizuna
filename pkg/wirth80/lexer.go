@@ -27,6 +27,10 @@ var keywords = map[string]TokenType{
 	"TO":        TokenTo,
 	"DOWNTO":    TokenDownto,
 	"DIV":       TokenDiv,
+	"PROCEDURE": TokenProcedure,
+	"FUNCTION":  TokenFunction,
+	"PUBLIC":    TokenPublic,
+	"EXTERN":    TokenExtern,
 }
 
 // Lexer realiza a análise léxica de código-fonte Pascal

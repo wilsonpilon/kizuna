@@ -1095,7 +1095,14 @@ func (cg *CodeGenerator) generateExpr(sb *strings.Builder, expr Expr) error {
 		return nil
 
 	case *CallExpr:
-		// Chamada de função como expressão
+		// Chamada de função como expressão: empilha argumentos, CALL, e
+		// limpa a pilha (convenção do chamador) SEM perder o valor de
+		// retorno que o CALL deixou em HL. Troca HL/DE ANTES de calcular o
+		// novo SP -- a versão anterior deste trecho somava o tamanho de
+		// limpeza direto em HL ("ADD HL,DE") antes de trocar, o que na
+		// prática corrompia o valor de retorno somando N*2 a ele (bug real,
+		// nunca exercitado por nenhum teste/sample até agora porque nada
+		// usava uma CallExpr com argumentos dentro de uma expressão maior).
 		for _, arg := range e.Args {
 			if err := cg.generateExpr(sb, arg); err != nil {
 				return err
@@ -1104,13 +1111,11 @@ func (cg *CodeGenerator) generateExpr(sb *strings.Builder, expr Expr) error {
 		}
 		sb.WriteString(fmt.Sprintf("    CALL %s\n", e.Name))
 		if len(e.Args) > 0 {
-			sb.WriteString(fmt.Sprintf("    LD DE, %d\n", len(e.Args)*2))
-			sb.WriteString("    ADD HL, DE\n") // preserva HL?
-			// Melhor restaurar SP com EXX ou registrador auxiliar
-			sb.WriteString("    EX DE, HL\n")
-			sb.WriteString("    ADD HL, SP\n")
+			sb.WriteString("    EX DE, HL\n") // DE = retorno
+			sb.WriteString(fmt.Sprintf("    LD HL, %d\n", len(e.Args)*2))
+			sb.WriteString("    ADD HL, SP\n") // HL = novo SP
 			sb.WriteString("    LD SP, HL\n")
-			sb.WriteString("    EX DE, HL\n") // HL tem o retorno
+			sb.WriteString("    EX DE, HL\n") // HL = retorno de volta
 		}
 		return nil
 

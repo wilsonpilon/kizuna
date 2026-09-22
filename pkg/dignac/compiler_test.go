@@ -603,3 +603,57 @@ func TestCompileOpenAppendSeeksToEnd(t *testing.T) {
 		t.Errorf("OPEN...FOR OUTPUT não deveria referenciar BDOS_FileSeek (sempre começa do zero)")
 	}
 }
+
+// TestCompileFunctionCallInExpressionPreservesReturnValue cobre um bug real
+// no CallExpr (chamada de FUNCTION usada dentro de uma expressão maior, não
+// como comando isolado): a sequência de limpeza da pilha após o CALL somava
+// o tamanho da limpeza (N*2 bytes) direto no próprio HL antes de trocar
+// registradores, corrompendo o valor de retorno com esse tamanho. Nunca
+// tinha sido pego porque nenhum teste/sample exercitava uma FUNCTION
+// chamada com argumentos dentro de uma expressão (só como comando). Aqui só
+// confirmamos que a sequência corrigida (EX DE,HL logo após o CALL, não
+// ADD HL,DE) é a que sai -- a aritmética em si já é coberta pelo mesmo
+// padrão de rastreamento manual usado no resto desta sessão.
+func TestCompileFunctionCallInExpressionPreservesReturnValue(t *testing.T) {
+	src := `
+	MODULE FuncTest
+	PUBLIC Main
+
+	FUNCTION Dobro(n%) AS INTEGER
+		RETURN n% * 2
+	END FUNCTION
+
+	PROCEDURE Main()
+		LOCAL resultado%
+		resultado% = Dobro(21) + 1
+		PRINT resultado%
+	END PROCEDURE
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	cg := NewCodeGenerator(mod)
+	obj, asmOut, err := cg.Compile()
+	if err != nil {
+		t.Fatalf("Erro ao compilar chamada de FUNCTION em expressão até .MOB: %v\nAssembly:\n%s", err, asmOut)
+	}
+	if obj == nil {
+		t.Fatalf("Objeto .MOB gerado é nulo")
+	}
+
+	if !strings.Contains(asmOut, "CALL Dobro\n    EX DE, HL\n") {
+		t.Errorf("Esperada a sequência corrigida (EX DE,HL logo após CALL Dobro) -- assembly gerado:\n%s", asmOut)
+	}
+	if strings.Contains(asmOut, "CALL Dobro\n    LD DE,") || strings.Contains(asmOut, "ADD HL, DE\n    EX DE, HL\n    ADD HL, SP") {
+		t.Errorf("Sequência antiga (bugada) de limpeza de pilha ainda presente no assembly gerado:\n%s", asmOut)
+	}
+}

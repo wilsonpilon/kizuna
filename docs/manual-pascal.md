@@ -9,22 +9,28 @@
 
 ## 1. Escopo atual vs. visão do projeto
 
-`WIRTH80` hoje compila um **programa Pascal único e autocontido** — sem
-units, sem `uses`, sem procedimentos/funções definidos pelo usuário, sem
-arrays/records, sem heap (`New`/`Dispose`). Todo programa vira diretamente
-seu próprio ponto de entrada `Start`, pronto pra virar um `.COM` sozinho
-(linkando com `msxlib.hlib`). A visão de `SPEC.md` (units com
-`interface`/`implementation`, `{$USES}` cruzando módulos noutras
-linguagens) ainda **não está implementada** — o arquivo `demo/main.pas` no
-repositório é um "croqui hipotético" explicitamente marcado como não
-compilável, mostrando pra onde o projeto está indo, não o que já funciona.
+`WIRTH80` compila um **programa Pascal único por arquivo** — sem units, sem
+`uses`, sem arrays/records, sem heap (`New`/`Dispose`). Desde a v4.9.0, um
+programa pode declarar suas próprias `procedure`/`function` (§4) e exportar
+ou importar símbolos via `PUBLIC`/`EXTERN` (§5) — antes disso, todo programa
+só virava seu próprio `Start` isolado, sem nenhuma sub-rotina própria. A
+visão mais ampla de `SPEC.md` (units com `interface`/`implementation`,
+`{$USES}` cruzando módulos noutras linguagens) ainda **não está
+implementada** — o arquivo `demo/main.pas` no repositório é um "croqui
+hipotético" explicitamente marcado como não compilável, mostrando pra onde o
+projeto está indo, não o que já funciona.
 
-Isso significa, na prática, que **hoje não é possível** um programa Pascal
-chamar uma rotina Assembly ou DIGNAC (ou vice-versa) — só KAJI80 e DIGNAC
-têm `PUBLIC`/`EXTERN` e podem ser linkados num único `.COM` multi-módulo. Um
-programa WIRTH80 é sempre seu próprio executável completo. Ver
-`docs/manual-ferramentas.md` §10 para como isso afeta um projeto que
-combina as três linguagens.
+Na prática, isso significa que um módulo Pascal **já pode**, hoje, exportar
+uma `procedure`/`function` via `PUBLIC` pra outro módulo `KAJI80`/`DIGNAC`
+chamar, ou declarar `EXTERN` pra chamar uma rotina de outro módulo — **desde
+que essa rotina siga a mesma ABI Kizuna baseada em pilha** (`PUSH`
+esquerda→direita, `IX` como frame pointer, limpeza pelo chamador — ver
+`docs/manual-ferramentas.md` §"ABI"). Rotinas da `MSXLIB` com convenção de
+registrador própria (`VDP_PSet`, `BDOS_PrintChar` etc.) **não** são
+chamáveis assim — só por comandos dedicados como `Write`/`WriteLn`, do mesmo
+jeito que o `DIGNAC` só acessa essas rotinas via `PSET`/`LINE`, nunca por
+uma chamada genérica. Ver `docs/manual-ferramentas.md` §10 pra um exemplo
+prático do que isso já destrava.
 
 ## 2. Estrutura de um programa
 
@@ -41,7 +47,9 @@ begin
 end.
 ```
 
-Um único bloco `var` (opcional) seguido de um único bloco `begin...end.`.
+Ordem completa (todas as partes depois de `program Nome;` são opcionais,
+mas quando presentes seguem sempre esta ordem): `PUBLIC`/`EXTERN` → `var` →
+`procedure`/`function` → bloco principal `begin...end.`.
 
 ## 3. Declaração de variáveis
 
@@ -70,7 +78,85 @@ suportada"), porque literais de string só são aceitos como argumento direto
 de `Write`/`WriteLn`, nunca como expressão geral. Trate `String` como
 reservado-mas-não-funcional por enquanto.
 
-## 4. Comandos suportados
+## 4. Procedimentos e funções
+
+```pascal
+program Exemplo;
+
+var
+  resultado: Integer;
+
+function Dobro(x: Integer): Integer;
+begin
+  Dobro := x * 2;   { TP4 clássico: atribuir ao próprio nome devolve o valor }
+end;
+
+procedure Saudacao(nome: Integer);
+begin
+  Write('Ola, sujeito numero ');
+  WriteLn(nome);
+end;
+
+begin
+  Saudacao(7);
+  resultado := Dobro(21) + 1;
+  WriteLn(resultado);
+end.
+```
+
+- Declaradas depois do `var` do programa, antes do `begin...end.` principal
+  — posição clássica de Pascal. Cada uma pode ter seu próprio `var` local.
+- **Declare-antes-de-usar**: uma só pode chamar outra já declarada antes
+  dela no arquivo — sem forward declarations por enquanto.
+- Lista de parâmetros no formato clássico, grupos separados por `;` e nomes
+  dentro de um grupo por `,`: `procedure P(a, b: Integer; c: Char);`. Todo
+  parâmetro ocupa um slot de 2 bytes na pilha independente do tipo
+  declarado (`PUSH` no Z80 só move pares de registrador) — só a leitura de
+  volta sabe que `Char`/`Boolean` usa apenas o byte baixo.
+- Chamar uma `procedure` como comando **exige parênteses mesmo sem
+  argumentos** (`Foo();`, não `Foo;` como o Pascal clássico permitiria) —
+  simplificação desta primeira leva.
+- `function` devolve valor por **atribuição ao próprio nome** dentro do
+  corpo (`Dobro := expr;`), estilo Turbo Pascal — não por um `return`
+  estilo C/BASIC. Uma `function` sem nenhuma atribuição ao próprio nome
+  devolve lixo em `HL` (mesmo comportamento indefinido do Pascal clássico
+  nesse caso — não é erro de compilação).
+- Usar uma `function` dentro de uma expressão maior (`Dobro(21) + 1`)
+  funciona — o valor de retorno em `HL` é preservado corretamente mesmo com
+  a limpeza da pilha depois do `CALL` (isso tinha um bug real no `DIGNAC`
+  equivalente, corrigido na mesma sessão que trouxe isso pro `WIRTH80` — ver
+  `CHANGELOG.md`).
+
+## 5. PUBLIC e EXTERN
+
+```pascal
+program Lib;
+PUBLIC Foo, Bar;
+EXTERN OutroSimbolo;
+
+procedure Foo(a: Integer);
+begin
+  WriteLn(a);
+end;
+```
+
+- Mesma palavra-chave nua do `KAJI80`/`DIGNAC` (não a diretiva `{$...}` do
+  Turbo Pascal real) — decisão deliberada, prioriza um modelo mental só
+  pra toolchain inteira. Vêm logo após `program Nome;`, antes do `var`.
+- Lista separada por vírgula, terminada em `;` (Pascal usa `;` pra terminar
+  declarações, diferente do `KAJI80`/`DIGNAC`).
+- Só fazem sentido pra nomes de `procedure`/`function` — variável não é
+  chamável entre módulos.
+- `Start` (o bloco principal `begin...end.`) é **sempre** `PUBLIC`,
+  automaticamente, mesmo sem nada declarado — continua sendo o ponto de
+  entrada padrão de um `.COM` standalone.
+- **Limitação real**: `EXTERN` + chamada genérica só funciona pra símbolos
+  que seguem a ABI Kizuna de pilha (outra `PROCEDURE` `DIGNAC`/`KAJI80`, ou
+  uma `procedure` `WIRTH80` `PUBLIC`) — não serve pra chamar rotinas da
+  `MSXLIB` diretamente (elas usam convenção de registrador, não pilha). Ver
+  §1.
+
+## 6. Comandos suportados
 
 ```pascal
 ' Atribuição
@@ -97,11 +183,11 @@ end;
 **Não implementado ainda** (mesmo com algumas palavras-chave já reservadas
 no léxico): laço `for...to/downto...do` (os tokens `for`, `to`, `downto`
 existem no lexer mas o parser não tem caso nenhum pra eles — usar `for`
-resulta em erro de sintaxe), `repeat...until`, `case`, procedimentos e
-funções definidos pelo usuário, `uses`/units, arrays, records, `New`/
-`Dispose` (heap), `ReadLn`/`Read`/`ReadKey` do teclado.
+resulta em erro de sintaxe), `repeat...until`, `case`, `uses`/units, arrays,
+records, `New`/`Dispose` (heap), `ReadLn`/`Read`/`ReadKey` do teclado,
+recursão indireta e forward declarations de `procedure`/`function`.
 
-## 5. Expressões e operadores
+## 7. Expressões e operadores
 
 | Categoria   | Operadores                                    |
 | ------------ | ------------------------------------------------ |
@@ -111,7 +197,7 @@ funções definidos pelo usuário, `uses`/units, arrays, records, `New`/
 
 Não existe `and`/`or`/`not` lógico ainda (apenas os operadores acima).
 
-## 6. Literais
+## 8. Literais
 
 ```pascal
 123        ' inteiro decimal
@@ -120,7 +206,7 @@ $FF        ' inteiro hexadecimal
 'a''b'     ' aspa simples escapada duplicando-a -> "a'b"
 ```
 
-## 7. Comentários
+## 9. Comentários
 
 ```pascal
 { bloco de chaves }
@@ -128,7 +214,7 @@ $FF        ' inteiro hexadecimal
 // até o fim da linha
 ```
 
-## 8. O compilador `WIRTH80` (linha de comando)
+## 10. O compilador `WIRTH80` (linha de comando)
 
 ```bash
 wirth80 [opções] <arquivo.pas>
@@ -151,26 +237,25 @@ musubi -v -m sample/pascal/hello.map -o sample/pascal/hello.com \
   sample/pascal/hello.mob lib/msxlib.hlib
 ```
 
-## 9. Roteiro (o que falta pra chegar na visão de `SPEC.md`)
+## 11. Roteiro (o que falta pra chegar na visão de `SPEC.md`)
 
 Na ordem que mais desbloqueia o resto:
 
-1. Procedimentos e funções definidas pelo usuário (`procedure`/`function`)
-   — pré-requisito de tudo que depende de reutilizar código dentro do
-   próprio programa.
-2. `PUBLIC`/`EXTERN` do lado do Pascal (hoje só o `Start` é exportado) —
-   pré-requisito para um módulo Pascal poder ser chamado de fora ou chamar
-   uma rotina Assembly/DIGNAC.
-3. `uses`/`{$USES}` cruzando módulos e linguagens, como o `demo/` já
-   esboça.
-4. `for...to/downto...do` (os tokens já existem, só falta o parser).
-5. Diferenciação de tipo de verdade para `Char`/`Boolean`/`String` (mesmo
+1. `uses`/`{$USES}` cruzando módulos e linguagens (units de verdade), como
+   o `demo/` já esboça — `procedure`/`function`/`PUBLIC`/`EXTERN` dentro de
+   um único arquivo (§4-5) são o pré-requisito que já está pronto.
+2. `for...to/downto...do` (os tokens já existem, só falta o parser).
+3. Diferenciação de tipo de verdade para `Char`/`Boolean`/`String` (mesmo
    trabalho que o DIGNAC já fez — ver `docs/manual-basic-dignified.md` §3 —
    inclusive a decisão já tomada de usar **IEEE 754** para um futuro tipo
    `Real`, para reaproveitar a mesma engine de ponto flutuante que o
    DIGNAC vai precisar, em vez de duas implementações separadas).
+4. Chamar `procedure`/`function` sem parênteses quando não há argumentos
+   (`Foo;` em vez de `Foo();`) — só uma simplificação de sintaxe, não um
+   bloqueio real.
+5. Forward declarations e recursão indireta.
 
-## 10. Ver também
+## 12. Ver também
 
 - `docs/manual-ferramentas.md` — `.MOB`, `MUSUBI`, bank switching,
   `MSXLIB`, `OBI`.

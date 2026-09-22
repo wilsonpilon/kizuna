@@ -1,0 +1,51 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
+===============================================================================
+
+Modo de Memória: Monobanco
+Bancos Utilizados: [0]
+Endereço Base:     0x0100
+Ponto de Entrada:  0x0100
+Tamanho do .COM:   668 bytes (0x029C)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x01BB | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   187 bytes
+[ 1] 0x01BB - 0x01FD | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    66 bytes
+[ 2] 0x01FD - 0x025F | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    98 bytes
+[ 3] 0x025F - 0x039C | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:   317 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x0100 [Banco  0] PROC Start
+0x013C [Banco  0] PROC Dobro
+0x0168 [Banco  0] PROC Saudacao
+0x018E [Banco  0] PROC StrLit_2
+0x01A4 [Banco  0] PROC StrLit_1
+0x01B9 [Banco  0] PROC Var_resultado
+0x01BB [Banco  0] PROC Mul16
+0x01D0 [Banco  0] PROC Div16
+0x01FD [Banco  0] PROC BDOS_Call
+0x0201 [Banco  0] PROC BDOS_PrintChar
+0x0217 [Banco  0] PROC BDOS_PrintString
+0x022D [Banco  0] PROC BDOS_ReadChar
+0x0235 [Banco  0] PROC BDOS_Exit
+0x023B [Banco  0] PROC BDOS_FileOpen
+0x0241 [Banco  0] PROC BDOS_FileCreate
+0x0247 [Banco  0] PROC BDOS_FileClose
+0x024D [Banco  0] PROC BDOS_FileRead
+0x0253 [Banco  0] PROC BDOS_FileWrite
+0x0259 [Banco  0] PROC BDOS_FileSeek
+0x025F [Banco  0] PROC StrLen
+0x026D [Banco  0] PROC StrCopy
+0x027D [Banco  0] PROC StrToUpper
+0x0294 [Banco  0] PROC PrintHex8
+0x02A1 [Banco  0] PROC PrintNibble
+0x02B2 [Banco  0] PROC PrintHex16
+0x02BD [Banco  0] PROC PrintDec16
+0x02E7 [Banco  0] PROC PrintDecDigit
+0x0305 [Banco  0] PROC PrintDec16ToBuffer
+0x0338 [Banco  0] PROC PrintDecDigitBuf
+0x0351 [Banco  0] PROC PDTB_WriteChar
+0x0365 [Banco  0] PROC PDTB_BufPtr
+0x0367 [Banco  0] PROC PDTB_Count
+0x0368 [Banco  0] PROC StrCopyLen
+0x0380 [Banco  0] PROC BDOS_PrintLenStr

@@ -33,6 +33,10 @@ const (
 	TokenFor
 	TokenTo
 	TokenDownto
+	TokenProcedure
+	TokenFunction
+	TokenPublic
+	TokenExtern
 
 	// Operadores e Delimitadores
 	TokenAssign    // :=
@@ -78,6 +82,10 @@ var tokenNames = map[TokenType]string{
 	TokenFor:       "for",
 	TokenTo:        "to",
 	TokenDownto:    "downto",
+	TokenProcedure: "procedure",
+	TokenFunction:  "function",
+	TokenPublic:    "PUBLIC",
+	TokenExtern:    "EXTERN",
 	TokenAssign:    ":=",
 	TokenPlus:      "+",
 	TokenMinus:     "-",

@@ -19,14 +19,39 @@ type Stmt interface {
 
 // ProgramNode representa o programa Pascal completo
 type ProgramNode struct {
-	Name   string
-	Vars   []*VarDecl
-	Block  *BlockStmt
-	Line   int
-	Column int
+	Name    string
+	Publics []string
+	Externs []string
+	Vars    []*VarDecl
+	Procs   []*ProcDecl
+	Block   *BlockStmt
+	Line    int
+	Column  int
 }
 
 func (p *ProgramNode) Pos() (int, int) { return p.Line, p.Column }
+
+// ParamDecl representa a declaração de um parâmetro de procedure/function
+type ParamDecl struct {
+	Name string
+	Type string // "Integer", "Char", "Boolean" ou "String"
+}
+
+// ProcDecl representa uma procedure ou function definida pelo usuário.
+// function devolve valor por atribuição ao próprio nome dentro do corpo
+// (Nome := expr;), estilo Turbo Pascal clássico -- não por um "return".
+type ProcDecl struct {
+	Name       string
+	IsFunction bool
+	ReturnType string // só relevante se IsFunction
+	Params     []ParamDecl
+	Locals     []*VarDecl
+	Body       *BlockStmt
+	Line       int
+	Column     int
+}
+
+func (d *ProcDecl) Pos() (int, int) { return d.Line, d.Column }
 
 // VarDecl representa a declaração de uma ou mais variáveis de um tipo
 type VarDecl struct {
@@ -93,6 +118,17 @@ type WhileStmt struct {
 func (w *WhileStmt) Pos() (int, int) { return w.Line, w.Column }
 func (w *WhileStmt) stmtNode()        {}
 
+// CallStmt representa a chamada de uma procedure como comando: Nome(args)
+type CallStmt struct {
+	Name   string
+	Args   []Expr
+	Line   int
+	Column int
+}
+
+func (c *CallStmt) Pos() (int, int) { return c.Line, c.Column }
+func (c *CallStmt) stmtNode()        {}
+
 // BinaryExpr representa uma operação binária (+, -, *, div, =, <>, <, <=, >, >=)
 type BinaryExpr struct {
 	Left   Expr
@@ -145,3 +181,14 @@ type VarExpr struct {
 
 func (v *VarExpr) Pos() (int, int) { return v.Line, v.Column }
 func (v *VarExpr) exprNode()        {}
+
+// CallExpr representa a chamada de uma function como expressão: Nome(args)
+type CallExpr struct {
+	Name   string
+	Args   []Expr
+	Line   int
+	Column int
+}
+
+func (c *CallExpr) Pos() (int, int) { return c.Line, c.Column }
+func (c *CallExpr) exprNode()        {}

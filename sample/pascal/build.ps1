@@ -17,7 +17,7 @@ if (-not (Test-Path $libFile)) {
     pwsh -File (Join-Path $rootDir "lib\build.ps1")
 }
 
-$examples = @("hello", "calc")
+$examples = @("hello", "calc", "procs")
 
 foreach ($name in $examples) {
     $pasFile = Join-Path $scriptDir "$name.pas"

@@ -74,7 +74,36 @@ func (p *Parser) ParseProgram() (*ProgramNode, error) {
 		prog.Name = "Program"
 	}
 
-	// 2. Declarações de variáveis opcionais: var ...
+	// 2. PUBLIC/EXTERN opcionais, na mesma posição e formato do KAJI80/DIGNAC
+	// (mas terminados em ';', como qualquer declaração Pascal) -- só nomes de
+	// procedure/function fazem sentido aqui, já que só rotina é chamável
+	// entre módulos.
+	for p.current.Type == TokenPublic || p.current.Type == TokenExtern {
+		isPublic := p.current.Type == TokenPublic
+		if err := p.advance(); err != nil {
+			return nil, err
+		}
+		for {
+			nameTok, err := p.expect(TokenIdent)
+			if err != nil {
+				return nil, err
+			}
+			if isPublic {
+				prog.Publics = append(prog.Publics, nameTok.Value)
+			} else {
+				prog.Externs = append(prog.Externs, nameTok.Value)
+			}
+			if p.match(TokenComma) {
+				continue
+			}
+			break
+		}
+		if _, err := p.expect(TokenSemi); err != nil {
+			return nil, err
+		}
+	}
+
+	// 3. Declarações de variáveis opcionais: var ...
 	if p.match(TokenVar) {
 		for p.current.Type == TokenIdent {
 			decl, err := p.parseVarDecl()
@@ -85,7 +114,18 @@ func (p *Parser) ParseProgram() (*ProgramNode, error) {
 		}
 	}
 
-	// 3. Bloco principal: begin ... end.
+	// 4. procedure/function definidas pelo usuário, na ordem declarada
+	// (declare-antes-de-usar: uma só pode chamar outra já declarada antes
+	// dela, sem forward declarations nesta leva).
+	for p.current.Type == TokenProcedure || p.current.Type == TokenFunction {
+		proc, err := p.parseProcDecl()
+		if err != nil {
+			return nil, err
+		}
+		prog.Procs = append(prog.Procs, proc)
+	}
+
+	// 5. Bloco principal: begin ... end.
 	if p.current.Type != TokenBegin {
 		return nil, fmt.Errorf("esperado 'begin' do programa na linha %d:%d", p.current.Line, p.current.Column)
 	}
@@ -95,7 +135,7 @@ func (p *Parser) ParseProgram() (*ProgramNode, error) {
 	}
 	prog.Block = block
 
-	// 4. Ponto final '.'
+	// 6. Ponto final '.'
 	if _, err := p.expect(TokenDot); err != nil {
 		return nil, fmt.Errorf("esperado '.' no final do programa: %w", err)
 	}
@@ -136,6 +176,118 @@ func (p *Parser) parseVarDecl() (*VarDecl, error) {
 	}
 	decl.Type = typeTok.Value
 	_ = p.advance()
+
+	if _, err := p.expect(TokenSemi); err != nil {
+		return nil, err
+	}
+
+	return decl, nil
+}
+
+// parseProcDecl analisa uma declaração completa de procedure/function:
+//
+//	procedure Nome(a, b: Integer; c: Char);
+//	var local: Integer;
+//	begin ... end;
+//
+// function segue o mesmo formato com ": Tipo" antes do ';' final do
+// cabeçalho, e devolve valor por atribuição ao próprio nome dentro do
+// corpo (Nome := expr;) -- estilo Turbo Pascal clássico, não "return".
+func (p *Parser) parseProcDecl() (*ProcDecl, error) {
+	decl := &ProcDecl{
+		Line:       p.current.Line,
+		Column:     p.current.Column,
+		IsFunction: p.current.Type == TokenFunction,
+	}
+	if err := p.advance(); err != nil { // consome procedure/function
+		return nil, err
+	}
+
+	nameTok, err := p.expect(TokenIdent)
+	if err != nil {
+		return nil, err
+	}
+	decl.Name = nameTok.Value
+
+	// Lista de parâmetros opcional: grupos "nomes: Tipo" separados por ';'
+	if p.match(TokenLParen) {
+		for p.current.Type != TokenRParen {
+			var names []string
+			for {
+				nTok, err := p.expect(TokenIdent)
+				if err != nil {
+					return nil, err
+				}
+				names = append(names, nTok.Value)
+				if p.match(TokenComma) {
+					continue
+				}
+				break
+			}
+			if _, err := p.expect(TokenColon); err != nil {
+				return nil, err
+			}
+			typeTok := p.current
+			if typeTok.Type != TokenIdent && typeTok.Type != TokenInteger && typeTok.Type != TokenChar &&
+				typeTok.Type != TokenBoolean && typeTok.Type != TokenStringKw {
+				return nil, fmt.Errorf("tipo inválido '%s' em parâmetro na linha %d:%d",
+					typeTok.Value, typeTok.Line, typeTok.Column)
+			}
+			if err := p.advance(); err != nil {
+				return nil, err
+			}
+			for _, n := range names {
+				decl.Params = append(decl.Params, ParamDecl{Name: n, Type: typeTok.Value})
+			}
+			if p.match(TokenSemi) {
+				continue
+			}
+			break
+		}
+		if _, err := p.expect(TokenRParen); err != nil {
+			return nil, err
+		}
+	}
+
+	if decl.IsFunction {
+		if _, err := p.expect(TokenColon); err != nil {
+			return nil, err
+		}
+		typeTok := p.current
+		if typeTok.Type != TokenIdent && typeTok.Type != TokenInteger && typeTok.Type != TokenChar &&
+			typeTok.Type != TokenBoolean && typeTok.Type != TokenStringKw {
+			return nil, fmt.Errorf("tipo de retorno inválido '%s' na linha %d:%d",
+				typeTok.Value, typeTok.Line, typeTok.Column)
+		}
+		decl.ReturnType = typeTok.Value
+		if err := p.advance(); err != nil {
+			return nil, err
+		}
+	}
+
+	if _, err := p.expect(TokenSemi); err != nil {
+		return nil, err
+	}
+
+	// var local opcional
+	if p.match(TokenVar) {
+		for p.current.Type == TokenIdent {
+			local, err := p.parseVarDecl()
+			if err != nil {
+				return nil, err
+			}
+			decl.Locals = append(decl.Locals, local)
+		}
+	}
+
+	if p.current.Type != TokenBegin {
+		return nil, fmt.Errorf("esperado 'begin' no corpo de '%s' na linha %d:%d", decl.Name, p.current.Line, p.current.Column)
+	}
+	body, err := p.parseBlock()
+	if err != nil {
+		return nil, err
+	}
+	decl.Body = body
 
 	if _, err := p.expect(TokenSemi); err != nil {
 		return nil, err
@@ -216,10 +368,36 @@ func (p *Parser) parseStatement() (Stmt, error) {
 		return &WriteStmt{Args: args, NewLine: isNewLine, Line: line, Column: col}, nil
 
 	case TokenIdent:
-		// Atribuição: var := expr
-		varName := p.current.Value
+		name := p.current.Value
 		line := p.current.Line
 		col := p.current.Column
+
+		if p.peekTok.Type == TokenLParen {
+			// Chamada de procedure como comando: Nome(args)
+			if err := p.advance(); err != nil { // consome ident
+				return nil, err
+			}
+			_ = p.advance() // consome '('
+			var args []Expr
+			for p.current.Type != TokenRParen && p.current.Type != TokenEOF {
+				arg, err := p.parseExpression()
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, arg)
+				if p.match(TokenComma) {
+					continue
+				}
+				break
+			}
+			if _, err := p.expect(TokenRParen); err != nil {
+				return nil, err
+			}
+			return &CallStmt{Name: name, Args: args, Line: line, Column: col}, nil
+		}
+
+		// Atribuição: var := expr (ou NomeDaFuncao := expr dentro do corpo
+		// de uma function, mesma sintaxe -- o codegen decide o significado)
 		_ = p.advance()
 
 		if _, err := p.expect(TokenAssign); err != nil {
@@ -230,7 +408,7 @@ func (p *Parser) parseStatement() (Stmt, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &AssignStmt{VarName: varName, Expr: expr, Line: line, Column: col}, nil
+		return &AssignStmt{VarName: name, Expr: expr, Line: line, Column: col}, nil
 
 	case TokenIf:
 		line := p.current.Line
@@ -389,6 +567,25 @@ func (p *Parser) parsePrimary() (Expr, error) {
 
 	case TokenIdent:
 		_ = p.advance()
+		if p.match(TokenLParen) {
+			// Chamada de function como expressão: Nome(args)
+			var args []Expr
+			for p.current.Type != TokenRParen && p.current.Type != TokenEOF {
+				arg, err := p.parseExpression()
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, arg)
+				if p.match(TokenComma) {
+					continue
+				}
+				break
+			}
+			if _, err := p.expect(TokenRParen); err != nil {
+				return nil, err
+			}
+			return &CallExpr{Name: tok.Value, Args: args, Line: tok.Line, Column: tok.Column}, nil
+		}
 		return &VarExpr{Name: tok.Value, Line: tok.Line, Column: tok.Column}, nil
 
 	case TokenLParen:
