@@ -2,6 +2,7 @@ package dignac
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/wilsonpilon/kizuna/pkg/kaji80"
@@ -26,13 +27,13 @@ type varSymbol struct {
 
 // CodeGenerator traduz a AST de MSX-BASIC Dignified em Assembly Z80 compatível com KAJI80
 type CodeGenerator struct {
-	module        *ModuleNode
-	asm           strings.Builder
-	labelCounter  int
-	stringLits    map[string]string // texto -> label (ex: "StrLit_1")
-	globals       map[string]*varSymbol
-	currentLocals map[string]*varSymbol
-	currentParams map[string]*varSymbol
+	module         *ModuleNode
+	asm            strings.Builder
+	labelCounter   int
+	stringLits     map[string]string // texto -> label (ex: "StrLit_1")
+	globals        map[string]*varSymbol
+	currentLocals  map[string]*varSymbol
+	currentParams  map[string]*varSymbol
 	localFrameSize int
 
 	// Flags de rastreamento de dependências da MSXLIB
@@ -47,6 +48,19 @@ type CodeGenerator struct {
 	needsCls      bool
 	needsBeep     bool
 	needsChgMod   bool
+
+	needsSpriteSet     bool
+	needsSpriteDefine  bool
+	needsSpriteHideAll bool
+	needsPlaySequence  bool
+	needsFileOpen      bool
+	needsFileCreate    bool
+	needsFileClose     bool
+	needsFileWrite     bool
+	needsPrintDecBuf   bool
+
+	extraData []string     // blocos DB pré-renderizados (padrões de sprite, sequências MML, caminhos de arquivo, literais de PRINT #n)
+	fileNums  map[int]bool // números de arquivo (#n) realmente usados no módulo
 }
 
 // NewCodeGenerator cria um novo gerador de código
@@ -55,6 +69,7 @@ func NewCodeGenerator(module *ModuleNode) *CodeGenerator {
 		module:     module,
 		stringLits: make(map[string]string),
 		globals:    make(map[string]*varSymbol),
+		fileNums:   make(map[int]bool),
 	}
 }
 
@@ -181,6 +196,33 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 	if cg.needsChgMod && !containsString(externs, "BIOS_CHGMOD") {
 		externs = append(externs, "BIOS_CHGMOD")
 	}
+	if cg.needsSpriteSet && !containsString(externs, "VDP_SpriteSet") {
+		externs = append(externs, "VDP_SpriteSet")
+	}
+	if cg.needsSpriteDefine && !containsString(externs, "VDP_SpriteDefine") {
+		externs = append(externs, "VDP_SpriteDefine")
+	}
+	if cg.needsSpriteHideAll && !containsString(externs, "VDP_SpriteHideAll") {
+		externs = append(externs, "VDP_SpriteHideAll")
+	}
+	if cg.needsPlaySequence && !containsString(externs, "PSG_PlaySequence") {
+		externs = append(externs, "PSG_PlaySequence")
+	}
+	if cg.needsFileOpen && !containsString(externs, "BDOS_FileOpen") {
+		externs = append(externs, "BDOS_FileOpen")
+	}
+	if cg.needsFileCreate && !containsString(externs, "BDOS_FileCreate") {
+		externs = append(externs, "BDOS_FileCreate")
+	}
+	if cg.needsFileClose && !containsString(externs, "BDOS_FileClose") {
+		externs = append(externs, "BDOS_FileClose")
+	}
+	if cg.needsFileWrite && !containsString(externs, "BDOS_FileWrite") {
+		externs = append(externs, "BDOS_FileWrite")
+	}
+	if cg.needsPrintDecBuf && !containsString(externs, "PrintDec16ToBuffer") {
+		externs = append(externs, "PrintDec16ToBuffer")
+	}
 
 	if len(externs) > 0 {
 		cg.asm.WriteString(fmt.Sprintf("EXTERN %s\n\n", strings.Join(externs, ", ")))
@@ -207,6 +249,49 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 			cg.asm.WriteString(fmt.Sprintf("    DB \"%s$\"\n", escapeString(str)))
 		}
 		cg.asm.WriteString("\n")
+	}
+
+	// Seção de Dados Extras: padrões de sprite (SPRITE PATTERN), sequências
+	// de música traduzidas do MML (PLAY), caminhos de arquivo e literais de
+	// PRINT #n (ASCIIZ/sem terminador -- não usam o '$' dos literais acima,
+	// que é específico de BDOS_PrintString). Ordem de inserção já é
+	// determinística (um slice, não um map) -- sem risco do mesmo
+	// não-determinismo já corrigido na tabela de símbolos do KAJI80.
+	if len(cg.extraData) > 0 {
+		cg.asm.WriteString("; --- Sprites / Música / Arquivos ---\n")
+		for _, block := range cg.extraData {
+			cg.asm.WriteString(block)
+		}
+		cg.asm.WriteString("\n")
+	}
+
+	// Células de rascunho de PUT SPRITE (ver o comentário no case
+	// *PutSpriteStmt em generateStmt)
+	if cg.needsSpriteSet {
+		cg.asm.WriteString("; --- Rascunho de PUT SPRITE ---\n")
+		cg.asm.WriteString("DGN_Sprite_Idx: DB 00h\n")
+		cg.asm.WriteString("DGN_Sprite_X: DB 00h\n")
+		cg.asm.WriteString("DGN_Sprite_Y: DB 00h\n")
+		cg.asm.WriteString("DGN_Sprite_Pattern: DB 00h\n")
+		cg.asm.WriteString("DGN_Sprite_Color: DB 00h\n\n")
+	}
+
+	// Handles de arquivo (#n) -- uma variável global de 1 byte por número de
+	// arquivo realmente usado no módulo, preenchida por OPEN e lida por
+	// CLOSE/PRINT #n. Números ordenados para saída determinística (mapa do
+	// Go embaralha a ordem de iteração).
+	if len(cg.fileNums) > 0 {
+		nums := make([]int, 0, len(cg.fileNums))
+		for n := range cg.fileNums {
+			nums = append(nums, n)
+		}
+		sort.Ints(nums)
+		cg.asm.WriteString("; --- Handles de Arquivo (#n) ---\n")
+		for _, n := range nums {
+			cg.asm.WriteString(fmt.Sprintf("DGN_FileHandle_%d:\n    DB 00h\n", n))
+		}
+		cg.asm.WriteString("DGN_FileNumBuf: DS 6\n")
+		cg.asm.WriteString("DGN_CRLF: DB 0Dh, 0Ah\n\n")
 	}
 
 	// Seção de Variáveis Globais
@@ -499,9 +584,9 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 		} else {
 			sb.WriteString("    LD HL, 000Fh\n") // Cor 15 padrão
 		}
-		sb.WriteString("    LD A, L\n")    // A = Color
-		sb.WriteString("    POP DE\n")     // DE = Y
-		sb.WriteString("    POP BC\n")     // BC = X
+		sb.WriteString("    LD A, L\n") // A = Color
+		sb.WriteString("    POP DE\n")  // DE = Y
+		sb.WriteString("    POP BC\n")  // BC = X
 		sb.WriteString("    CALL VDP_PSet\n")
 		return nil
 
@@ -554,6 +639,9 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 		return nil
 
 	case *PrintStmt:
+		if s.FileNum != nil {
+			return cg.generatePrintFileStmt(sb, s)
+		}
 		for _, arg := range s.Args {
 			switch a := arg.(type) {
 			case *StringExpr:
@@ -576,6 +664,118 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 			sb.WriteString("    LD E, 0Ah\n")
 			sb.WriteString("    CALL BDOS_PrintChar\n")
 		}
+		return nil
+
+	case *PutSpriteStmt:
+		// VDP_SpriteSet espera: A=índice, H=Y, L=X, D=padrão, E=cor.
+		// Avalia os 5 valores primeiro para células de rascunho (mesmo
+		// idioma de VDP_PSet_ColorArg) -- evita um valor sobrescrever outro
+		// no meio do caminho, já que só A tem endereçamento absoluto direto
+		// (LD A,(nn)); os demais só recebem via LD r,A.
+		cg.needsSpriteSet = true
+		if err := cg.generateExpr(sb, s.Index); err != nil {
+			return err
+		}
+		sb.WriteString("    LD A, L\n    LD (DGN_Sprite_Idx), A\n")
+		if err := cg.generateExpr(sb, s.X); err != nil {
+			return err
+		}
+		sb.WriteString("    LD A, L\n    LD (DGN_Sprite_X), A\n")
+		if err := cg.generateExpr(sb, s.Y); err != nil {
+			return err
+		}
+		sb.WriteString("    LD A, L\n    LD (DGN_Sprite_Y), A\n")
+		if err := cg.generateExpr(sb, s.Color); err != nil {
+			return err
+		}
+		sb.WriteString("    LD A, L\n    LD (DGN_Sprite_Color), A\n")
+		if err := cg.generateExpr(sb, s.Pattern); err != nil {
+			return err
+		}
+		sb.WriteString("    LD A, L\n    LD (DGN_Sprite_Pattern), A\n")
+
+		sb.WriteString("    LD A, (DGN_Sprite_Y)\n    LD H, A\n")
+		sb.WriteString("    LD A, (DGN_Sprite_X)\n    LD L, A\n")
+		sb.WriteString("    LD A, (DGN_Sprite_Pattern)\n    LD D, A\n")
+		sb.WriteString("    LD A, (DGN_Sprite_Color)\n    LD E, A\n")
+		sb.WriteString("    LD A, (DGN_Sprite_Idx)\n")
+		sb.WriteString("    CALL VDP_SpriteSet\n")
+		return nil
+
+	case *SpritePatternStmt:
+		cg.needsSpriteDefine = true
+		parts := make([]string, len(s.Bytes))
+		for i, bExpr := range s.Bytes {
+			numExpr, ok := bExpr.(*NumberExpr)
+			if !ok {
+				return fmt.Errorf("SPRITE PATTERN: os bytes do padrão precisam ser constantes numéricas literais")
+			}
+			if numExpr.Value < 0 || numExpr.Value > 255 {
+				return fmt.Errorf("SPRITE PATTERN: byte de padrão %d fora do intervalo 0..255", numExpr.Value)
+			}
+			parts[i] = fmt.Sprintf("%02Xh", numExpr.Value)
+		}
+		label := cg.newLabel("SpritePattern")
+		cg.extraData = append(cg.extraData, fmt.Sprintf("%s:\n    DB %s\n", label, strings.Join(parts, ", ")))
+
+		if err := cg.generateExpr(sb, s.Pattern); err != nil {
+			return err
+		}
+		sb.WriteString("    LD A, L\n")
+		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", label))
+		sb.WriteString(fmt.Sprintf("    LD BC, %d\n", len(s.Bytes)))
+		sb.WriteString("    CALL VDP_SpriteDefine\n")
+		return nil
+
+	case *SpriteOffStmt:
+		cg.needsSpriteHideAll = true
+		sb.WriteString("    CALL VDP_SpriteHideAll\n")
+		return nil
+
+	case *PlayStmt:
+		cg.needsPlaySequence = true
+		events, err := parseMML(s.MML)
+		if err != nil {
+			return fmt.Errorf("PLAY: %w", err)
+		}
+		label := cg.newLabel("PlaySeq")
+		cg.extraData = append(cg.extraData, fmt.Sprintf("%s:\n%s", label, encodeEvents(events)))
+		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", label))
+		sb.WriteString("    CALL PSG_PlaySequence\n")
+		return nil
+
+	case *OpenStmt:
+		pathStr, ok := s.Path.(*StringExpr)
+		if !ok {
+			return fmt.Errorf("OPEN exige um caminho literal (ex: OPEN \"TEST.TXT\" FOR OUTPUT AS #1)")
+		}
+		cg.fileNums[s.FileNum] = true
+		pathLabel := cg.newLabel("FilePath")
+		cg.extraData = append(cg.extraData, fmt.Sprintf("%s:\n    DB \"%s\", 00h\n", pathLabel, escapeString(pathStr.Value)))
+
+		handleLabel := fmt.Sprintf("DGN_FileHandle_%d", s.FileNum)
+		sb.WriteString(fmt.Sprintf("    LD DE, %s\n", pathLabel))
+		if s.Mode == "INPUT" {
+			cg.needsFileOpen = true
+			sb.WriteString("    LD A, 01h\n") // somente leitura
+			sb.WriteString("    CALL BDOS_FileOpen\n")
+		} else {
+			cg.needsFileCreate = true
+			sb.WriteString("    LD A, 00h\n") // leitura+escrita
+			sb.WriteString("    LD B, 00h\n") // atributo normal
+			sb.WriteString("    CALL BDOS_FileCreate\n")
+		}
+		sb.WriteString("    LD A, B\n") // handle retornado em B
+		sb.WriteString(fmt.Sprintf("    LD (%s), A\n", handleLabel))
+		return nil
+
+	case *CloseStmt:
+		cg.needsFileClose = true
+		cg.fileNums[s.FileNum] = true
+		handleLabel := fmt.Sprintf("DGN_FileHandle_%d", s.FileNum)
+		sb.WriteString(fmt.Sprintf("    LD A, (%s)\n", handleLabel))
+		sb.WriteString("    LD B, A\n")
+		sb.WriteString("    CALL BDOS_FileClose\n")
 		return nil
 
 	case *ClsStmt:
@@ -611,6 +811,57 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 	default:
 		return fmt.Errorf("instrução não suportada pelo gerador de código: %T", stmt)
 	}
+}
+
+// generatePrintFileStmt gera PRINT #n, expr[, expr...] -- mesma gramática de
+// argumentos do PRINT de console, mas escrevendo em arquivo via
+// BDOS_FileWrite em vez de BDOS_PrintString/PrintDec16 (que só sabem
+// escrever no console). Literais de string vão direto (sem o terminador '$'
+// que só o console precisa); expressões numéricas passam por
+// PrintDec16ToBuffer antes de ir pro arquivo.
+func (cg *CodeGenerator) generatePrintFileStmt(sb *strings.Builder, s *PrintStmt) error {
+	n := *s.FileNum
+	cg.fileNums[n] = true
+	handleLabel := fmt.Sprintf("DGN_FileHandle_%d", n)
+
+	writeBuf := func(bufExpr string, sizeExpr string) {
+		sb.WriteString(fmt.Sprintf("    LD A, (%s)\n", handleLabel))
+		sb.WriteString("    LD B, A\n")
+		sb.WriteString(fmt.Sprintf("    LD DE, %s\n", bufExpr))
+		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", sizeExpr))
+		sb.WriteString("    CALL BDOS_FileWrite\n")
+	}
+
+	cg.needsFileWrite = true
+	for _, arg := range s.Args {
+		switch a := arg.(type) {
+		case *StringExpr:
+			lbl := cg.newLabel("FileStr")
+			cg.extraData = append(cg.extraData, fmt.Sprintf("%s:\n    DB \"%s\"\n", lbl, escapeString(a.Value)))
+			writeBuf(lbl, fmt.Sprintf("%d", len(a.Value)))
+		default:
+			cg.needsPrintDecBuf = true
+			if err := cg.generateExpr(sb, a); err != nil {
+				return err
+			}
+			sb.WriteString("    LD DE, DGN_FileNumBuf\n")
+			sb.WriteString("    CALL PrintDec16ToBuffer\n")
+			// A = tamanho (retorno de PrintDec16ToBuffer); HL precisa desse
+			// mesmo valor pra BDOS_FileWrite, então monta HL a partir de A
+			// em vez de usar o helper writeBuf (que só aceita um tamanho
+			// fixo conhecido em tempo de compilação, não um valor de retorno).
+			sb.WriteString("    LD L, A\n    LD H, 0\n")
+			sb.WriteString(fmt.Sprintf("    LD A, (%s)\n    LD B, A\n", handleLabel))
+			sb.WriteString("    LD DE, DGN_FileNumBuf\n")
+			sb.WriteString("    CALL BDOS_FileWrite\n")
+		}
+	}
+
+	if !s.TrailingSemicolon {
+		writeBuf("DGN_CRLF", "2")
+	}
+
+	return nil
 }
 
 func (cg *CodeGenerator) generateExpr(sb *strings.Builder, expr Expr) error {

@@ -152,14 +152,70 @@ type PsetStmt struct {
 func (s *PsetStmt) node() {}
 func (s *PsetStmt) stmt() {}
 
-// PrintStmt representa o comando PRINT expr1, expr2; ...
+// PrintStmt representa o comando PRINT expr1, expr2; ... ou, com FileNum
+// definido, PRINT #n, expr1, expr2; ...
 type PrintStmt struct {
 	Args              []Expr
 	TrailingSemicolon bool
+	FileNum           *int // nil = console; caso contrário, número de arquivo (PRINT #n,)
 }
 
 func (s *PrintStmt) node() {}
 func (s *PrintStmt) stmt() {}
+
+// PutSpriteStmt representa PUT SPRITE index, (x, y), color, pattern
+type PutSpriteStmt struct {
+	Index   Expr
+	X       Expr
+	Y       Expr
+	Color   Expr
+	Pattern Expr
+}
+
+func (s *PutSpriteStmt) node() {}
+func (s *PutSpriteStmt) stmt() {}
+
+// SpritePatternStmt representa SPRITE PATTERN pattern#, b0, b1, ..., bN
+type SpritePatternStmt struct {
+	Pattern Expr
+	Bytes   []Expr
+}
+
+func (s *SpritePatternStmt) node() {}
+func (s *SpritePatternStmt) stmt() {}
+
+// SpriteOffStmt representa SPRITE OFF (oculta todos os sprites)
+type SpriteOffStmt struct{}
+
+func (s *SpriteOffStmt) node() {}
+func (s *SpriteOffStmt) stmt() {}
+
+// PlayStmt representa PLAY "mml" -- a string MML é traduzida em tempo de
+// compilação para uma tabela de eventos de PSG_PlaySequence
+type PlayStmt struct {
+	MML string
+}
+
+func (s *PlayStmt) node() {}
+func (s *PlayStmt) stmt() {}
+
+// OpenStmt representa OPEN caminho$ FOR modo AS #n
+type OpenStmt struct {
+	Path    Expr
+	Mode    string // "INPUT", "OUTPUT" ou "APPEND"
+	FileNum int
+}
+
+func (s *OpenStmt) node() {}
+func (s *OpenStmt) stmt() {}
+
+// CloseStmt representa CLOSE #n
+type CloseStmt struct {
+	FileNum int
+}
+
+func (s *CloseStmt) node() {}
+func (s *CloseStmt) stmt() {}
 
 // ClsStmt representa o comando CLS
 type ClsStmt struct{}

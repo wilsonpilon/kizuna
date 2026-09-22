@@ -17,8 +17,8 @@ if (-not (Test-Path $libFile)) {
     pwsh -File (Join-Path $rootDir "lib\build.ps1")
 }
 
-# 1. Compila os executáveis standalone: hello, calc e chart
-$executables = @("hello", "calc", "chart")
+# 1. Compila os executáveis standalone: hello, calc, chart e showcase
+$executables = @("hello", "calc", "chart", "showcase")
 
 foreach ($name in $executables) {
     $basFile = Join-Path $scriptDir "$name.bas"

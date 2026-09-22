@@ -181,6 +181,8 @@ Copy-Item -Path "$RootDir/sample/basic/calc.bas" -Destination "$BasicDir/calc.ba
 Copy-Item -Path "$RootDir/sample/basic/calc.com" -Destination "$BasicDir/calc.com"
 Copy-Item -Path "$RootDir/sample/basic/chart.bas" -Destination "$BasicDir/chart.bas"
 Copy-Item -Path "$RootDir/sample/basic/chart.com" -Destination "$BasicDir/chart.com"
+Copy-Item -Path "$RootDir/sample/basic/showcase.bas" -Destination "$BasicDir/showcase.bas"
+Copy-Item -Path "$RootDir/sample/basic/showcase.com" -Destination "$BasicDir/showcase.com"
 Copy-Item -Path "$RootDir/sample/basic/build.ps1" -Destination "$BasicDir/build.ps1"
 
 # OBI (Obifile declarativo: KAJI80 + DIGNAC + resource + biblioteca)
@@ -245,6 +247,7 @@ $kizunaComs = @(
     "sample/basic/hello.com",
     "sample/basic/calc.com",
     "sample/basic/chart.com",
+    "sample/basic/showcase.com",
     "sample/pascal/hello.com",
     "sample/pascal/calc.com",
     "sample/libdemo/libdemo.com",

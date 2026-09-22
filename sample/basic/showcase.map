@@ -1,0 +1,119 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
+===============================================================================
+
+Modo de Memória: Monobanco
+Bancos Utilizados: [0]
+Endereço Base:     0x0100
+Ponto de Entrada:  0x0100
+Tamanho do .COM:   2477 bytes (0x09AD)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x02B9 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   441 bytes
+[ 1] 0x02B9 - 0x031B | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
+[ 2] 0x031B - 0x03CE | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   179 bytes
+[ 3] 0x03CE - 0x089D | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:  1231 bytes
+[ 4] 0x089D - 0x09A2 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:   261 bytes
+[ 5] 0x09A2 - 0x0AAD | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:   267 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x0100 [Banco  0] PROC Start
+0x0106 [Banco  0] PROC Main
+0x0212 [Banco  0] PROC StrLit_7
+0x023E [Banco  0] PROC SpritePattern_1
+0x025E [Banco  0] PROC PlaySeq_2
+0x026F [Banco  0] PROC FilePath_3
+0x0279 [Banco  0] PROC FileStr_4
+0x0293 [Banco  0] PROC FileStr_5
+0x029C [Banco  0] PROC FileStr_6
+0x02AB [Banco  0] PROC DGN_Sprite_Idx
+0x02AC [Banco  0] PROC DGN_Sprite_X
+0x02AD [Banco  0] PROC DGN_Sprite_Y
+0x02AE [Banco  0] PROC DGN_Sprite_Pattern
+0x02AF [Banco  0] PROC DGN_Sprite_Color
+0x02B0 [Banco  0] PROC DGN_FileHandle_1
+0x02B1 [Banco  0] PROC DGN_FileNumBuf
+0x02B7 [Banco  0] PROC DGN_CRLF
+0x02B9 [Banco  0] PROC BDOS_Call
+0x02BD [Banco  0] PROC BDOS_PrintChar
+0x02D3 [Banco  0] PROC BDOS_PrintString
+0x02E9 [Banco  0] PROC BDOS_ReadChar
+0x02F1 [Banco  0] PROC BDOS_Exit
+0x02F7 [Banco  0] PROC BDOS_FileOpen
+0x02FD [Banco  0] PROC BDOS_FileCreate
+0x0303 [Banco  0] PROC BDOS_FileClose
+0x0309 [Banco  0] PROC BDOS_FileRead
+0x030F [Banco  0] PROC BDOS_FileWrite
+0x0315 [Banco  0] PROC BDOS_FileSeek
+0x031B [Banco  0] PROC BIOS_Call
+0x032D [Banco  0] PROC BIOS_CHPUT
+0x033C [Banco  0] PROC BIOS_CHGET
+0x0366 [Banco  0] PROC BIOS_CLS
+0x036D [Banco  0] PROC BIOS_POSIT
+0x036E [Banco  0] PROC BIOS_BEEP
+0x037E [Banco  0] PROC BIOS_INIT32
+0x0386 [Banco  0] PROC BIOS_CHGMOD
+0x03CE [Banco  0] PROC VDP_WriteReg
+0x03D4 [Banco  0] PROC VDP_WriteReg_Raw
+0x03DF [Banco  0] PROC VDP_SetWriteAddr
+0x03EE [Banco  0] PROC VDP_SetReadAddr
+0x03FB [Banco  0] PROC VDP_FillVRAM
+0x0417 [Banco  0] PROC VDP_WriteVRAM
+0x042A [Banco  0] PROC VDP_ReadVRAM
+0x043F [Banco  0] PROC VDP_CopyVRAM
+0x045D [Banco  0] PROC VDP_SetColor
+0x0474 [Banco  0] PROC VDP_SetScreen
+0x0477 [Banco  0] PROC VDP_InitScreen2
+0x047C [Banco  0] PROC VDP_InitScreen0
+0x0480 [Banco  0] PROC VDP_InitScreen1
+0x0486 [Banco  0] PROC VDP_InitScreen2_Tables
+0x0507 [Banco  0] PROC VDP_PSet
+0x050D [Banco  0] PROC VDP_PSet_HW
+0x0549 [Banco  0] PROC VDP_CommandWait_Raw
+0x0562 [Banco  0] PROC VDP_PSet_Raw
+0x05A7 [Banco  0] PROC VDP_PSet_MaskDone
+0x0616 [Banco  0] PROC VDP_PSet_ColorArg
+0x0617 [Banco  0] PROC VDP_BoxFill
+0x06BA [Banco  0] PROC VDP_Line
+0x078E [Banco  0] PROC VDP_Line_Loop
+0x07D7 [Banco  0] PROC VDP_Line_CheckE2DX
+0x0801 [Banco  0] PROC VDP_Line_Exit
+0x0808 [Banco  0] PROC VDP_Line_H_End
+0x0809 [Banco  0] PROC VDP_Line_DX
+0x080A [Banco  0] PROC VDP_Line_SX
+0x080B [Banco  0] PROC VDP_Line_DY
+0x080D [Banco  0] PROC VDP_Line_SY
+0x080E [Banco  0] PROC VDP_Line_Err
+0x0810 [Banco  0] PROC VDP_Line_E2
+0x0812 [Banco  0] PROC VDP_Line_CurX
+0x0813 [Banco  0] PROC VDP_Line_CurY
+0x0814 [Banco  0] PROC VDP_SpriteDefine
+0x0825 [Banco  0] PROC VDP_SpriteSet
+0x0862 [Banco  0] PROC VDP_Sprite_Idx
+0x0863 [Banco  0] PROC VDP_Sprite_X
+0x0864 [Banco  0] PROC VDP_Sprite_Y
+0x0865 [Banco  0] PROC VDP_Sprite_Pat
+0x0866 [Banco  0] PROC VDP_Sprite_Color
+0x0867 [Banco  0] PROC VDP_SpriteHide
+0x0883 [Banco  0] PROC VDP_SpriteHideAll
+0x0896 [Banco  0] PROC VDP_SpriteSetSize
+0x089D [Banco  0] PROC PSG_Write
+0x08A3 [Banco  0] PROC PSG_Read
+0x08A8 [Banco  0] PROC PSG_MuteAll
+0x08C5 [Banco  0] PROC PSG_PlayTone
+0x08FC [Banco  0] PROC PSG_NoteTable
+0x0974 [Banco  0] PROC PSG_PlayNoteIndexed
+0x0988 [Banco  0] PROC PSG_PlaySequence
+0x09A2 [Banco  0] PROC StrLen
+0x09B0 [Banco  0] PROC StrCopy
+0x09C0 [Banco  0] PROC StrToUpper
+0x09D7 [Banco  0] PROC PrintHex8
+0x09E4 [Banco  0] PROC PrintNibble
+0x09F5 [Banco  0] PROC PrintHex16
+0x0A00 [Banco  0] PROC PrintDec16
+0x0A2A [Banco  0] PROC PrintDecDigit
+0x0A48 [Banco  0] PROC PrintDec16ToBuffer
+0x0A7D [Banco  0] PROC PrintDecDigitBuf
+0x0A96 [Banco  0] PROC PDTB_WriteChar
+0x0AAA [Banco  0] PROC PDTB_BufPtr
+0x0AAC [Banco  0] PROC PDTB_Count

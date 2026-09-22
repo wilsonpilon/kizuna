@@ -60,29 +60,45 @@ const (
 	TokenB
 	TokenBf
 
+	// Sprites
+	TokenPut
+	TokenSprite
+	TokenPattern
+	TokenOff
+
+	// Música (PLAY / MML)
+	TokenPlay
+
+	// Arquivos
+	TokenOpen
+	TokenClose
+	TokenOutput
+	TokenAppend
+	TokenHash // '#'
+
 	// Operadores Aritméticos e Lógicos
-	TokenPlus     // +
-	TokenMinus    // -
-	TokenMul      // *
-	TokenDiv      // / ou \
-	TokenMod      // MOD
-	TokenAnd      // AND
-	TokenOr       // OR
-	TokenNot      // NOT
-	TokenXor      // XOR
-	TokenEqual    // =
-	TokenNotEqual // <>
-	TokenLess     // <
-	TokenLessEq   // <=
-	TokenGreater  // >
-	TokenGreaterEq// >=
+	TokenPlus      // +
+	TokenMinus     // -
+	TokenMul       // *
+	TokenDiv       // / ou \
+	TokenMod       // MOD
+	TokenAnd       // AND
+	TokenOr        // OR
+	TokenNot       // NOT
+	TokenXor       // XOR
+	TokenEqual     // =
+	TokenNotEqual  // <>
+	TokenLess      // <
+	TokenLessEq    // <=
+	TokenGreater   // >
+	TokenGreaterEq // >=
 
 	// Delimitadores
-	TokenLParen   // (
-	TokenRParen   // )
-	TokenComma    // ,
-	TokenColon    // :
-	TokenSemi     // ;
+	TokenLParen // (
+	TokenRParen // )
+	TokenComma  // ,
+	TokenColon  // :
+	TokenSemi   // ;
 )
 
 var tokenNames = map[TokenType]string{
@@ -129,6 +145,16 @@ var tokenNames = map[TokenType]string{
 	TokenPset:      "PSET",
 	TokenB:         "B",
 	TokenBf:        "BF",
+	TokenPut:       "PUT",
+	TokenSprite:    "SPRITE",
+	TokenPattern:   "PATTERN",
+	TokenOff:       "OFF",
+	TokenPlay:      "PLAY",
+	TokenOpen:      "OPEN",
+	TokenClose:     "CLOSE",
+	TokenOutput:    "OUTPUT",
+	TokenAppend:    "APPEND",
+	TokenHash:      "#",
 	TokenPlus:      "+",
 	TokenMinus:     "-",
 	TokenMul:       "*",

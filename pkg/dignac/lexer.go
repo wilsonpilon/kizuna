@@ -123,6 +123,12 @@ func (l *Lexer) NextToken() (Token, error) {
 			return l.lexHexNumber("$")
 		}
 
+		// '#' -- número de arquivo (OPEN ... AS #1 / PRINT #1, / CLOSE #1)
+		if ch == '#' {
+			l.advance()
+			return Token{Type: TokenHash, Value: "#", Line: startLine, Column: startCol}, nil
+		}
+
 		// Números decimais
 		if unicode.IsDigit(ch) {
 			return l.lexNumber()
@@ -344,6 +350,15 @@ func (l *Lexer) lexIdentOrKeyword() (Token, error) {
 		"PSET":      TokenPset,
 		"B":         TokenB,
 		"BF":        TokenBf,
+		"PUT":       TokenPut,
+		"SPRITE":    TokenSprite,
+		"PATTERN":   TokenPattern,
+		"OFF":       TokenOff,
+		"PLAY":      TokenPlay,
+		"OPEN":      TokenOpen,
+		"CLOSE":     TokenClose,
+		"OUTPUT":    TokenOutput,
+		"APPEND":    TokenAppend,
 		"MOD":       TokenMod,
 		"AND":       TokenAnd,
 		"OR":        TokenOr,

@@ -391,6 +391,16 @@ func (p *Parser) parseStmt() (Stmt, error) {
 		return p.parsePsetStmt()
 	case TokenPrint:
 		return p.parsePrintStmt()
+	case TokenPut:
+		return p.parsePutSpriteStmt()
+	case TokenSprite:
+		return p.parseSpriteStmt()
+	case TokenPlay:
+		return p.parsePlayStmt()
+	case TokenOpen:
+		return p.parseOpenStmt()
+	case TokenClose:
+		return p.parseCloseStmt()
 	case TokenCls:
 		_ = p.nextToken()
 		return &ClsStmt{}, nil
@@ -836,6 +846,29 @@ func (p *Parser) parsePrintStmt() (*PrintStmt, error) {
 
 	stmt := &PrintStmt{}
 
+	// PRINT #n, ... -- imprime no arquivo n em vez do console
+	if p.curToken.Type == TokenHash {
+		if err := p.nextToken(); err != nil { // consome '#'
+			return nil, err
+		}
+		if p.curToken.Type != TokenNumber {
+			return nil, fmt.Errorf("esperado número de arquivo após '#' na linha %d:%d", p.curToken.Line, p.curToken.Column)
+		}
+		n, err := strconv.Atoi(p.curToken.Value)
+		if err != nil {
+			return nil, fmt.Errorf("número de arquivo inválido '%s' na linha %d", p.curToken.Value, p.curToken.Line)
+		}
+		stmt.FileNum = &n
+		if err := p.nextToken(); err != nil { // consome o número
+			return nil, err
+		}
+		if p.curToken.Type == TokenComma {
+			if err := p.nextToken(); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	for p.curToken.Type != TokenNewline && p.curToken.Type != TokenEOF {
 		if p.curToken.Type == TokenSemi {
 			stmt.TrailingSemicolon = true
@@ -864,6 +897,181 @@ func (p *Parser) parsePrintStmt() (*PrintStmt, error) {
 	}
 
 	return stmt, nil
+}
+
+// PUT SPRITE index, (x, y), color, pattern
+func (p *Parser) parsePutSpriteStmt() (*PutSpriteStmt, error) {
+	if err := p.nextToken(); err != nil { // consome PUT
+		return nil, err
+	}
+	if err := p.expect(TokenSprite); err != nil {
+		return nil, err
+	}
+	index, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expect(TokenComma); err != nil {
+		return nil, err
+	}
+	if err := p.expect(TokenLParen); err != nil {
+		return nil, err
+	}
+	x, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expect(TokenComma); err != nil {
+		return nil, err
+	}
+	y, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expect(TokenRParen); err != nil {
+		return nil, err
+	}
+	if err := p.expect(TokenComma); err != nil {
+		return nil, err
+	}
+	color, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expect(TokenComma); err != nil {
+		return nil, err
+	}
+	pattern, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+	return &PutSpriteStmt{Index: index, X: x, Y: y, Color: color, Pattern: pattern}, nil
+}
+
+// SPRITE PATTERN pattern#, b0, b1, ..., bN  ou  SPRITE OFF
+func (p *Parser) parseSpriteStmt() (Stmt, error) {
+	if err := p.nextToken(); err != nil { // consome SPRITE
+		return nil, err
+	}
+	switch p.curToken.Type {
+	case TokenOff:
+		if err := p.nextToken(); err != nil {
+			return nil, err
+		}
+		return &SpriteOffStmt{}, nil
+
+	case TokenPattern:
+		if err := p.nextToken(); err != nil { // consome PATTERN
+			return nil, err
+		}
+		pattern, err := p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
+		stmt := &SpritePatternStmt{Pattern: pattern}
+		for p.curToken.Type == TokenComma {
+			if err := p.nextToken(); err != nil {
+				return nil, err
+			}
+			b, err := p.parseExpression()
+			if err != nil {
+				return nil, err
+			}
+			stmt.Bytes = append(stmt.Bytes, b)
+		}
+		if len(stmt.Bytes) != 8 && len(stmt.Bytes) != 32 {
+			return nil, fmt.Errorf("SPRITE PATTERN precisa de 8 bytes (8x8) ou 32 bytes (16x16) de padrão, recebeu %d na linha %d", len(stmt.Bytes), p.curToken.Line)
+		}
+		return stmt, nil
+
+	default:
+		return nil, fmt.Errorf("esperado PATTERN ou OFF após SPRITE na linha %d:%d, obteve %v", p.curToken.Line, p.curToken.Column, p.curToken.Type)
+	}
+}
+
+// PLAY "mml" -- exige literal de string (a tradução MML acontece em tempo
+// de compilação, não há interpretador MML em tempo de execução)
+func (p *Parser) parsePlayStmt() (*PlayStmt, error) {
+	if err := p.nextToken(); err != nil { // consome PLAY
+		return nil, err
+	}
+	if p.curToken.Type != TokenString {
+		return nil, fmt.Errorf("PLAY exige uma string literal (ex: PLAY \"cdefgab\") na linha %d:%d", p.curToken.Line, p.curToken.Column)
+	}
+	mml := p.curToken.Value
+	if err := p.nextToken(); err != nil {
+		return nil, err
+	}
+	return &PlayStmt{MML: mml}, nil
+}
+
+// OPEN caminho$ FOR modo AS #n
+func (p *Parser) parseOpenStmt() (*OpenStmt, error) {
+	if err := p.nextToken(); err != nil { // consome OPEN
+		return nil, err
+	}
+	path, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expect(TokenFor); err != nil {
+		return nil, err
+	}
+
+	var mode string
+	switch p.curToken.Type {
+	case TokenInput:
+		mode = "INPUT"
+	case TokenOutput:
+		mode = "OUTPUT"
+	case TokenAppend:
+		mode = "APPEND"
+	default:
+		return nil, fmt.Errorf("esperado INPUT, OUTPUT ou APPEND após FOR na linha %d:%d", p.curToken.Line, p.curToken.Column)
+	}
+	if err := p.nextToken(); err != nil {
+		return nil, err
+	}
+
+	if err := p.expect(TokenAs); err != nil {
+		return nil, err
+	}
+	if err := p.expect(TokenHash); err != nil {
+		return nil, err
+	}
+	if p.curToken.Type != TokenNumber {
+		return nil, fmt.Errorf("esperado número de arquivo após '#' na linha %d:%d", p.curToken.Line, p.curToken.Column)
+	}
+	n, err := strconv.Atoi(p.curToken.Value)
+	if err != nil {
+		return nil, fmt.Errorf("número de arquivo inválido '%s' na linha %d", p.curToken.Value, p.curToken.Line)
+	}
+	if err := p.nextToken(); err != nil {
+		return nil, err
+	}
+
+	return &OpenStmt{Path: path, Mode: mode, FileNum: n}, nil
+}
+
+// CLOSE #n
+func (p *Parser) parseCloseStmt() (*CloseStmt, error) {
+	if err := p.nextToken(); err != nil { // consome CLOSE
+		return nil, err
+	}
+	if err := p.expect(TokenHash); err != nil {
+		return nil, err
+	}
+	if p.curToken.Type != TokenNumber {
+		return nil, fmt.Errorf("esperado número de arquivo após '#' na linha %d:%d", p.curToken.Line, p.curToken.Column)
+	}
+	n, err := strconv.Atoi(p.curToken.Value)
+	if err != nil {
+		return nil, fmt.Errorf("número de arquivo inválido '%s' na linha %d", p.curToken.Value, p.curToken.Line)
+	}
+	if err := p.nextToken(); err != nil {
+		return nil, err
+	}
+	return &CloseStmt{FileNum: n}, nil
 }
 
 // --- Análise de Expressões (Precedência de Operadores) ---
