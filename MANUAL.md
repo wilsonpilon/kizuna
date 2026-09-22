@@ -1,10 +1,17 @@
-# KIZUNA — Manual do Usuário (v4.5.2 — Release Yoake)
+# KIZUNA — Manual do Usuário
 
-> Este manual descreve o uso da toolchain **KIZUNA** para MSX2+ / MSX-DOS 2.
-> As ferramentas `kaji80`, `wirth80`, `dignac`, `musubi`, `hako`, `mobdump` e a biblioteca `msxlib.hlib`
-> estão totalmente implementadas e funcionais.
+> Este documento é um índice curto. A documentação completa está dividida
+> por assunto em `docs/`:
 
-## 1. Visão geral do fluxo
+| Manual | Cobre |
+| ------- | ------ |
+| [`docs/manual-assembly.md`](docs/manual-assembly.md) | Sintaxe do Assembly Z80 (`KAJI80`): diretivas, instruções suportadas, literais, linha de comando. |
+| [`docs/manual-basic-dignified.md`](docs/manual-basic-dignified.md) | Sintaxe do MSX-BASIC Dignified (`DIGNAC`): tipos, controle de fluxo, sprites, música, arquivos, linha de comando. |
+| [`docs/manual-pascal.md`](docs/manual-pascal.md) | Sintaxe do Pascal (`WIRTH80`) — escopo real hoje vs. visão do projeto, linha de comando. |
+| [`docs/manual-ferramentas.md`](docs/manual-ferramentas.md) | Formato `.MOB`/`.MAP`, o linker `MUSUBI`, bank switching, `HAKO`/`.HLIB`, `MSXLIB`, o orquestrador `OBI`, `MOBDUMP`, e um exemplo combinando as três linguagens num mesmo projeto. |
+| [`SPEC.md`](SPEC.md) | Decisões de design originais e visão completa do projeto (inclui partes ainda não implementadas). |
+
+## Visão geral do fluxo
 
 ```
 fonte.asm  ──KAJI80──►  fonte.mob  ─┐
@@ -12,71 +19,38 @@ fonte.pas  ──WIRTH80─►  fonte.mob  ─┼──MUSUBI (+ msxlib.hlib)─
 fonte.bas  ──DIGNAC──►  fonte.mob  ─┘
 ```
 
-## 2. As Ferramentas
+## As ferramentas
 
-| Ferramenta | Comando | Status | O que faz |
-|---|---|---|---|
-| **`KAJI80`** | `kaji80 arq.asm -o arq.mob` | **Funcional** | Assembler Z80 modular com suporte a bancos e relocações. |
-| **`WIRTH80`**| `wirth80 arq.pas -o arq.mob` | **Funcional** | Compilador Pascal nativo (TP4-like) gerando objetos `.mob`. |
-| **`MUSUBI`** | `musubi *.mob *.hlib -o prog.com` | **Funcional** | Linker multi-banco com Smart-Linking e trampolins de mapper. |
-| **`HAKO`**   | `hako -c lib.hlib *.mob` | **Funcional** | Bibliotecário / empacotador de arquivos estáticos `.HLIB`. |
-| **`MOBDUMP`**| `mobdump arq.mob` | **Funcional** | Despejo legível de cabeçalhos, segmentos, símbolos e relocs. |
-| **`MSXLIB`** | `msxlib.hlib` | **Funcional** | Biblioteca padrão MSX (BDOS, BIOS, VDP, PSG, String, Math). |
-| **`DIGNAC`** | `dignac arq.bas -o arq.mob` | **Funcional** | Compilador MSX-BASIC Dignified para Z80 gerando objetos `.mob`. |
-| **`OBI`**    | `obi build` | *Planejado* | Orquestrador declarativo de build via `Obifile`. |
+| Ferramenta | Comando | O que faz |
+| ----------- | -------- | ----------- |
+| **`KAJI80`** | `kaji80 arq.asm -o arq.mob` | Assembler Z80 modular com suporte a bancos e relocações. |
+| **`WIRTH80`** | `wirth80 arq.pas -o arq.mob` | Compilador Pascal (subset atual: sem units/procedimentos — ver `docs/manual-pascal.md`). |
+| **`DIGNAC`** | `dignac arq.bas -o arq.mob` | Compilador MSX-BASIC Dignified: tipos reais (STRING/INTEGER/SINGLE/DOUBLE), sprites, música, arquivo. |
+| **`MUSUBI`** | `musubi *.mob *.hlib -o prog.com` | Linker multi-banco com Smart-Linking e trampolins de bank switching. |
+| **`HAKO`** | `hako -c lib.hlib *.mob` | Bibliotecário/empacotador de objetos `.HLIB`. |
+| **`MOBDUMP`** | `mobdump arq.mob` | Despejo legível de cabeçalhos, segmentos, símbolos e relocações. |
+| **`OBI`** | `obi build [Obifile]` | Orquestrador declarativo de build — o "make" do projeto. |
+| **`MSXLIB`** | `lib/msxlib.hlib` | Biblioteca padrão (BDOS, BIOS, VDP, PSG, String, Math). |
 
-## 3. Guia Rápido de Uso
+## Início rápido
 
-### 3.1. Compilando Programa em Pascal:
 ```bash
-# 1. Compila Pascal para objeto relocável .mob
-wirth80 sample/pascal/hello.pas -o sample/pascal/hello.mob
-
-# 2. Linka com a biblioteca padrão (elimina código não utilizado automaticamente)
-musubi -v -m sample/pascal/hello.map -o sample/pascal/hello.com \
-  sample/pascal/hello.mob lib/msxlib.hlib
-```
-
-### 3.2. Compilando Programa em Assembly Z80:
-```bash
-# 1. Monta o Assembly
+# Assembly
 kaji80 sample/hello.asm -o sample/hello.mob
-
-# 2. Linka gerando o executável .COM
 musubi -v -o sample/hello.com sample/hello.mob
-```
 
-### 3.3. Compilando Programa em MSX-BASIC Dignified:
-```bash
-# 1. Compila BASIC Dignified para objeto relocável .mob
+# BASIC Dignified
 dignac sample/basic/hello.bas -o sample/basic/hello.mob
-
-# 2. Linka com a biblioteca padrão gerando o executável .COM
 musubi -v -o sample/basic/hello.com sample/basic/hello.mob lib/msxlib.hlib
+
+# Pascal
+wirth80 sample/pascal/hello.pas -o sample/pascal/hello.mob
+musubi -v -o sample/pascal/hello.com sample/pascal/hello.mob lib/msxlib.hlib
+
+# Ou, para um projeto com vários módulos/bancos, via OBI:
+obi build sample/obi/Obifile -v
 ```
 
-## 4. Interoperabilidade entre linguagens
-
-- Um módulo Pascal declara uma dependência externa com `{$USES Nome in
-  'arquivo'}`, apontando para um módulo Assembly ou BASIC Dignified.
-- Símbolos exportados (`PUBLIC` no Assembly, `interface` no Pascal,
-  `PUBLIC PROCEDURE` no BASIC Dignified) ficam visíveis para os demais
-  módulos linkados.
-- Chamadas entre módulos em bancos diferentes são resolvidas
-  automaticamente por `MUSUBI` via trampolim (transparente para quem
-  escreve o código-fonte).
-- Strings passadas entre linguagens seguem sempre o formato short string
-  (1 byte de tamanho + dados) — não há conversão necessária nas
-  fronteiras.
-
-## 5. Exemplo mínimo
-
-Veja o diretório `demo/` para um croqui completo: um programa Pascal que
-chama uma rotina de ajuste de tela em Assembly, lê uma entrada do
-usuário, chama um módulo BASIC Dignified para desenhar um gráfico, e
-retorna ao Pascal — com os três módulos em bancos de memória diferentes.
-
-## 6. Ver também
-
-- `SPEC.md` — especificação técnica completa (formato `.MOB`, ABI,
-  modelo de bancos de memória).
+Veja `docs/manual-ferramentas.md` §10 para o que "misturar as três
+linguagens" realmente significa hoje (e o que ainda falta para um único
+`.COM` cruzando as três).
