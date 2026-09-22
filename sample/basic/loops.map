@@ -1,0 +1,58 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
+===============================================================================
+
+Modo de Memória: Monobanco
+Bancos Utilizados: [0]
+Endereço Base:     0x0100
+Ponto de Entrada:  0x0100
+Tamanho do .COM:   792 bytes (0x0318)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x0279 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   377 bytes
+[ 1] 0x0279 - 0x02DB | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
+[ 2] 0x02DB - 0x0418 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   317 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x0100 [Banco  0] PROC Start
+0x0106 [Banco  0] PROC Main
+0x013A [Banco  0] PROC For_Start_2
+0x015A [Banco  0] PROC For_LT_6
+0x0162 [Banco  0] PROC For_Body_4
+0x0192 [Banco  0] PROC For_End_3
+0x01E7 [Banco  0] PROC Append_Opened_11
+0x021D [Banco  0] PROC StrLit_1
+0x0232 [Banco  0] PROC StrLit_7
+0x0237 [Banco  0] PROC FilePath_8
+0x0241 [Banco  0] PROC FileStr_9
+0x024F [Banco  0] PROC FilePath_10
+0x0259 [Banco  0] PROC FileStr_12
+0x026F [Banco  0] PROC DGN_ForStepSign
+0x0270 [Banco  0] PROC DGN_FileHandle_1
+0x0277 [Banco  0] PROC DGN_CRLF
+0x0279 [Banco  0] PROC BDOS_Call
+0x027D [Banco  0] PROC BDOS_PrintChar
+0x0293 [Banco  0] PROC BDOS_PrintString
+0x02A9 [Banco  0] PROC BDOS_ReadChar
+0x02B1 [Banco  0] PROC BDOS_Exit
+0x02B7 [Banco  0] PROC BDOS_FileOpen
+0x02BD [Banco  0] PROC BDOS_FileCreate
+0x02C3 [Banco  0] PROC BDOS_FileClose
+0x02C9 [Banco  0] PROC BDOS_FileRead
+0x02CF [Banco  0] PROC BDOS_FileWrite
+0x02D5 [Banco  0] PROC BDOS_FileSeek
+0x02DB [Banco  0] PROC StrLen
+0x02E9 [Banco  0] PROC StrCopy
+0x02F9 [Banco  0] PROC StrToUpper
+0x0310 [Banco  0] PROC PrintHex8
+0x031D [Banco  0] PROC PrintNibble
+0x032E [Banco  0] PROC PrintHex16
+0x0339 [Banco  0] PROC PrintDec16
+0x0363 [Banco  0] PROC PrintDecDigit
+0x0381 [Banco  0] PROC PrintDec16ToBuffer
+0x03B4 [Banco  0] PROC PrintDecDigitBuf
+0x03CD [Banco  0] PROC PDTB_WriteChar
+0x03E1 [Banco  0] PROC PDTB_BufPtr
+0x03E3 [Banco  0] PROC PDTB_Count
+0x03E4 [Banco  0] PROC StrCopyLen
+0x03FC [Banco  0] PROC BDOS_PrintLenStr

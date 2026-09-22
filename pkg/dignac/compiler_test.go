@@ -449,3 +449,157 @@ func TestFloatArithmeticNotYetImplementedError(t *testing.T) {
 		t.Errorf("Esperado erro mencionando 'ponto flutuante', obteve: %v", err)
 	}
 }
+
+// TestCompileForNegativeStep cobre o bug real do teste de término do FOR
+// assumir sempre um STEP positivo (SBC HL,DE + "Var>End encerra", sem
+// considerar STEP negativo). Aqui só verificamos que o caminho de código
+// consciente de direção (DGN_ForStepSign + AND 80h) é realmente emitido
+// quando há STEP explícito -- a correção em si (as 5 iterações esperadas
+// de "FOR i%=5 TO 1 STEP -1") foi conferida por rastreamento manual
+// instrução-a-instrução (não há emulador Z80 neste repositório para
+// verificar automaticamente a contagem de iterações em tempo de execução;
+// recomenda-se testar em hardware/openMSX antes de dar como definitivo).
+func TestCompileForNegativeStep(t *testing.T) {
+	src := `
+	MODULE ForDesc
+	PUBLIC Main
+	PROCEDURE Main
+		LOCAL i%
+		FOR i% = 5 TO 1 STEP -1
+			PRINT i%
+		NEXT i%
+	END PROCEDURE
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	cg := NewCodeGenerator(mod)
+	obj, asmOut, err := cg.Compile()
+	if err != nil {
+		t.Fatalf("Erro ao compilar FOR com STEP negativo até .MOB: %v\nAssembly:\n%s", err, asmOut)
+	}
+	if obj == nil {
+		t.Fatalf("Objeto .MOB gerado é nulo")
+	}
+
+	if !strings.Contains(asmOut, "DGN_ForStepSign") {
+		t.Errorf("Assembly gerado deveria referenciar DGN_ForStepSign (teste de término consciente de direção)")
+	}
+	if !strings.Contains(asmOut, "AND 80h") {
+		t.Errorf("Assembly gerado deveria conferir o bit de sinal do STEP (AND 80h)")
+	}
+}
+
+// TestCompileForWithoutStepOmitsDirectionCheck é o teste de regressão
+// complementar: um FOR sem STEP (incremento implícito +1, sempre
+// ascendente) não deve pagar o custo nem o risco do teste de direção --
+// continua gerando exatamente o teste de término simples de antes.
+func TestCompileForWithoutStepOmitsDirectionCheck(t *testing.T) {
+	src := `
+	MODULE ForAsc
+	PUBLIC Main
+	PROCEDURE Main
+		LOCAL i%
+		FOR i% = 1 TO 3
+			PRINT i%
+		NEXT i%
+	END PROCEDURE
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	cg := NewCodeGenerator(mod)
+	_, asmOut, err := cg.Compile()
+	if err != nil {
+		t.Fatalf("Erro ao compilar FOR sem STEP até .MOB: %v\nAssembly:\n%s", err, asmOut)
+	}
+
+	if strings.Contains(asmOut, "DGN_ForStepSign") {
+		t.Errorf("FOR sem STEP não deveria emitir o teste de direção (DGN_ForStepSign)")
+	}
+}
+
+// TestCompileOpenAppendSeeksToEnd cobre o bug real de OPEN...FOR APPEND se
+// comportar exatamente igual a FOR OUTPUT (ambos caindo em
+// BDOS_FileCreate, que cria OU TRUNCA um arquivo existente) -- sem nunca
+// posicionar o ponteiro no fim do arquivo antes de escrever. Confere que
+// APPEND agora referencia BDOS_FileSeek (a correção real) e que OUTPUT
+// continua sem precisar dele (regressão).
+func TestCompileOpenAppendSeeksToEnd(t *testing.T) {
+	srcAppend := `
+	MODULE AppendTest
+	PUBLIC Main
+	PROCEDURE Main
+		OPEN "LOG.TXT" FOR APPEND AS #1
+		PRINT #1, "linha"
+		CLOSE #1
+	END PROCEDURE
+	END MODULE
+	`
+	lexer := NewLexer(srcAppend)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser (APPEND): %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo (APPEND): %v", err)
+	}
+	cg := NewCodeGenerator(mod)
+	obj, asmOut, err := cg.Compile()
+	if err != nil {
+		t.Fatalf("Erro ao compilar OPEN...FOR APPEND até .MOB: %v\nAssembly:\n%s", err, asmOut)
+	}
+	if obj == nil {
+		t.Fatalf("Objeto .MOB gerado é nulo")
+	}
+	if !strings.Contains(asmOut, "BDOS_FileSeek") {
+		t.Errorf("OPEN...FOR APPEND deveria referenciar BDOS_FileSeek (posicionar no fim do arquivo)")
+	}
+
+	srcOutput := `
+	MODULE OutputTest
+	PUBLIC Main
+	PROCEDURE Main
+		OPEN "LOG.TXT" FOR OUTPUT AS #1
+		PRINT #1, "linha"
+		CLOSE #1
+	END PROCEDURE
+	END MODULE
+	`
+	lexer2 := NewLexer(srcOutput)
+	parser2, err := NewParser(lexer2)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser (OUTPUT): %v", err)
+	}
+	mod2, err := parser2.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo (OUTPUT): %v", err)
+	}
+	cg2 := NewCodeGenerator(mod2)
+	_, asmOut2, err := cg2.Compile()
+	if err != nil {
+		t.Fatalf("Erro ao compilar OPEN...FOR OUTPUT até .MOB: %v\nAssembly:\n%s", err, asmOut2)
+	}
+	if strings.Contains(asmOut2, "BDOS_FileSeek") {
+		t.Errorf("OPEN...FOR OUTPUT não deveria referenciar BDOS_FileSeek (sempre começa do zero)")
+	}
+}

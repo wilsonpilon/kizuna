@@ -96,9 +96,11 @@ type CodeGenerator struct {
 	needsFileCreate    bool
 	needsFileClose     bool
 	needsFileWrite     bool
+	needsFileSeek      bool
 	needsPrintDecBuf   bool
 	needsStrCopyLen    bool
 	needsPrintLenStr   bool
+	needsForStepSign   bool
 
 	extraData []string     // blocos DB pré-renderizados (padrões de sprite, sequências MML, caminhos de arquivo, literais de PRINT #n)
 	fileNums  map[int]bool // números de arquivo (#n) realmente usados no módulo
@@ -264,6 +266,9 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 	if cg.needsFileWrite && !containsString(externs, "BDOS_FileWrite") {
 		externs = append(externs, "BDOS_FileWrite")
 	}
+	if cg.needsFileSeek && !containsString(externs, "BDOS_FileSeek") {
+		externs = append(externs, "BDOS_FileSeek")
+	}
 	if cg.needsPrintDecBuf && !containsString(externs, "PrintDec16ToBuffer") {
 		externs = append(externs, "PrintDec16ToBuffer")
 	}
@@ -324,6 +329,17 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 		cg.asm.WriteString("DGN_Sprite_Y: DB 00h\n")
 		cg.asm.WriteString("DGN_Sprite_Pattern: DB 00h\n")
 		cg.asm.WriteString("DGN_Sprite_Color: DB 00h\n\n")
+	}
+
+	// Sinal do STEP de um FOR com STEP explícito, guardado 1x por iteração
+	// antes do teste de término decidir se o laço é ascendente ou
+	// descendente (ver o comentário no case *ForStmt em generateStmt).
+	// Compartilhada entre todos os FOR...STEP do módulo -- segura mesmo com
+	// laços aninhados porque é sempre escrita e lida dentro do mesmo bloco
+	// de teste, nunca através da execução do corpo.
+	if cg.needsForStepSign {
+		cg.asm.WriteString("; --- Sinal do STEP (FOR...STEP) ---\n")
+		cg.asm.WriteString("DGN_ForStepSign: DB 00h\n\n")
 	}
 
 	// Handles de arquivo (#n) -- uma variável global de 1 byte por número de
@@ -472,6 +488,7 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 		// FOR var = start TO end [STEP step] ... NEXT [var]
 		loopStart := cg.newLabel("For_Start")
 		loopEnd := cg.newLabel("For_End")
+		hasStep := s.Step != nil
 
 		// 1. Inicializa variável com Start
 		if err := cg.generateExpr(sb, s.Start); err != nil {
@@ -481,9 +498,30 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 			return err
 		}
 
+		// 1b. Se houver STEP explícito, o SINAL é calculado uma única vez
+		// (assumindo que não muda durante o laço -- mesma suposição de
+		// qualquer BASIC clássico) e guardado numa célula compartilhada do
+		// módulo, lida a cada iteração pelo teste de término (passo 2)
+		// pra decidir se o laço é ascendente ou descendente.
+		if hasStep {
+			cg.needsForStepSign = true
+			if err := cg.generateExpr(sb, s.Step); err != nil {
+				return err
+			}
+			sb.WriteString("    LD A, H\n") // bit 7 do byte alto = sinal do valor de 16 bits
+			sb.WriteString("    LD (DGN_ForStepSign), A\n")
+		}
+
 		sb.WriteString(fmt.Sprintf("%s:\n", loopStart))
 
-		// 2. Condição de término: var <= end (para step positivo)
+		// 2. Condição de término. SBC HL,DE (Var - End) dá Z (Var==End,
+		// sempre continua, nas duas direções) e C (Var<End, sem sinal). Sem
+		// STEP explícito (incremento sempre +1) ou com STEP positivo,
+		// continua enquanto Var<=End; com STEP negativo, continua enquanto
+		// Var>=End -- por isso o "Var>End" e o "Var<End" cada um decide
+		// parar ou continuar consultando DGN_ForStepSign, em vez de uma
+		// comparação fixa que só cobria o caso ascendente (bug real: um
+		// STEP negativo nunca detectava o fim do laço corretamente).
 		if err := cg.loadVar(sb, s.VarName); err != nil {
 			return err
 		}
@@ -493,13 +531,29 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 		}
 		sb.WriteString("    EX DE, HL\n") // DE = End
 		sb.WriteString("    POP HL\n")    // HL = Var
-		// Compara Var com End: se Var > End -> encerra
 		sb.WriteString("    OR A\n")
 		sb.WriteString("    SBC HL, DE\n")
-		okLbl := cg.newLabel("For_Ok")
-		sb.WriteString(fmt.Sprintf("    JP Z, %s\n", okLbl))
-		sb.WriteString(fmt.Sprintf("    JP NC, %s\n", loopEnd))
-		sb.WriteString(fmt.Sprintf("%s:\n", okLbl))
+
+		bodyLbl := cg.newLabel("For_Body")
+		gtLbl := cg.newLabel("For_GT") // Var > End (NC e NZ)
+		ltLbl := cg.newLabel("For_LT") // Var < End (C)
+
+		sb.WriteString(fmt.Sprintf("    JP Z, %s\n", bodyLbl))  // Var == End -> sempre continua
+		sb.WriteString(fmt.Sprintf("    JP C, %s\n", ltLbl))    // Var < End
+		sb.WriteString(fmt.Sprintf("%s:\n", gtLbl))             // Var > End
+		if hasStep {
+			sb.WriteString("    LD A, (DGN_ForStepSign)\n")
+			sb.WriteString("    AND 80h\n")
+			sb.WriteString(fmt.Sprintf("    JP NZ, %s\n", bodyLbl)) // descendente: Var>End ainda continua
+		}
+		sb.WriteString(fmt.Sprintf("    JP %s\n", loopEnd)) // ascendente (ou sem STEP): Var>End encerra
+		sb.WriteString(fmt.Sprintf("%s:\n", ltLbl))         // Var < End
+		if hasStep {
+			sb.WriteString("    LD A, (DGN_ForStepSign)\n")
+			sb.WriteString("    AND 80h\n")
+			sb.WriteString(fmt.Sprintf("    JP NZ, %s\n", loopEnd)) // descendente: Var<End encerra
+		}
+		sb.WriteString(fmt.Sprintf("%s:\n", bodyLbl))
 
 		// 3. Executa corpo
 		for _, child := range s.Body {
@@ -844,19 +898,59 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 		cg.extraData = append(cg.extraData, fmt.Sprintf("%s:\n    DB \"%s\", 00h\n", pathLabel, escapeString(pathStr.Value)))
 
 		handleLabel := fmt.Sprintf("DGN_FileHandle_%d", s.FileNum)
-		sb.WriteString(fmt.Sprintf("    LD DE, %s\n", pathLabel))
-		if s.Mode == "INPUT" {
+
+		switch s.Mode {
+		case "INPUT":
 			cg.needsFileOpen = true
+			sb.WriteString(fmt.Sprintf("    LD DE, %s\n", pathLabel))
 			sb.WriteString("    LD A, 01h\n") // somente leitura
 			sb.WriteString("    CALL BDOS_FileOpen\n")
-		} else {
+			sb.WriteString("    LD A, B\n") // handle retornado em B
+			sb.WriteString(fmt.Sprintf("    LD (%s), A\n", handleLabel))
+
+		case "APPEND":
+			// FOR APPEND precisa abrir o arquivo EXISTENTE (sem truncar) e
+			// só então posicionar o ponteiro no fim antes de qualquer
+			// escrita -- diferente de OUTPUT, que sempre cria do zero.
+			// BDOS_FileCreate/ATTR_NORMAL trunca um arquivo já existente,
+			// então cai nele só como fallback se o arquivo ainda não
+			// existir (BDOS_FileOpen retornando erro em A).
+			cg.needsFileOpen = true
 			cg.needsFileCreate = true
+			cg.needsFileSeek = true
+			openedLbl := cg.newLabel("Append_Opened")
+
+			sb.WriteString(fmt.Sprintf("    LD DE, %s\n", pathLabel))
 			sb.WriteString("    LD A, 00h\n") // leitura+escrita
+			sb.WriteString("    CALL BDOS_FileOpen\n")
+			sb.WriteString("    OR A\n")
+			sb.WriteString(fmt.Sprintf("    JP Z, %s\n", openedLbl))
+			// Arquivo não existia -- cria do zero (DE recarregado: uma
+			// chamada BDOS anterior não deixa garantia sobre seu valor).
+			sb.WriteString(fmt.Sprintf("    LD DE, %s\n", pathLabel))
+			sb.WriteString("    LD A, 00h\n")
 			sb.WriteString("    LD B, 00h\n") // atributo normal
 			sb.WriteString("    CALL BDOS_FileCreate\n")
+			sb.WriteString(fmt.Sprintf("%s:\n", openedLbl))
+			sb.WriteString("    LD A, B\n") // handle retornado em B
+			sb.WriteString(fmt.Sprintf("    LD (%s), A\n", handleLabel))
+			// Posiciona o ponteiro no fim do arquivo (método 2, offset 0)
+			// antes de qualquer PRINT #n escrever nele.
+			sb.WriteString("    LD B, A\n")
+			sb.WriteString("    LD A, 02h\n") // 2 = a partir do fim
+			sb.WriteString("    LD DE, 0000h\n")
+			sb.WriteString("    LD HL, 0000h\n")
+			sb.WriteString("    CALL BDOS_FileSeek\n")
+
+		default: // OUTPUT
+			cg.needsFileCreate = true
+			sb.WriteString(fmt.Sprintf("    LD DE, %s\n", pathLabel))
+			sb.WriteString("    LD A, 00h\n") // leitura+escrita
+			sb.WriteString("    LD B, 00h\n") // atributo normal (cria ou trunca)
+			sb.WriteString("    CALL BDOS_FileCreate\n")
+			sb.WriteString("    LD A, B\n") // handle retornado em B
+			sb.WriteString(fmt.Sprintf("    LD (%s), A\n", handleLabel))
 		}
-		sb.WriteString("    LD A, B\n") // handle retornado em B
-		sb.WriteString(fmt.Sprintf("    LD (%s), A\n", handleLabel))
 		return nil
 
 	case *CloseStmt:

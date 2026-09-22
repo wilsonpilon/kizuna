@@ -163,11 +163,16 @@ DO [WHILE condicao]
 LOOP
 ```
 
-**Limitação conhecida**: `FOR...STEP` com passo **negativo** não funciona
-corretamente hoje — o teste de término do laço assume comparação sem sinal
-para passo positivo (`Var > End` encerra o laço); um `STEP -1` não é
-detectado do jeito esperado. Prefira `WHILE`/`DO...LOOP` com decremento
-manual para laços decrescentes até isso ser corrigido.
+`STEP` negativo funciona corretamente desde a v4.8.0 — o teste de término
+do laço calcula o sinal do `STEP` uma vez antes de entrar no laço e o
+consulta a cada iteração pra decidir se `Var > End` ou `Var < End` é quem
+encerra:
+
+```basic
+FOR i% = 5 TO 1 STEP -1
+    PRINT i%
+NEXT i%   ' imprime 5, 4, 3, 2, 1
+```
 
 `DO...LOOP` só suporta o teste **antes** do corpo (`DO WHILE cond ... LOOP`)
 — não existe a forma `DO ... LOOP WHILE cond` (teste no final) ainda. Um
@@ -262,9 +267,11 @@ CLOSE #1
 
 - `#n` precisa ser um **literal inteiro em tempo de compilação**, não uma
   expressão — cada `#n` vira um byte global dedicado (`DGN_FileHandle_<n>`).
-- `FOR OUTPUT` e `FOR APPEND` hoje se comportam **de forma idêntica** (ambos
-  criam/truncam o arquivo do zero via `BDOS_FileCreate`) — `APPEND` ainda
-  não faz seek até o fim do arquivo antes de escrever.
+- `FOR OUTPUT` sempre cria/trunca o arquivo do zero. `FOR APPEND` (desde a
+  v4.8.0) abre o arquivo existente sem truncar (criando-o do zero só se
+  ainda não existir) e posiciona o ponteiro no fim antes de qualquer
+  escrita — duas aberturas em `APPEND` seguidas acrescentam, não
+  sobrescrevem uma a outra.
 - `FOR INPUT` abre o arquivo para leitura, mas **ainda não existe
   `INPUT #n`/`LINE INPUT #n`** para ler o conteúdo de volta — só dá pra
   abrir e fechar o handle por enquanto. Ler arquivo de dentro do BASIC é o
