@@ -281,9 +281,13 @@ func TestBootstrapAllocSegStructure(t *testing.T) {
 	pos += 3 // LD (Musubi_GetP2+1),HL
 
 	// Loop ALL_SEG (1 banco pagineável neste cenário): LD HL,(scratch) /
-	// XOR A / CALL Musubi_CallHL / JP C,<falha> / LD (BankTable+banco),A
+	// XOR A / LD B,0 / CALL Musubi_CallHL / JP C,<falha> / LD (BankTable+banco),A
 	pos += 3 // LD HL,(Musubi_JumpTableBase)
 	pos += 1 // XOR A
+	if code[pos] != 0x06 || code[pos+1] != 0x00 {
+		t.Fatalf("Expected LD B,0 (0x06 0x00, seleciona mapper primário para ALL_SEG) at offset %d, got %02X %02X", pos, code[pos], code[pos+1])
+	}
+	pos += 2 // LD B,0
 	pos += 3 // CALL Musubi_CallHL
 	if code[pos] != 0xDA {
 		t.Fatalf("Expected JP C,nn (0xDA, falha de ALL_SEG) at offset %d, got 0x%02X", pos, code[pos])

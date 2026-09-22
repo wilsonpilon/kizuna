@@ -837,14 +837,22 @@ func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint1
 	code = append(code, 0x19)                                                   // ADD HL, DE
 	code = append(code, 0x22, uint8(getPatchAddr&0xFF), uint8(getPatchAddr>>8)) // LD (Musubi_GetP2 + 1), HL
 
-	// ALL_SEG por banco pagineável (13 bytes cada): A=0 (tipo=segmento RAM
-	// comum), CALL Musubi_CallHL executa a rotina em (Musubi_JumpTableBase+0);
-	// retorna com Carry setado se não houver segmento livre, senão A=segmento real.
+	// ALL_SEG por banco pagineável (16 bytes cada): A=0 (tipo=segmento RAM
+	// comum), B=0 (seleciona o mapper PRIMÁRIO -- exigido pela convenção da
+	// rotina ALL_SEG do EXTBIO, ver map.grauw.nl/resources/dos2_environment.php;
+	// antes desta correção B ficava com o que quer que a própria chamada
+	// EXTBIO D=4,E=2 alguns bytes acima tivesse deixado lá -- que segundo a
+	// mesma referência é "B = slot do mapper primário", não necessariamente
+	// 0, corrompendo silenciosamente o parâmetro em qualquer slot != 0),
+	// CALL Musubi_CallHL executa a rotina em (Musubi_JumpTableBase+0);
+	// retorna com Carry setado se não houver segmento livre (ou parâmetro
+	// inválido), senão A=segmento real.
 	var allocFailPositions []int
 	for _, b := range banks {
 		tblEntryAddr := bankTableAddr + uint16(b.Bank)
 		code = append(code, 0x2A, uint8(jumpTableScratchAddr&0xFF), uint8(jumpTableScratchAddr>>8)) // LD HL,(Musubi_JumpTableBase)
 		code = append(code, 0xAF)                                                                   // XOR A (tipo=0: segmento RAM comum)
+		code = append(code, 0x06, 0x00)                                                             // LD B, 0 (mapper primário)
 		code = append(code, 0xCD, uint8(callHLAddr&0xFF), uint8(callHLAddr>>8))                     // CALL Musubi_CallHL -> executa ALL_SEG
 		allocFailPositions = append(allocFailPositions, len(code))
 		code = append(code, 0xDA, 0x00, 0x00)                                       // JP C, <falha de alocação> (placeholder)
