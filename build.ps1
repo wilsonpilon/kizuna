@@ -34,7 +34,7 @@ $ZipFilePath = Join-Path $RootDir $ZipFileName
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "    KIZUNA (絆) - Build & Empacotamento para Distribuicao        " -ForegroundColor Cyan
-Write-Host "    Versao: v$KizunaVersion [Release Kansei (完成)]                " -ForegroundColor Cyan
+Write-Host "    Versao: v$KizunaVersion [Release Kaika (開花)]                " -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "Diretorio Raiz: $RootDir" -ForegroundColor Gray
 Write-Host "Destino:        $DistDir" -ForegroundColor Gray

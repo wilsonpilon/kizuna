@@ -3,6 +3,81 @@
 Todas as mudanças notáveis deste projeto são documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
+## [4.7.0] - 2026-09-22 - Release Kaika (開花)
+
+### MSXLIB expandida: sprites, música PSG e I/O de arquivo — todos confirmados em hardware
+
+Primeira expansão real da `MSXLIB` desde que o roadmap original fechou na
+v4.6.0. Toda a informação de hardware foi verificada contra fontes
+primárias antes de escrever qualquer código (registradores de sprite
+contra `resource/MSXgl/engine/src/vdp_reg.h`; números de função de
+arquivo contra o protocolo oficial de MSX-DOS 2, diferentes dos números
+genéricos de CP/M/MS-DOS que se assumiria por padrão).
+
+- **`lib/src/vdp.asm`**: `VDP_SpriteDefine`, `VDP_SpriteSet`,
+  `VDP_SpriteHide`, `VDP_SpriteHideAll`, `VDP_SpriteSetSize`. Sprite
+  Attribute Table em `1B00h`, Sprite Pattern Table em `3800h` — os mesmos
+  endereços-padrão que o MSX-BASIC já usa em SCREEN 2, encaixando nos vãos
+  livres entre as tabelas existentes.
+- **`lib/src/psg.asm`**: `PSG_NoteTable` (5 oitavas, C2..B6, 60 períodos
+  calculados pela fórmula padrão e conferidos contra A4=440Hz→254),
+  `PSG_PlayNoteIndexed`, `PSG_PlaySequence`.
+- **`lib/src/bdos.asm`**: `BDOS_FileOpen/Create/Close/Read/Write/Seek` —
+  funções de MSX-DOS 2 baseadas em handle (43h-4Ah).
+- **`sample/sprites/`, `sample/music/`, `sample/fileio/`**: um exemplo
+  KAJI80 puro por área (nem `WIRTH80` nem `DIGNAC` ainda conseguem chamar
+  rotinas externas por convenção de registrador arbitrária — dar acesso
+  aos compiladores fica para uma sessão futura).
+
+**Confirmado em hardware real pelo usuário**: sprites e música funcionaram
+de primeira. I/O de arquivo criava e escrevia o arquivo corretamente, mas
+a leitura de volta imprimia caracteres bagunçados na tela — ver o bug
+real abaixo, encontrado e corrigido no mesmo dia.
+
+### Bug real no KAJI80: literal de caractere entre aspas simples virava zero em silêncio
+
+`sample/fileio/main.asm` usava `LD (HL), '$'` para marcar onde a função
+09h da BDOS deveria parar de imprimir (o arquivo lido não tem esse
+terminador). `pkg/kaji80/assembler.go`'s `parseLine` reconstrói os
+operandos de uma instrução concatenando `token.Value` diretamente, e o
+lexer já devolve o conteúdo de uma string **sem** aspas (correto para
+`DB`, que lê os tokens crus, não os operandos reconstruídos aqui) — então
+`'$'` virava só `$`, indistinguível de um prefixo hexadecimal malformado
+para `parseImm8`, que falhava em silêncio e devolvia `0`. `LD (HL),'$'`
+virava `LD (HL),0x00` (`36 00`) em vez de `LD (HL),0x24` (`36 24`), **sem
+nenhum erro de montagem** — mesma classe de bug já vista com `(IX+d)` na
+saga da SCREEN 2. Com o terminador virando um byte nulo em vez de `'$'`
+de verdade, a rotina de impressão nunca parava e imprimia memória adiante
+indefinidamente — exatamente o "monte de caracteres bagunçados" relatado.
+
+Corrigido na raiz: `parseLine` agora devolve as aspas simples ao redor do
+valor de um `TokenString` ao reconstruir o operando, para que o suporte a
+literal de caractere que `parseImm8` já tinha (mas nunca recebia a string
+com aspas) passe a funcionar de verdade. `DB` não é afetado — usa os
+tokens crus diretamente. Novo teste `TestCharLiteralImmediate`
+(`pkg/kaji80/assembler_test.go`). `sample/fileio` também trocou `'$'` por
+`24h` explícito, por segurança. **Confirmado pelo usuário em hardware
+real após a correção.**
+
+### Limpeza do disco de teste
+
+`sample/` é usado como "disk in a folder" pelo openMSX para rodar os
+`.com` do projeto durante os testes. Durante essa mesma sessão de
+depuração, um bug lateral: vários arquivos antigos e sem relação com o
+KIZUNA (`sample/MSXDOS.SYS`, `sample/UTILS/*`, `sample/hello.mob`/`.map`,
+`sample/screen2_test.*`) apareceram deletados do disco — quase certamente
+efeito colateral de algum comando MSX-DOS 2 rodado no openMSX contra essa
+mesma pasta montada como disco real. Restaurados via `git restore` antes
+de qualquer commit.
+
+A pedido do usuário, o disco de teste foi então deliberadamente reduzido
+para caber no limite de 720KB de um disquete DD padrão: removidos
+`sample/screen2_test.*` (saga da SCREEN 2 já encerrada), `sample/UTILS/`
+reduzido de 21 para 5 arquivos (mantendo só `CHKDSK`, `COPY.BTM`, `DIR.BTM`,
+`MORE`, `TREE` — o resto não tem relação com testar programas KIZUNA), e
+`sample/HELP/` (433K de textos de ajuda do MSX-DOS 2) removido por
+inteiro. `sample/` caiu de ~1.1M para 526K.
+
 ## [4.6.0] - 2026-09-22 - Release Kansei (完成)
 
 ### Fase 6 concluída: OBI, o orquestrador de build declarativo

@@ -10,7 +10,7 @@ num único executável — inclusive distribuindo módulos por bancos de
 memória diferentes, com troca de banco resolvida automaticamente pelo
 linker.
 
-Versão Atual: `v4.6.0` — Release **Kansei (完成)**.
+Versão Atual: `v4.7.0` — Release **Kaika (開花)**.
 
 ## Por quê
 
@@ -35,7 +35,7 @@ BASIC estruturado no mesmo binário `.COM`.
 | `MUSUBI`  | Linker com Smart-Linking e Mapper     | **Concluído & Validado** (v4.3)   |
 | `HAKO`    | Bibliotecário / Empacotador (`.hlib`) | **Concluído & Validado** (v4.3)   |
 | `MOBDUMP` | Inspecionador de objetos `.MOB`       | **Concluído & Validado** (v4.2)   |
-| `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **Concluído & Validado, SCREEN 2 confirmada em hardware** (v4.5.3) |
+| `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **Concluído & Validado — SCREEN 2, sprites, música PSG e I/O de arquivo confirmados em hardware** (v4.7.0) |
 | `OBI`     | Orquestrador de build (`Obifile`)     | **Concluído & Validado, confirmado em hardware** (v4.6.0) |
 
 Cada compilador/assembler gera um objeto relocável no formato próprio `.MOB`;
@@ -58,6 +58,13 @@ trampolins automáticos de bank switching) e produz o `.COM` final para MSX-DOS 
   (banco 0, dono do `Start`) + `DIGNAC` (banco 2, módulo biblioteca sem
   `PROCEDURE Main`) + um resource binário embutido + `msxlib.hlib`, tudo com
   um único comando `obi build`.
+- `sample/sprites/`: Define um padrão 16x16 e move um sprite pela tela em
+  SCREEN 2 (`VDP_SpriteDefine`/`VDP_SpriteSet`).
+- `sample/music/`: Toca uma escala simples via `PSG_PlaySequence` e a nova
+  tabela de períodos de nota (`PSG_NoteTable`, 5 oitavas).
+- `sample/fileio/`: Cria, escreve, fecha, reabre, lê e imprime de volta um
+  arquivo (`BDOS_FileCreate/Open/Read/Write/Close`, MSX-DOS 2 baseado em
+  handle).
 
 ### Estado atual da SCREEN 2 (causa raiz encontrada e confirmada em hardware)
 

@@ -1,3 +1,80 @@
+# Release Notes — KIZUNA v4.7.0 "Kaika" (開花)
+
+> "Depois de fechar o roadmap, o laço floresce: sprites, música e arquivos, provados um por um em hardware real."
+
+**Kaika** (開花) — "florescimento, o momento em que a flor desabrocha". Depois
+de *Kansei* (完成, a conclusão do roadmap original), esta release é o
+primeiro capítulo do que vem depois: a `MSXLIB` deixa de ser fina e ganha
+as três capacidades de maior valor prático para quem for escrever um
+programa de verdade — **sprites**, **música PSG** e **I/O de arquivo** —
+todas verificadas contra fontes primárias antes de escrever qualquer
+código, e todas testadas em hardware real pelo usuário no mesmo dia.
+
+## MSXLIB: sprites, música e arquivos
+
+- **Sprites** (`lib/src/vdp.asm`): `VDP_SpriteDefine`, `VDP_SpriteSet`,
+  `VDP_SpriteHide`, `VDP_SpriteHideAll`, `VDP_SpriteSetSize`. Endereços de
+  tabela confirmados contra `resource/MSXgl/engine/src/vdp_reg.h` — os
+  mesmos que o MSX-BASIC já usa por padrão em SCREEN 2.
+- **Música PSG** (`lib/src/psg.asm`): `PSG_NoteTable` (5 oitavas, 60
+  períodos calculados pela fórmula padrão, conferidos contra o valor
+  público A4=440Hz→254), `PSG_PlayNoteIndexed`, `PSG_PlaySequence`.
+- **I/O de arquivo** (`lib/src/bdos.asm`): `BDOS_FileOpen/Create/Close/
+  Read/Write/Seek` — funções de MSX-DOS 2 baseadas em handle, números
+  confirmados contra o protocolo oficial (diferentes dos genéricos de
+  CP/M/MS-DOS que se assumiria por padrão).
+- Três exemplos novos, um por área: `sample/sprites/`, `sample/music/`,
+  `sample/fileio/` — todos em `KAJI80` puro (nem `WIRTH80` nem `DIGNAC`
+  ainda sabem chamar uma rotina externa por convenção de registrador
+  arbitrária; dar essa capacidade aos compiladores é o próximo passo
+  natural depois desta release).
+
+**Testado em hardware real**: sprites e música funcionaram corretamente
+de primeira. I/O de arquivo criava e escrevia o arquivo certo, mas a
+leitura de volta imprimia caracteres bagunçados na tela.
+
+## Bug real do KAJI80 encontrado e corrigido: literal de caractere virava zero em silêncio
+
+O sample de I/O de arquivo usava `LD (HL), '$'` para marcar onde parar de
+imprimir a string lida de volta do arquivo (a função 09h da BDOS exige um
+terminador `'$'`, que o conteúdo do arquivo não tem). O assembler
+reconstruía os operandos de uma instrução perdendo as aspas de um literal
+de caractere — `'$'` virava só `$`, indistinguível de um prefixo
+hexadecimal malformado, e o parser de imediatos falhava em silêncio,
+devolvendo `0`. `LD (HL),'$'` virava `LD (HL),0x00` em vez de
+`LD (HL),0x24`, **sem nenhum erro de montagem** — a mesma classe de bug já
+vista com `(IX+d)` na saga da SCREEN 2: sintaxe não reconhecida virando 0
+em silêncio ao invés de erro. Com um byte nulo no lugar do terminador
+real, a rotina de impressão nunca parava e mostrava memória adiante
+indefinidamente.
+
+Corrigido na raiz do assembler (`pkg/kaji80/assembler.go`), não só
+contornado no exemplo: o parser agora preserva as aspas de um literal de
+caractere ao reconstruir o operando. Novo teste de regressão
+`TestCharLiteralImmediate`. **Confirmado pelo usuário em hardware real
+após a correção.**
+
+## Limpeza do disco de teste
+
+`sample/` é usado como disco MSX-DOS 2 montado diretamente pelo openMSX
+para testar os `.com` do projeto. A pedido do usuário, reduzido para caber
+no limite de 720KB de um disquete DD padrão: `sample/screen2_test.*`
+removido (saga da SCREEN 2 encerrada), `sample/UTILS/` reduzido de 21 para
+5 arquivos essenciais, e `sample/HELP/` (433K de textos de ajuda do
+MSX-DOS 2) removido por inteiro. `sample/` caiu de ~1.1M para 526K.
+
+## Próximos passos
+
+- Dar ao `DIGNAC` (e eventualmente ao `WIRTH80`) acesso às novas rotinas
+  de sprite/música/arquivo, para que MSX-BASIC Dignified consiga usá-las
+  sem cair para Assembly puro — o que realmente destrava escrever um jogo
+  simples só em BASIC.
+- Investigar o não-determinismo residual de `WIRTH80`/`DIGNAC` (ordem dos
+  literais de string na pool de deduplicação).
+- Considerar suporte a units/linkagem externa em `WIRTH80`.
+
+---
+
 # Release Notes — KIZUNA v4.6.0 "Kansei" (完成)
 
 > "O laço agora amarra até os próprios bancos de memória — e prova, de novo, que só a execução real fecha um bug."
