@@ -314,7 +314,21 @@ func (a *Assembler) parseLine(tokens []Token) (parsedLine, error) {
 			idx++
 			continue
 		}
-		currentOp.WriteString(tokens[idx].Value)
+		if tokens[idx].Type == TokenString {
+			// O lexer já devolve o conteúdo sem as aspas (correto para DB,
+			// que lê os tokens crus diretamente, não os operandos
+			// reconstruídos aqui) -- mas para instruções como LD/CP que
+			// dependem do texto do operando (parseImm8), perder as aspas
+			// torna "'$'" indistinguível de um identificador solto ou de
+			// um prefixo hex malformado, e parseImm8 silenciosamente
+			// devolve 0. Devolve as aspas simples aqui para que um literal
+			// de caractere continue reconhecível como tal.
+			currentOp.WriteByte('\'')
+			currentOp.WriteString(tokens[idx].Value)
+			currentOp.WriteByte('\'')
+		} else {
+			currentOp.WriteString(tokens[idx].Value)
+		}
 		idx++
 	}
 	if currentOp.Len() > 0 {
@@ -1170,6 +1184,13 @@ func (a *Assembler) parseImm8(s string) uint8 {
 	s = strings.TrimSpace(s)
 	if val, ok := a.constants[s]; ok {
 		return uint8(val & 0xFF)
+	}
+	// Literal de caractere entre aspas simples: 'A', '$', etc. -- sem isso,
+	// caía no Sscanf genérico abaixo, que falha silenciosamente pra essa
+	// sintaxe e devolve 0 (mesma classe de bug já vista com operandos
+	// indexados não reconhecidos, ver estimateSize/encodeAlu8).
+	if len(s) == 3 && s[0] == '\'' && s[2] == '\'' {
+		return s[1]
 	}
 	// Tratar hex como 0x10, 10h, $10, #10
 	if strings.HasPrefix(s, "$") || strings.HasPrefix(s, "#") {

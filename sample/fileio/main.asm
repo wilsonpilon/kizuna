@@ -64,11 +64,15 @@ Start:
     OR A
     JR NZ, FileIO_Error
 
-    ; HL = bytes realmente lidos; usa para terminar a string em '$' (função
-    ; 09h da BDOS exige terminador '$', o arquivo em si não tem um)
+    ; HL = bytes realmente lidos; usa para terminar a string em '$' (0x24 --
+    ; função 09h da BDOS exige terminador '$', o arquivo em si não tem um).
+    ; KAJI80 não reconhece literal de caractere entre aspas simples em
+    ; operando imediato (parseImm8 silenciosamente devolve 0 pra sintaxe que
+    ; não entende -- mesma classe de bug já vista com "CP (IX+d)"); por isso
+    ; o valor precisa ir em hexadecimal aqui, não como '$'.
     LD DE, ReadBuf
     ADD HL, DE
-    LD (HL), '$'
+    LD (HL), 24h
 
     ; 6. Fecha de novo
     LD A, (Handle)

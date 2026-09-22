@@ -162,6 +162,46 @@ MyWord:
 	}
 }
 
+// TestCharLiteralImmediate cobre um bug real encontrado em 2026-09-22:
+// parseLine reconstruía operandos concatenando tokens.Value direto, e o
+// lexer já devolve o conteúdo de um TokenString SEM as aspas (correto para
+// DB, que usa os tokens crus). Isso deixava "'$'" indistinguível de um
+// identificador solto para parseImm8, que silenciosamente devolvia 0 --
+// "LD (HL), '$'" virava "LD (HL), 0" em vez de "LD (HL), 24h", sem erro de
+// montagem. Descoberto porque sample/fileio (que usava esse terminador
+// pra imprimir uma string lida de um arquivo via BDOS função 09h) imprimia
+// lixo de memória indefinidamente em vez de parar no terminador.
+func TestCharLiteralImmediate(t *testing.T) {
+	src := `
+MODULE CharLit
+BANK 0
+PUBLIC Start
+Start:
+    LD HL, 8000h
+    LD (HL), '$'
+    LD A, 'A'
+    RET
+ENDMOD
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+
+	data := obj.Segments[0].Data
+	// LD HL,8000h (3) / LD (HL),n (2) / LD A,n (2) / RET (1)
+	if len(data) != 8 {
+		t.Fatalf("Expected 8 bytes, got %d: % X", len(data), data)
+	}
+	if data[3] != 0x36 || data[4] != '$' {
+		t.Errorf("Expected LD (HL),'$' -> 36 24, got %02X %02X", data[3], data[4])
+	}
+	if data[5] != 0x3E || data[6] != 'A' {
+		t.Errorf("Expected LD A,'A' -> 3E 41, got %02X %02X", data[5], data[6])
+	}
+}
+
 func TestRotateShiftBitInstructions(t *testing.T) {
 	src := `
 MODULE BitOps
