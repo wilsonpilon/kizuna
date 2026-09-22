@@ -1,0 +1,37 @@
+# =============================================================================
+# KIZUNA - Script de Build do Exemplo de Musica PSG (PSG_PlaySequence)
+# =============================================================================
+
+$ErrorActionPreference = "Stop"
+
+$SampleDir = $PSScriptRoot
+if (-not $SampleDir) {
+    $SampleDir = (Get-Location).Path
+}
+
+$RootDir = (Resolve-Path (Join-Path $SampleDir "..\..")).Path
+$LibPath = Join-Path $RootDir "lib\msxlib.hlib"
+
+Write-Host "=================================================================" -ForegroundColor Cyan
+Write-Host "    KIZUNA - Build do Exemplo de Musica PSG                      " -ForegroundColor Cyan
+Write-Host "=================================================================" -ForegroundColor Cyan
+
+# 1. Montar main.asm
+$asmFile = Join-Path $SampleDir "main.asm"
+$mobFile = Join-Path $SampleDir "main.mob"
+$logFile = Join-Path $SampleDir "music.log"
+Write-Host "[1/2] Montando main.asm -> main.mob..." -ForegroundColor Yellow
+& go run "$RootDir/cmd/kaji80" -v --log-file $logFile -o $mobFile $asmFile
+if ($LASTEXITCODE -ne 0) { throw "Falha na montagem de $asmFile" }
+
+# 2. Linkar com a biblioteca msxlib.hlib
+$outCom = Join-Path $SampleDir "music.com"
+$mapFile = Join-Path $SampleDir "music.map"
+Write-Host "[2/2] Linkando main.mob com msxlib.hlib (Smart-Linking)..." -ForegroundColor Yellow
+& go run "$RootDir/cmd/musubi" -v --log-file $logFile -m $mapFile -o $outCom $mobFile $LibPath
+if ($LASTEXITCODE -ne 0) { throw "Falha na linkagem" }
+
+Write-Host ""
+Write-Host "Build concluido com sucesso!" -ForegroundColor Green
+Write-Host "Executavel: $outCom" -ForegroundColor White
+Write-Host "Mapa:       $mapFile" -ForegroundColor White

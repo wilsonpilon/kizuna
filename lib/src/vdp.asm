@@ -11,10 +11,18 @@ PUBLIC VDP_WriteReg, VDP_WriteReg_Raw, VDP_SetWriteAddr, VDP_SetReadAddr
 PUBLIC VDP_FillVRAM, VDP_WriteVRAM, VDP_ReadVRAM, VDP_CopyVRAM, VDP_SetColor
 PUBLIC VDP_SetScreen, VDP_InitScreen2, VDP_InitScreen1, VDP_InitScreen0, VDP_InitScreen2_Tables
 PUBLIC VDP_PSet, VDP_PSet_Raw, VDP_PSet_HW, VDP_CommandWait_Raw, VDP_Line, VDP_BoxFill
+PUBLIC VDP_SpriteDefine, VDP_SpriteSet, VDP_SpriteHide, VDP_SpriteHideAll, VDP_SpriteSetSize
 EXTERN BIOS_CHGMOD
 
 VDP_DATA EQU 0098h
 VDP_CMD  EQU 0099h
+
+; Tabelas de sprite em SCREEN 2 -- mesmos endereços-padrão que o MSX-BASIC
+; usa (confirmado contra resource/MSXgl/engine/src/vdp_reg.h: R#5 = 36h e
+; R#6 = 07h para SCREEN 2), encaixando exatamente nos vãos livres que sobram
+; entre a Name Table/Color Table e depois da Color Table.
+VDP_SPRITE_ATTR_TABLE    EQU 1B00h
+VDP_SPRITE_PATTERN_TABLE EQU 3800h
 
 ; -----------------------------------------------------------------------------
 ; VDP_WriteReg: Escreve valor em um registrador do VDP (0..46 no V9938/V9958;
@@ -909,5 +917,143 @@ VDP_Line_Err:   DW 0000h
 VDP_Line_E2:    DW 0000h
 VDP_Line_CurX:  DB 00h
 VDP_Line_CurY:  DB 00h
+
+; -----------------------------------------------------------------------------
+; VDP_SpriteDefine: Grava o padrão gráfico de um sprite na Sprite Pattern
+; Generator Table
+; Entrada: A = número do padrão (0..255 para 8x8; para 16x16 o padrão ocupa
+;          4 números consecutivos, um por quadrante), HL = ponteiro RAM com
+;          os bytes do padrão, BC = tamanho em bytes (8 para 8x8, 32 para
+;          16x16)
+; -----------------------------------------------------------------------------
+VDP_SpriteDefine:
+    PUSH HL
+    LD H, 0
+    LD L, A
+    ADD HL, HL ; x2
+    ADD HL, HL ; x4
+    ADD HL, HL ; x8
+    LD DE, VDP_SPRITE_PATTERN_TABLE
+    ADD HL, DE
+    EX DE, HL  ; DE = endereço VRAM de destino
+    POP HL     ; HL = ponteiro RAM de origem (restaurado)
+    CALL VDP_WriteVRAM
+    RET
+
+; -----------------------------------------------------------------------------
+; VDP_SpriteSet: Posiciona/configura um sprite na Sprite Attribute Table
+; Entrada: A = índice do sprite (0..31), H = Y, L = X, D = número do padrão,
+;          E = cor (bits 0-3; bit 7 = EC/early-clock, desloca 32 pixels para
+;          a esquerda -- usado para X negativo)
+; -----------------------------------------------------------------------------
+VDP_SpriteSet:
+    ; Guarda os 5 valores de entrada em células de rascunho antes de
+    ; calcular o endereço -- evita malabarismo de registradores, mesmo
+    ; estilo de VDP_PSet_ColorArg. LD (nn),HL grava L em nn e H em nn+1,
+    ; por isso VDP_Sprite_X (L=X) e VDP_Sprite_Y (H=Y) estão declarados
+    ; nessa ordem, contíguos, logo abaixo.
+    LD (VDP_Sprite_Idx), A
+    LD (VDP_Sprite_X), HL
+    LD A, D
+    LD (VDP_Sprite_Pat), A
+    LD A, E
+    LD (VDP_Sprite_Color), A
+
+    ; endereço = VDP_SPRITE_ATTR_TABLE + índice*4
+    LD A, (VDP_Sprite_Idx)
+    LD L, A
+    LD H, 0
+    ADD HL, HL ; x2
+    ADD HL, HL ; x4
+    LD DE, VDP_SPRITE_ATTR_TABLE
+    ADD HL, DE
+
+    DI
+    LD A, L
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    LD A, H
+    AND 3Fh
+    OR 40h
+    OUT (VDP_CMD), A
+
+    LD A, (VDP_Sprite_Y)
+    OUT (VDP_DATA), A
+    LD A, (VDP_Sprite_X)
+    OUT (VDP_DATA), A
+    LD A, (VDP_Sprite_Pat)
+    OUT (VDP_DATA), A
+    LD A, (VDP_Sprite_Color)
+    OUT (VDP_DATA), A
+    EI
+    RET
+
+VDP_Sprite_Idx:   DB 00h
+VDP_Sprite_X:     DB 00h
+VDP_Sprite_Y:     DB 00h
+VDP_Sprite_Pat:   DB 00h
+VDP_Sprite_Color: DB 00h
+
+; -----------------------------------------------------------------------------
+; VDP_SpriteHide: Oculta um único sprite, movendo seu Y para fora da área
+; visível (0E0h), sem afetar os demais sprites
+; Entrada: A = índice do sprite (0..31)
+; -----------------------------------------------------------------------------
+VDP_SpriteHide:
+    LD L, A
+    LD H, 0
+    ADD HL, HL ; x2
+    ADD HL, HL ; x4
+    LD DE, VDP_SPRITE_ATTR_TABLE
+    ADD HL, DE
+    DI
+    LD A, L
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    LD A, H
+    AND 3Fh
+    OR 40h
+    OUT (VDP_CMD), A
+    LD A, 0E0h
+    OUT (VDP_DATA), A
+    EI
+    RET
+
+; -----------------------------------------------------------------------------
+; VDP_SpriteHideAll: Oculta todos os sprites de uma vez, escrevendo o valor
+; terminador (0D0h/208) no Y do sprite de índice 0 -- truque padrão do VDP
+; que interrompe o processamento da lista de sprites ali
+; -----------------------------------------------------------------------------
+VDP_SpriteHideAll:
+    PUSH AF
+    DI
+    LD A, 00h ; byte baixo de VDP_SPRITE_ATTR_TABLE (1B00h)
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    LD A, 5Bh ; byte alto (1Bh) OR 40h (comando de escrita em VRAM)
+    OUT (VDP_CMD), A
+    LD A, 0D0h
+    OUT (VDP_DATA), A
+    EI
+    POP AF
+    RET
+
+; -----------------------------------------------------------------------------
+; VDP_SpriteSetSize: Define tamanho/zoom dos sprites via R#1. Não faz
+; leitura-modificação-escrita (o VDP não permite reler um registrador de
+; forma simples) -- o chamador fornece o byte COMPLETO do R#1, não só os
+; bits de tamanho.
+; Entrada: A = byte completo do R#1. Valores prontos para SCREEN 2 (mesma
+;          base já usada no projeto, R1=E2h): 0E0h=8x8, 0E1h=8x8+zoom,
+;          0E2h=16x16 (padrão), 0E3h=16x16+zoom
+; -----------------------------------------------------------------------------
+VDP_SpriteSetSize:
+    LD B, A
+    LD C, 01h
+    CALL VDP_WriteReg
+    RET
 
 ENDMOD

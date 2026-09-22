@@ -118,6 +118,21 @@ Write-Host "      - Compilando sample/obi (Obifile -> main.com)..." -ForegroundC
 & pwsh -ExecutionPolicy Bypass -File "$RootDir/sample/obi/build.ps1"
 if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/obi" }
 
+# 6.7. Exemplo de Sprites (VDP_Sprite*)
+Write-Host "      - Compilando sample/sprites -> sample/sprites/sprites.com..." -ForegroundColor Gray
+& pwsh -ExecutionPolicy Bypass -File "$RootDir/sample/sprites/build.ps1"
+if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/sprites" }
+
+# 6.8. Exemplo de Musica PSG (PSG_PlaySequence)
+Write-Host "      - Compilando sample/music -> sample/music/music.com..." -ForegroundColor Gray
+& pwsh -ExecutionPolicy Bypass -File "$RootDir/sample/music/build.ps1"
+if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/music" }
+
+# 6.9. Exemplo de I/O de Arquivo (BDOS_File*)
+Write-Host "      - Compilando sample/fileio -> sample/fileio/fileio.com..." -ForegroundColor Gray
+& pwsh -ExecutionPolicy Bypass -File "$RootDir/sample/fileio/build.ps1"
+if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/fileio" }
+
 # 7. Copiar documentação essencial e licença
 Write-Host "[6/8] Copiando documentacao de usuario e licenca..." -ForegroundColor Yellow
 Copy-Item -Path "$RootDir/README.md" -Destination "$DocsDir/README.md"
@@ -177,6 +192,27 @@ Copy-Item -Path "$RootDir/sample/obi/chart_lib.bas" -Destination "$ObiDir/chart_
 Copy-Item -Path "$RootDir/sample/obi/banner.txt" -Destination "$ObiDir/banner.txt"
 Copy-Item -Path "$RootDir/sample/obi/main.com" -Destination "$ObiDir/main.com"
 Copy-Item -Path "$RootDir/sample/obi/build.ps1" -Destination "$ObiDir/build.ps1"
+
+# Sprites (VDP_Sprite*)
+$SpritesDir = Join-Path $SampDir "sprites"
+New-Item -ItemType Directory -Path $SpritesDir -Force | Out-Null
+Copy-Item -Path "$RootDir/sample/sprites/main.asm" -Destination "$SpritesDir/main.asm"
+Copy-Item -Path "$RootDir/sample/sprites/sprites.com" -Destination "$SpritesDir/sprites.com"
+Copy-Item -Path "$RootDir/sample/sprites/build.ps1" -Destination "$SpritesDir/build.ps1"
+
+# Musica PSG (PSG_PlaySequence)
+$MusicDir = Join-Path $SampDir "music"
+New-Item -ItemType Directory -Path $MusicDir -Force | Out-Null
+Copy-Item -Path "$RootDir/sample/music/main.asm" -Destination "$MusicDir/main.asm"
+Copy-Item -Path "$RootDir/sample/music/music.com" -Destination "$MusicDir/music.com"
+Copy-Item -Path "$RootDir/sample/music/build.ps1" -Destination "$MusicDir/build.ps1"
+
+# I/O de arquivo (BDOS_File*)
+$FileioDir = Join-Path $SampDir "fileio"
+New-Item -ItemType Directory -Path $FileioDir -Force | Out-Null
+Copy-Item -Path "$RootDir/sample/fileio/main.asm" -Destination "$FileioDir/main.asm"
+Copy-Item -Path "$RootDir/sample/fileio/fileio.com" -Destination "$FileioDir/fileio.com"
+Copy-Item -Path "$RootDir/sample/fileio/build.ps1" -Destination "$FileioDir/build.ps1"
 
 # 9. Gerar pacote compactado .ZIP
 Write-Host "[8/8] Criando arquivo compactado $ZipFileName..." -ForegroundColor Yellow

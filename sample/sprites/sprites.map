@@ -1,0 +1,72 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
+===============================================================================
+
+Modo de Memória: Monobanco
+Bancos Utilizados: [0]
+Endereço Base:     0x0100
+Ponto de Entrada:  0x0100
+Tamanho do .COM:   1603 bytes (0x0643)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x01C1 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   193 bytes
+[ 1] 0x01C1 - 0x0690 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:  1231 bytes
+[ 2] 0x0690 - 0x0743 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   179 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x0100 [Banco  0] PROC Start
+0x0152 [Banco  0] PROC MsgIntro
+0x0186 [Banco  0] PROC MsgDone
+0x01A1 [Banco  0] PROC SpritePattern
+0x01C1 [Banco  0] PROC VDP_WriteReg
+0x01C7 [Banco  0] PROC VDP_WriteReg_Raw
+0x01D2 [Banco  0] PROC VDP_SetWriteAddr
+0x01E1 [Banco  0] PROC VDP_SetReadAddr
+0x01EE [Banco  0] PROC VDP_FillVRAM
+0x020A [Banco  0] PROC VDP_WriteVRAM
+0x021D [Banco  0] PROC VDP_ReadVRAM
+0x0232 [Banco  0] PROC VDP_CopyVRAM
+0x0250 [Banco  0] PROC VDP_SetColor
+0x0267 [Banco  0] PROC VDP_SetScreen
+0x026A [Banco  0] PROC VDP_InitScreen2
+0x026F [Banco  0] PROC VDP_InitScreen0
+0x0273 [Banco  0] PROC VDP_InitScreen1
+0x0279 [Banco  0] PROC VDP_InitScreen2_Tables
+0x02FA [Banco  0] PROC VDP_PSet
+0x0300 [Banco  0] PROC VDP_PSet_HW
+0x033C [Banco  0] PROC VDP_CommandWait_Raw
+0x0355 [Banco  0] PROC VDP_PSet_Raw
+0x039A [Banco  0] PROC VDP_PSet_MaskDone
+0x0409 [Banco  0] PROC VDP_PSet_ColorArg
+0x040A [Banco  0] PROC VDP_BoxFill
+0x04AD [Banco  0] PROC VDP_Line
+0x0581 [Banco  0] PROC VDP_Line_Loop
+0x05CA [Banco  0] PROC VDP_Line_CheckE2DX
+0x05F4 [Banco  0] PROC VDP_Line_Exit
+0x05FB [Banco  0] PROC VDP_Line_H_End
+0x05FC [Banco  0] PROC VDP_Line_DX
+0x05FD [Banco  0] PROC VDP_Line_SX
+0x05FE [Banco  0] PROC VDP_Line_DY
+0x0600 [Banco  0] PROC VDP_Line_SY
+0x0601 [Banco  0] PROC VDP_Line_Err
+0x0603 [Banco  0] PROC VDP_Line_E2
+0x0605 [Banco  0] PROC VDP_Line_CurX
+0x0606 [Banco  0] PROC VDP_Line_CurY
+0x0607 [Banco  0] PROC VDP_SpriteDefine
+0x0618 [Banco  0] PROC VDP_SpriteSet
+0x0655 [Banco  0] PROC VDP_Sprite_Idx
+0x0656 [Banco  0] PROC VDP_Sprite_X
+0x0657 [Banco  0] PROC VDP_Sprite_Y
+0x0658 [Banco  0] PROC VDP_Sprite_Pat
+0x0659 [Banco  0] PROC VDP_Sprite_Color
+0x065A [Banco  0] PROC VDP_SpriteHide
+0x0676 [Banco  0] PROC VDP_SpriteHideAll
+0x0689 [Banco  0] PROC VDP_SpriteSetSize
+0x0690 [Banco  0] PROC BIOS_Call
+0x06A2 [Banco  0] PROC BIOS_CHPUT
+0x06B1 [Banco  0] PROC BIOS_CHGET
+0x06DB [Banco  0] PROC BIOS_CLS
+0x06E2 [Banco  0] PROC BIOS_POSIT
+0x06E3 [Banco  0] PROC BIOS_BEEP
+0x06F3 [Banco  0] PROC BIOS_INIT32
+0x06FB [Banco  0] PROC BIOS_CHGMOD
