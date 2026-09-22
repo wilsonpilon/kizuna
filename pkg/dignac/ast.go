@@ -32,22 +32,29 @@ func (m *ModuleNode) node() {}
 // ParamDecl representa a declaração de um parâmetro de sub-rotina
 type ParamDecl struct {
 	Name string
-	Type string // "INTEGER", "STRING", "BOOLEAN"
+	Type string // "INTEGER", "STRING", "SINGLE", "DOUBLE" ou "BOOLEAN"
 }
 
-// LocalDeclNode representa declaração de variáveis locais (LOCAL a%, b%)
-type LocalDeclNode struct {
-	Vars []string
+// VarDecl representa uma variável dentro de uma lista LOCAL/DIM, com seu
+// próprio tipo -- resolvido pelo sufixo do nome (%/$/!/#) a menos que a
+// declaração inteira tenha um "AS <Tipo>" explícito no final, que então
+// vale pra todo mundo da lista (ex: "LOCAL a, b AS BOOLEAN").
+type VarDecl struct {
+	Name string
 	Type string
+}
+
+// LocalDeclNode representa declaração de variáveis locais (LOCAL a%, b$, c!)
+type LocalDeclNode struct {
+	Decls []VarDecl
 }
 
 func (l *LocalDeclNode) node() {}
 func (l *LocalDeclNode) stmt() {}
 
-// DimDeclNode representa declaração de variáveis globais (DIM a%, b%)
+// DimDeclNode representa declaração de variáveis globais (DIM a%, b$, c!)
 type DimDeclNode struct {
-	Vars []string
-	Type string
+	Decls []VarDecl
 }
 
 func (d *DimDeclNode) node() {}
@@ -264,6 +271,18 @@ type NumberExpr struct {
 
 func (e *NumberExpr) node() {}
 func (e *NumberExpr) expr() {}
+
+// FloatExpr representa um literal de ponto flutuante SINGLE (sufixo ! ou
+// notação "e") ou DOUBLE (sufixo # ou notação "d"), representado
+// internamente em IEEE 754 (binary32/binary64) -- ver a nota de design em
+// pkg/dignac/codegen.go sobre por que não é o MBF que o MSX-BASIC real usa.
+type FloatExpr struct {
+	Value    float64
+	IsDouble bool
+}
+
+func (e *FloatExpr) node() {}
+func (e *FloatExpr) expr() {}
 
 // StringExpr representa uma string literal
 type StringExpr struct {

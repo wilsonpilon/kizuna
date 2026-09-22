@@ -102,7 +102,7 @@ func TestParser(t *testing.T) {
 	if len(proc.Params) != 1 || proc.Params[0].Name != "n%" {
 		t.Errorf("Esperado parâmetro 'n%%', obteve %v", proc.Params)
 	}
-	if len(proc.Locals) != 1 || proc.Locals[0].Vars[0] != "r%" {
+	if len(proc.Locals) != 1 || proc.Locals[0].Decls[0].Name != "r%" {
 		t.Errorf("Esperado local 'r%%', obteve %v", proc.Locals)
 	}
 }
@@ -232,5 +232,220 @@ func TestCompileAndLinkHelloAndCalc(t *testing.T) {
 		if len(res.Binary) == 0 {
 			t.Fatalf("Executável binário gerado para %s está vazio", path)
 		}
+	}
+}
+
+func TestParseDimMixedSuffixes(t *testing.T) {
+	src := `
+	MODULE Types
+	DIM nome$, idade%, altura!
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	if len(mod.Globals) != 1 || len(mod.Globals[0].Decls) != 3 {
+		t.Fatalf("Esperado 1 DIM com 3 variáveis, obteve %v", mod.Globals)
+	}
+
+	want := map[string]string{"nome$": "STRING", "idade%": "INTEGER", "altura!": "SINGLE"}
+	for _, d := range mod.Globals[0].Decls {
+		expected, ok := want[d.Name]
+		if !ok {
+			t.Fatalf("Variável inesperada '%s'", d.Name)
+		}
+		if d.Type != expected {
+			t.Errorf("Variável '%s': esperado tipo %s por sufixo, obteve %s", d.Name, expected, d.Type)
+		}
+	}
+}
+
+func TestLexOctalAndBinaryLiterals(t *testing.T) {
+	lexer := NewLexer("&O17 &B101")
+
+	tok1, err := lexer.NextToken()
+	if err != nil {
+		t.Fatalf("Erro no lexer (octal): %v", err)
+	}
+	if tok1.Type != TokenNumber || tok1.Value != "&O17" {
+		t.Errorf("Esperado token &O17, obteve %v", tok1)
+	}
+
+	tok2, err := lexer.NextToken()
+	if err != nil {
+		t.Fatalf("Erro no lexer (binário): %v", err)
+	}
+	if tok2.Type != TokenNumber || tok2.Value != "&B101" {
+		t.Errorf("Esperado token &B101, obteve %v", tok2)
+	}
+}
+
+func TestParseOctalAndBinaryLiteralsAsValues(t *testing.T) {
+	src := `
+	MODULE RadixTest
+	PUBLIC Main
+	PROCEDURE Main
+		LOCAL o%, b%
+		o% = &O17
+		b% = &B101
+	END PROCEDURE
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	proc := mod.Procedures[0]
+	assign1, ok := proc.Body[0].(*AssignStmt)
+	if !ok {
+		t.Fatalf("Esperado AssignStmt, obteve %T", proc.Body[0])
+	}
+	if num1, ok := assign1.Value.(*NumberExpr); !ok || num1.Value != 15 {
+		t.Fatalf("Esperado &O17 = 15, obteve %v", assign1.Value)
+	}
+
+	assign2, ok := proc.Body[1].(*AssignStmt)
+	if !ok {
+		t.Fatalf("Esperado AssignStmt, obteve %T", proc.Body[1])
+	}
+	if num2, ok := assign2.Value.(*NumberExpr); !ok || num2.Value != 5 {
+		t.Fatalf("Esperado &B101 = 5, obteve %v", assign2.Value)
+	}
+}
+
+func TestCompileMixedTypesEndToEnd(t *testing.T) {
+	src := `
+	MODULE MixedTypes
+	PUBLIC Main
+	DIM nome$, idade%, altura!
+
+	PROCEDURE Main
+		nome$ = "Kizuna"
+		idade% = 42
+		altura! = 1.75
+		PRINT nome$
+		PRINT idade%
+	END PROCEDURE
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	cg := NewCodeGenerator(mod)
+	obj, asmOut, err := cg.Compile()
+	if err != nil {
+		t.Fatalf("Erro ao compilar tipos mistos até .MOB: %v\nAssembly:\n%s", err, asmOut)
+	}
+	if obj == nil {
+		t.Fatalf("Objeto .MOB gerado é nulo")
+	}
+
+	if !strings.Contains(asmOut, "StrCopyLen") {
+		t.Errorf("Assembly gerado deveria referenciar StrCopyLen (EXTERN) para a atribuição de nome$")
+	}
+	if !strings.Contains(asmOut, "BDOS_PrintLenStr") {
+		t.Errorf("Assembly gerado deveria referenciar BDOS_PrintLenStr (EXTERN) para o PRINT de nome$")
+	}
+	if !strings.Contains(asmOut, "DS 256") {
+		t.Errorf("Global STRING 'nome$' deveria reservar 256 bytes (DS 256)")
+	}
+	if !strings.Contains(asmOut, "DS 4") {
+		t.Errorf("Global SINGLE 'altura!' deveria reservar 4 bytes (DS 4)")
+	}
+}
+
+func TestCompileSingleDoubleDeclareAndAssign(t *testing.T) {
+	src := `
+	MODULE FloatTypes
+	PUBLIC Main
+	DIM x!, y#, z#
+
+	PROCEDURE Main
+		x! = 3.14
+		y# = 2.71828d0
+		z# = 100
+	END PROCEDURE
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	cg := NewCodeGenerator(mod)
+	obj, asmOut, err := cg.Compile()
+	if err != nil {
+		t.Fatalf("Erro ao compilar SINGLE/DOUBLE (declarar+atribuir) até .MOB: %v\nAssembly:\n%s", err, asmOut)
+	}
+	if obj == nil {
+		t.Fatalf("Objeto .MOB gerado é nulo")
+	}
+
+	if !strings.Contains(asmOut, "DS 4") {
+		t.Errorf("Global SINGLE 'x!' deveria reservar 4 bytes (DS 4)")
+	}
+	if n := strings.Count(asmOut, "DS 8"); n != 2 {
+		t.Errorf("Esperado 2 globais DOUBLE reservando 8 bytes (DS 8) cada, encontrado %d", n)
+	}
+}
+
+func TestFloatArithmeticNotYetImplementedError(t *testing.T) {
+	src := `
+	MODULE FloatArith
+	PUBLIC Main
+	DIM x!, y!
+
+	PROCEDURE Main
+		x! = 1.0
+		y! = 2.0
+		x! = x! + y!
+	END PROCEDURE
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	cg := NewCodeGenerator(mod)
+	if _, err := cg.GenerateAsm(); err == nil {
+		t.Fatalf("Esperado erro de compilação ao somar dois SINGLE, mas compilou com sucesso")
+	} else if !strings.Contains(err.Error(), "ponto flutuante") {
+		t.Errorf("Esperado erro mencionando 'ponto flutuante', obteve: %v", err)
 	}
 }

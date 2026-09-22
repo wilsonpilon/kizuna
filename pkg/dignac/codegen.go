@@ -1,7 +1,9 @@
 package dignac
 
 import (
+	"encoding/binary"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -20,9 +22,45 @@ const (
 type varSymbol struct {
 	Name   string
 	Kind   varKind
-	Type   string // "INTEGER", "STRING", "BOOLEAN"
+	Type   string // "INTEGER", "STRING", "BOOLEAN", "SINGLE" ou "DOUBLE"
 	Offset int    // offset a partir de IX (positivo para param, positivo absoluto para local onde local está em IX - Offset)
 	Label  string // label para globais
+}
+
+// typeSize devolve o tamanho em bytes do armazenamento de uma variável pelo
+// seu tipo declarado -- usado tanto pra alocar o frame de locais (que hoje
+// soma 2 bytes fixos por variável, sem olhar pro tipo) quanto pra emitir a
+// diretiva de dado de uma global.
+func typeSize(t string) int {
+	switch strings.ToUpper(t) {
+	case "BOOLEAN":
+		return 1
+	case "STRING":
+		return 256 // 1 byte de tamanho + até 255 bytes de dados (SPEC.md §7)
+	case "SINGLE":
+		return 4 // IEEE754 binary32
+	case "DOUBLE":
+		return 8 // IEEE754 binary64
+	default: // INTEGER
+		return 2
+	}
+}
+
+// storageDirective devolve a diretiva Assembly que reserva/inicializa o
+// armazenamento de uma variável GLOBAL do tipo dado.
+func storageDirective(t string) string {
+	switch strings.ToUpper(t) {
+	case "BOOLEAN":
+		return "DB 00h"
+	case "STRING":
+		return "DS 256"
+	case "SINGLE":
+		return "DS 4"
+	case "DOUBLE":
+		return "DS 8"
+	default: // INTEGER
+		return "DW 0000h"
+	}
 }
 
 // CodeGenerator traduz a AST de MSX-BASIC Dignified em Assembly Z80 compatível com KAJI80
@@ -59,6 +97,8 @@ type CodeGenerator struct {
 	needsFileClose     bool
 	needsFileWrite     bool
 	needsPrintDecBuf   bool
+	needsStrCopyLen    bool
+	needsPrintLenStr   bool
 
 	extraData []string     // blocos DB pré-renderizados (padrões de sprite, sequências MML, caminhos de arquivo, literais de PRINT #n)
 	fileNums  map[int]bool // números de arquivo (#n) realmente usados no módulo
@@ -107,13 +147,13 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 
 	// Coleta variáveis globais
 	for _, g := range cg.module.Globals {
-		for _, vName := range g.Vars {
-			lower := strings.ToLower(vName)
+		for _, v := range g.Decls {
+			lower := strings.ToLower(v.Name)
 			cg.globals[lower] = &varSymbol{
-				Name:  vName,
+				Name:  v.Name,
 				Kind:  varGlobal,
-				Type:  g.Type,
-				Label: fmt.Sprintf("Global_%s", sanitizeIdent(vName)),
+				Type:  v.Type,
+				Label: fmt.Sprintf("Global_%s", sanitizeIdent(v.Name)),
 			}
 		}
 	}
@@ -227,6 +267,12 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 	if cg.needsPrintDecBuf && !containsString(externs, "PrintDec16ToBuffer") {
 		externs = append(externs, "PrintDec16ToBuffer")
 	}
+	if cg.needsStrCopyLen && !containsString(externs, "StrCopyLen") {
+		externs = append(externs, "StrCopyLen")
+	}
+	if cg.needsPrintLenStr && !containsString(externs, "BDOS_PrintLenStr") {
+		externs = append(externs, "BDOS_PrintLenStr")
+	}
 
 	if len(externs) > 0 {
 		cg.asm.WriteString(fmt.Sprintf("EXTERN %s\n\n", strings.Join(externs, ", ")))
@@ -298,16 +344,21 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 		cg.asm.WriteString("DGN_CRLF: DB 0Dh, 0Ah\n\n")
 	}
 
-	// Seção de Variáveis Globais
+	// Seção de Variáveis Globais. Nomes ordenados antes de emitir -- iterar
+	// cg.globals (um map do Go) direto embaralharia a ordem a cada
+	// remontagem, mesma classe de não-determinismo já corrigida na tabela de
+	// símbolos do KAJI80 (ver histórico do projeto).
 	if len(cg.globals) > 0 {
+		names := make([]string, 0, len(cg.globals))
+		for name := range cg.globals {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+
 		cg.asm.WriteString("; --- Variáveis Globais ---\n")
-		for _, sym := range cg.globals {
-			if strings.EqualFold(sym.Type, "BOOLEAN") {
-				cg.asm.WriteString(fmt.Sprintf("%s:\n    DB 00h\n", sym.Label))
-			} else {
-				// Integer (16 bits)
-				cg.asm.WriteString(fmt.Sprintf("%s:\n    DW 0000h\n", sym.Label))
-			}
+		for _, name := range names {
+			sym := cg.globals[name]
+			cg.asm.WriteString(fmt.Sprintf("%s:\n    %s\n", sym.Label, storageDirective(sym.Type)))
 		}
 		cg.asm.WriteString("\n")
 	}
@@ -350,15 +401,18 @@ func (cg *CodeGenerator) generateProcedure(sb *strings.Builder, proc *ProcedureN
 		}
 	}
 
-	// Alocação de variáveis locais no frame de pilha (IX - Offset)
+	// Alocação de variáveis locais no frame de pilha (IX - Offset). Cada
+	// variável reserva o tamanho do seu próprio tipo (typeSize) em vez dos
+	// 2 bytes fixos de antes -- uma STRING local, por exemplo, ocupa 256
+	// bytes do frame, não 2.
 	localOffset := 0
 	for _, locDecl := range proc.Locals {
-		for _, vName := range locDecl.Vars {
-			localOffset += 2 // 16-bit
-			cg.currentLocals[strings.ToLower(vName)] = &varSymbol{
-				Name:   vName,
+		for _, v := range locDecl.Decls {
+			localOffset += typeSize(v.Type)
+			cg.currentLocals[strings.ToLower(v.Name)] = &varSymbol{
+				Name:   v.Name,
 				Kind:   varLocal,
-				Type:   locDecl.Type,
+				Type:   v.Type,
 				Offset: localOffset,
 			}
 		}
@@ -400,12 +454,19 @@ func (cg *CodeGenerator) generateProcedure(sb *strings.Builder, proc *ProcedureN
 func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 	switch s := stmt.(type) {
 	case *AssignStmt:
-		// Avalia expressão -> HL
-		if err := cg.generateExpr(sb, s.Value); err != nil {
-			return err
+		switch cg.varType(s.VarName) {
+		case "STRING":
+			return cg.generateStringAssign(sb, s)
+		case "SINGLE", "DOUBLE":
+			return cg.generateFloatAssign(sb, s, cg.varType(s.VarName))
+		default:
+			// Avalia expressão -> HL
+			if err := cg.generateExpr(sb, s.Value); err != nil {
+				return err
+			}
+			// Armazena HL na variável
+			return cg.storeVar(sb, s.VarName)
 		}
-		// Armazena HL na variável
-		return cg.storeVar(sb, s.VarName)
 
 	case *ForStmt:
 		// FOR var = start TO end [STEP step] ... NEXT [var]
@@ -653,6 +714,23 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 				lbl := cg.getStringLabel(a.Value)
 				sb.WriteString(fmt.Sprintf("    LD DE, %s\n", lbl))
 				sb.WriteString("    CALL BDOS_PrintString\n")
+			case *VarExpr:
+				switch cg.varType(a.Name) {
+				case "STRING":
+					cg.needsPrintLenStr = true
+					if err := cg.loadVarAddress(sb, a.Name); err != nil {
+						return err
+					}
+					sb.WriteString("    CALL BDOS_PrintLenStr\n")
+				case "SINGLE", "DOUBLE":
+					return fmt.Errorf("PRINT de '%s': impressão de ponto flutuante (SINGLE/DOUBLE) ainda não implementada", a.Name)
+				default:
+					cg.needsPrintDec = true
+					if err := cg.generateExpr(sb, a); err != nil {
+						return err
+					}
+					sb.WriteString("    CALL PrintDec16\n")
+				}
 			default:
 				cg.needsPrintDec = true
 				if err := cg.generateExpr(sb, a); err != nil {
@@ -887,8 +965,18 @@ func (cg *CodeGenerator) generateExpr(sb *strings.Builder, expr Expr) error {
 		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", lbl))
 		return nil
 
+	case *FloatExpr:
+		return fmt.Errorf("aritmética de ponto flutuante (SINGLE/DOUBLE) ainda não implementada -- literal %v", e.Value)
+
 	case *VarExpr:
-		return cg.loadVar(sb, e.Name)
+		switch cg.varType(e.Name) {
+		case "STRING":
+			return fmt.Errorf("variável STRING '%s' só pode ser usada em atribuição ou PRINT por enquanto", e.Name)
+		case "SINGLE", "DOUBLE":
+			return fmt.Errorf("aritmética de ponto flutuante (SINGLE/DOUBLE) ainda não implementada -- variável '%s'", e.Name)
+		default:
+			return cg.loadVar(sb, e.Name)
+		}
 
 	case *UnaryExpr:
 		if err := cg.generateExpr(sb, e.Expr); err != nil {
@@ -1066,10 +1154,183 @@ func (cg *CodeGenerator) storeVar(sb *strings.Builder, name string) error {
 	return fmt.Errorf("variável '%s' não declarada", name)
 }
 
+// loadVarAddress carrega em HL o ENDEREÇO de uma variável (não o valor) --
+// necessário para tipos que não cabem num par de registradores de 16 bits
+// (STRING: 256 bytes; SINGLE: 4; DOUBLE: 8), diferente de loadVar/storeVar,
+// que sempre movem exatamente 2 bytes.
+//
+// Para uma global, o endereço já É o label (LD HL,label). Para uma local ou
+// parâmetro, o endereço é relativo a IX (IX-Offset ou IX+Offset) -- não
+// existe "ADD HL,IX" no Z80 (só ADD HL com BC/DE/HL/SP), então o caminho é
+// copiar IX pra HL via PUSH IX/POP HL e somar o deslocamento com ADD HL,DE.
+// O deslocamento negativo (caso local) é calculado em Go como um uint16 em
+// complemento de dois e emitido já pronto em hexadecimal -- mesmo padrão que
+// generateExpr já usa pra NumberExpr, em vez de depender do parser do KAJI80
+// reconhecer um literal decimal negativo (que não foi verificado).
+func (cg *CodeGenerator) loadVarAddress(sb *strings.Builder, name string) error {
+	lower := strings.ToLower(name)
+
+	if sym, ok := cg.currentLocals[lower]; ok {
+		sb.WriteString("    PUSH IX\n    POP HL\n")
+		sb.WriteString(fmt.Sprintf("    LD DE, %04Xh\n", uint16(-sym.Offset)))
+		sb.WriteString("    ADD HL, DE\n")
+		return nil
+	}
+
+	if sym, ok := cg.currentParams[lower]; ok {
+		sb.WriteString("    PUSH IX\n    POP HL\n")
+		sb.WriteString(fmt.Sprintf("    LD DE, %04Xh\n", uint16(sym.Offset)))
+		sb.WriteString("    ADD HL, DE\n")
+		return nil
+	}
+
+	if sym, ok := cg.globals[lower]; ok {
+		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", sym.Label))
+		return nil
+	}
+
+	return fmt.Errorf("variável '%s' não declarada", name)
+}
+
+// varType devolve o tipo declarado de uma variável (local, parâmetro ou
+// global) já conhecida, ou "" se não encontrada.
+func (cg *CodeGenerator) varType(name string) string {
+	lower := strings.ToLower(name)
+	if sym, ok := cg.currentLocals[lower]; ok {
+		return sym.Type
+	}
+	if sym, ok := cg.currentParams[lower]; ok {
+		return sym.Type
+	}
+	if sym, ok := cg.globals[lower]; ok {
+		return sym.Type
+	}
+	return ""
+}
+
+// generateStringAssign implementa "s$ = <literal>" ou "s$ = outravar$" --
+// diferente de uma atribuição INTEGER/BOOLEAN (LD (dest),HL de 2 bytes fixos
+// via storeVar), uma STRING é um buffer de até 256 bytes (1 de tamanho + até
+// 255 de dados, SPEC.md §7), então a atribuição é uma cópia de buffer via
+// StrCopyLen (MSXLIB, lib/src/string.asm) entre os ENDEREÇOS de origem e
+// destino, não um valor de 16 bits.
+//
+// O endereço de destino é calculado e empilhado ANTES do de origem porque
+// loadVarAddress usa DE como registrador de rascunho para locais/parâmetros
+// -- se a origem também for uma local/parâmetro e fosse calculada primeiro,
+// calcular o destino depois sobrescreveria o DE da origem antes do CALL.
+func (cg *CodeGenerator) generateStringAssign(sb *strings.Builder, s *AssignStmt) error {
+	cg.needsStrCopyLen = true
+
+	if err := cg.loadVarAddress(sb, s.VarName); err != nil {
+		return err
+	}
+	sb.WriteString("    PUSH HL\n")
+
+	switch v := s.Value.(type) {
+	case *StringExpr:
+		if len(v.Value) > 255 {
+			return fmt.Errorf("literal de string \"%s\" excede 255 caracteres (máximo suportado)", v.Value)
+		}
+		label := cg.newLabel("StrLit")
+		cg.extraData = append(cg.extraData, fmt.Sprintf("%s:\n    DB %02Xh, \"%s\"\n", label, len(v.Value), escapeString(v.Value)))
+		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", label))
+	case *VarExpr:
+		srcType := cg.varType(v.Name)
+		if srcType != "STRING" {
+			return fmt.Errorf("atribuição a '%s' (STRING) exige um literal de texto ou outra variável STRING -- '%s' é do tipo %s", s.VarName, v.Name, srcType)
+		}
+		if err := cg.loadVarAddress(sb, v.Name); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("atribuição a '%s' (STRING) só suporta literal de texto ou outra variável STRING por enquanto -- concatenação e outras expressões de string ainda não implementadas", s.VarName)
+	}
+
+	sb.WriteString("    POP DE\n")
+	sb.WriteString("    CALL StrCopyLen\n")
+	return nil
+}
+
+// generateFloatAssign implementa "x! = <literal>" ou "x! = outravar!" para
+// SINGLE/DOUBLE -- cópia crua de 4/8 bytes IEEE754 entre endereços (mesma
+// ordem destino-antes-de-origem de generateStringAssign, mesmo motivo). Não
+// existe LDIR no KAJI80 (não suportado pelo assembler), e o tamanho é uma
+// constante pequena conhecida em tempo de compilação (4 ou 8), então o loop
+// é desenrolado em vez de usar B/DJNZ.
+func (cg *CodeGenerator) generateFloatAssign(sb *strings.Builder, s *AssignStmt, targetType string) error {
+	if err := cg.loadVarAddress(sb, s.VarName); err != nil {
+		return err
+	}
+	sb.WriteString("    PUSH HL\n")
+
+	switch v := s.Value.(type) {
+	case *FloatExpr:
+		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", cg.floatLiteralLabel(v, targetType)))
+	case *NumberExpr:
+		fe := &FloatExpr{Value: float64(v.Value), IsDouble: targetType == "DOUBLE"}
+		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", cg.floatLiteralLabel(fe, targetType)))
+	case *VarExpr:
+		srcType := cg.varType(v.Name)
+		if srcType != targetType {
+			return fmt.Errorf("atribuição a '%s' (%s) exige um literal numérico ou outra variável %s -- '%s' é do tipo %s", s.VarName, targetType, targetType, v.Name, srcType)
+		}
+		if err := cg.loadVarAddress(sb, v.Name); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("atribuição a '%s' (%s) só suporta literal numérico ou outra variável %s por enquanto -- aritmética de ponto flutuante ainda não implementada", s.VarName, targetType, targetType)
+	}
+
+	sb.WriteString("    POP DE\n")
+	cg.emitRawCopy(sb, typeSize(targetType))
+	return nil
+}
+
+// floatLiteralLabel emite um bloco DB com a representação IEEE754
+// (binary32/binary64, little-endian) de um literal SINGLE/DOUBLE calculada
+// em Go (math.Float32bits/Float64bits) e devolve o label criado.
+func (cg *CodeGenerator) floatLiteralLabel(v *FloatExpr, targetType string) string {
+	if targetType == "DOUBLE" {
+		var buf [8]byte
+		binary.LittleEndian.PutUint64(buf[:], math.Float64bits(v.Value))
+		label := cg.newLabel("DblLit")
+		cg.extraData = append(cg.extraData, fmt.Sprintf("%s:\n    DB %s\n", label, bytesToHexList(buf[:])))
+		return label
+	}
+	var buf [4]byte
+	binary.LittleEndian.PutUint32(buf[:], math.Float32bits(float32(v.Value)))
+	label := cg.newLabel("SglLit")
+	cg.extraData = append(cg.extraData, fmt.Sprintf("%s:\n    DB %s\n", label, bytesToHexList(buf[:])))
+	return label
+}
+
+// emitRawCopy copia `size` bytes de (HL) para (DE), desenrolado (sem laço) --
+// usado só para SINGLE/DOUBLE, onde size é sempre 4 ou 8.
+func (cg *CodeGenerator) emitRawCopy(sb *strings.Builder, size int) {
+	for i := 0; i < size; i++ {
+		sb.WriteString("    LD A, (HL)\n")
+		sb.WriteString("    LD (DE), A\n")
+		if i < size-1 {
+			sb.WriteString("    INC HL\n")
+			sb.WriteString("    INC DE\n")
+		}
+	}
+}
+
+func bytesToHexList(bs []byte) string {
+	parts := make([]string, len(bs))
+	for i, b := range bs {
+		parts[i] = fmt.Sprintf("%02Xh", b)
+	}
+	return strings.Join(parts, ", ")
+}
+
 func sanitizeIdent(s string) string {
 	s = strings.ReplaceAll(s, "%", "_int")
 	s = strings.ReplaceAll(s, "$", "_str")
-	s = strings.ReplaceAll(s, "!", "_bool")
+	s = strings.ReplaceAll(s, "!", "_sgl") // ! agora é SINGLE, não BOOLEAN
+	s = strings.ReplaceAll(s, "#", "_dbl") // # (DOUBLE) não era tratado antes -- um label com '#' de verdade não é um identificador Assembly válido
 	return s
 }
 

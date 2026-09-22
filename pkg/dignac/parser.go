@@ -183,17 +183,56 @@ func (p *Parser) ParseModule() (*ModuleNode, error) {
 	return module, nil
 }
 
+// typeFromSuffix resolve o tipo de uma variável pelo sufixo clássico do
+// BASIC no fim do nome: %=INTEGER, $=STRING, !=SINGLE, #=DOUBLE. Sem sufixo
+// reconhecido, o padrão é INTEGER (mesmo default de sempre) -- BOOLEAN não
+// tem sufixo próprio (não é um tipo do MSX-BASIC, é uma extensão desta
+// linguagem; só entra via "AS BOOLEAN" explícito).
+func typeFromSuffix(name string) string {
+	if name == "" {
+		return "INTEGER"
+	}
+	switch name[len(name)-1] {
+	case '%':
+		return "INTEGER"
+	case '$':
+		return "STRING"
+	case '!':
+		return "SINGLE"
+	case '#':
+		return "DOUBLE"
+	default:
+		return "INTEGER"
+	}
+}
+
+// asClauseType lê um tipo explícito após "AS" (INTEGER/STRING/BOOLEAN/
+// SINGLE/DOUBLE), consumindo o token. Devolve ok=false se o token atual não
+// for um tipo reconhecido (chamador decide o que fazer nesse caso).
+func (p *Parser) asClauseType() (string, bool, error) {
+	switch p.curToken.Type {
+	case TokenInteger, TokenStringKw, TokenBoolean, TokenSingle, TokenDouble:
+		t := strings.ToUpper(p.curToken.Value)
+		if err := p.nextToken(); err != nil {
+			return "", false, err
+		}
+		return t, true, nil
+	default:
+		return "", false, nil
+	}
+}
+
 func (p *Parser) parseDimDecl() (*DimDeclNode, error) {
 	if err := p.nextToken(); err != nil { // consome DIM
 		return nil, err
 	}
 
-	decl := &DimDeclNode{Type: "INTEGER"}
+	decl := &DimDeclNode{}
 	for {
 		if p.curToken.Type != TokenIdent {
 			return nil, fmt.Errorf("esperado nome de variável em DIM na linha %d", p.curToken.Line)
 		}
-		decl.Vars = append(decl.Vars, p.curToken.Value)
+		decl.Decls = append(decl.Decls, VarDecl{Name: p.curToken.Value, Type: typeFromSuffix(p.curToken.Value)})
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
@@ -206,14 +245,18 @@ func (p *Parser) parseDimDecl() (*DimDeclNode, error) {
 		break
 	}
 
+	// "AS <Tipo>" no final sobrescreve o tipo de TODAS as variáveis da lista
+	// (mesmo comportamento de antes) -- sem AS, cada variável já resolveu o
+	// próprio tipo pelo sufixo do nome acima.
 	if p.curToken.Type == TokenAs {
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
-		if p.curToken.Type == TokenInteger || p.curToken.Type == TokenStringKw || p.curToken.Type == TokenBoolean {
-			decl.Type = strings.ToUpper(p.curToken.Value)
-			if err := p.nextToken(); err != nil {
-				return nil, err
+		if explicitType, ok, err := p.asClauseType(); err != nil {
+			return nil, err
+		} else if ok {
+			for i := range decl.Decls {
+				decl.Decls[i].Type = explicitType
 			}
 		}
 	}
@@ -252,12 +295,7 @@ func (p *Parser) parseProcedure() (*ProcedureNode, error) {
 				return nil, fmt.Errorf("esperado identificador de parâmetro na linha %d", p.curToken.Line)
 			}
 			pName := p.curToken.Value
-			pType := "INTEGER"
-			if strings.HasSuffix(pName, "$") {
-				pType = "STRING"
-			} else if strings.HasSuffix(pName, "!") {
-				pType = "BOOLEAN"
-			}
+			pType := typeFromSuffix(pName)
 
 			if err := p.nextToken(); err != nil {
 				return nil, err
@@ -267,9 +305,10 @@ func (p *Parser) parseProcedure() (*ProcedureNode, error) {
 				if err := p.nextToken(); err != nil {
 					return nil, err
 				}
-				pType = strings.ToUpper(p.curToken.Value)
-				if err := p.nextToken(); err != nil {
+				if explicitType, ok, err := p.asClauseType(); err != nil {
 					return nil, err
+				} else if ok {
+					pType = explicitType
 				}
 			}
 
@@ -344,12 +383,12 @@ func (p *Parser) parseLocalDecl() (*LocalDeclNode, error) {
 		return nil, err
 	}
 
-	decl := &LocalDeclNode{Type: "INTEGER"}
+	decl := &LocalDeclNode{}
 	for {
 		if p.curToken.Type != TokenIdent {
 			return nil, fmt.Errorf("esperado nome de variável local após LOCAL na linha %d", p.curToken.Line)
 		}
-		decl.Vars = append(decl.Vars, p.curToken.Value)
+		decl.Decls = append(decl.Decls, VarDecl{Name: p.curToken.Value, Type: typeFromSuffix(p.curToken.Value)})
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
@@ -362,13 +401,18 @@ func (p *Parser) parseLocalDecl() (*LocalDeclNode, error) {
 		break
 	}
 
+	// "AS <Tipo>" sobrescreve o tipo de todas as variáveis da lista, mesmo
+	// padrão de DIM (ver parseDimDecl).
 	if p.curToken.Type == TokenAs {
 		if err := p.nextToken(); err != nil {
 			return nil, err
 		}
-		decl.Type = strings.ToUpper(p.curToken.Value)
-		if err := p.nextToken(); err != nil {
+		if explicitType, ok, err := p.asClauseType(); err != nil {
 			return nil, err
+		} else if ok {
+			for i := range decl.Decls {
+				decl.Decls[i].Type = explicitType
+			}
 		}
 	}
 
@@ -1194,11 +1238,20 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		valStr := p.curToken.Value
 		var val int
 		var err error
-		if strings.HasPrefix(valStr, "&H") || strings.HasPrefix(valStr, "&h") {
+		switch {
+		case strings.HasPrefix(valStr, "&H") || strings.HasPrefix(valStr, "&h"):
 			var parsed int64
 			parsed, err = strconv.ParseInt(valStr[2:], 16, 32)
 			val = int(parsed)
-		} else {
+		case strings.HasPrefix(valStr, "&O") || strings.HasPrefix(valStr, "&o"):
+			var parsed int64
+			parsed, err = strconv.ParseInt(valStr[2:], 8, 32)
+			val = int(parsed)
+		case strings.HasPrefix(valStr, "&B") || strings.HasPrefix(valStr, "&b"):
+			var parsed int64
+			parsed, err = strconv.ParseInt(valStr[2:], 2, 32)
+			val = int(parsed)
+		default:
 			val, err = strconv.Atoi(valStr)
 		}
 		if err != nil {
@@ -1206,6 +1259,24 @@ func (p *Parser) parsePrimary() (Expr, error) {
 		}
 		_ = p.nextToken()
 		return &NumberExpr{Value: val}, nil
+
+	case TokenFloat:
+		// Value vem de lexer.lexNumber() como "<número><S|D>" -- o último
+		// caractere é o marcador de precisão (S=SINGLE, D=DOUBLE), nunca
+		// parte do número em si, então precisa ser removido antes do
+		// ParseFloat.
+		valStr := p.curToken.Value
+		if len(valStr) < 2 {
+			return nil, fmt.Errorf("literal de ponto flutuante inválido: %q", valStr)
+		}
+		marker := valStr[len(valStr)-1]
+		numStr := valStr[:len(valStr)-1]
+		fval, err := strconv.ParseFloat(numStr, 64)
+		if err != nil {
+			return nil, fmt.Errorf("número de ponto flutuante inválido: %v", err)
+		}
+		_ = p.nextToken()
+		return &FloatExpr{Value: fval, IsDouble: marker == 'D'}, nil
 
 	case TokenString:
 		str := p.curToken.Value

@@ -7,7 +7,7 @@ MODULE STRING
 BANK 0
 
 PUBLIC StrLen, StrCopy, StrToUpper, PrintHex8, PrintHex16, PrintDec16
-PUBLIC PrintDec16ToBuffer
+PUBLIC PrintDec16ToBuffer, StrCopyLen, BDOS_PrintLenStr
 EXTERN BDOS_PrintChar
 
 ; -----------------------------------------------------------------------------
@@ -280,5 +280,78 @@ PDTB_WriteChar:
 
 PDTB_BufPtr: DW 0000h
 PDTB_Count:  DB 00h
+
+; -----------------------------------------------------------------------------
+; StrCopyLen: Copia uma string no formato "curto" (1 byte de tamanho + até 255
+; bytes de dados, ver SPEC.md §7) da origem para o destino -- usado por DIGNAC
+; para atribuição de variável STRING (s$ = ...), que não é um simples LD de
+; 2 bytes como INTEGER.
+; Entrada: HL = origem, DE = destino (ambos no formato tamanho+dados)
+; -----------------------------------------------------------------------------
+StrCopyLen:
+    PUSH AF
+    PUSH BC
+    PUSH HL
+    PUSH DE
+
+    LD A, (HL)  ; byte de tamanho (0..255 bytes de dados)
+    LD B, A     ; B = contador de bytes de DADOS a copiar
+    LD (DE), A  ; copia o próprio byte de tamanho pro destino
+    INC HL
+    INC DE
+
+    LD A, B
+    OR A
+    JR Z, StrCopyLen_Done ; tamanho 0: nenhum dado a copiar (B=0 não pode ir pro DJNZ, viraria 256 iterações)
+StrCopyLen_Loop:
+    LD A, (HL)
+    LD (DE), A
+    INC HL
+    INC DE
+    DJNZ StrCopyLen_Loop
+StrCopyLen_Done:
+
+    POP DE
+    POP HL
+    POP BC
+    POP AF
+    RET
+
+; -----------------------------------------------------------------------------
+; BDOS_PrintLenStr: Imprime no console uma string no formato "curto" (1 byte
+; de tamanho + dados) -- diferente de BDOS_PrintString, que espera um
+; terminador '$' e não sabe nada sobre esse formato.
+; Entrada: HL = ponteiro para a string (tamanho + dados)
+; -----------------------------------------------------------------------------
+BDOS_PrintLenStr:
+    PUSH AF
+    PUSH BC
+    PUSH DE
+    PUSH HL
+
+    LD A, (HL)
+    LD B, A
+    INC HL
+
+    LD A, B
+    OR A
+    JR Z, BDOS_PrintLenStr_Done
+BDOS_PrintLenStr_Loop:
+    LD A, (HL)
+    LD E, A
+    PUSH HL
+    PUSH BC
+    CALL BDOS_PrintChar
+    POP BC
+    POP HL
+    INC HL
+    DJNZ BDOS_PrintLenStr_Loop
+BDOS_PrintLenStr_Done:
+
+    POP HL
+    POP DE
+    POP BC
+    POP AF
+    RET
 
 ENDMOD

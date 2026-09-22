@@ -112,11 +112,16 @@ func (l *Lexer) NextToken() (Token, error) {
 			return l.lexString()
 		}
 
-		// Números hexadecimais (&H... ou $...)
+		// Números hexadecimais (&H... ou $...), octais (&O...) e binários (&B...)
 		if ch == '&' {
 			next := l.peek()
-			if next == 'H' || next == 'h' {
+			switch next {
+			case 'H', 'h':
 				return l.lexHexNumber("&H")
+			case 'O', 'o':
+				return l.lexRadixNumber("&O", isOctalDigit)
+			case 'B', 'b':
+				return l.lexRadixNumber("&B", isBinaryDigit)
 			}
 		}
 		if ch == '$' && isHexDigit(l.peek()) {
@@ -237,6 +242,15 @@ func (l *Lexer) lexString() (Token, error) {
 	}, nil
 }
 
+// lexNumber lê um número decimal, que pode ser um INTEGER simples ("42") ou
+// um literal SINGLE/DOUBLE de ponto flutuante: parte fracionária ("3.14"),
+// notação de expoente com "e"/"E" (implica SINGLE) ou "d"/"D" (implica
+// DOUBLE), com sinal opcional ("1.5e+10", "3.14159d-5"), e/ou um sufixo de
+// tipo explícito "!" (SINGLE) ou "#" (DOUBLE) no final ("42!", "42#"). Sem
+// nenhum desses marcadores, o literal é um INTEGER (TokenNumber); com
+// qualquer um deles, vira um TokenFloat cujo Value é o número no formato
+// aceito por strconv.ParseFloat mais um marcador de precisão ('S'/'D') no
+// último caractere, que parsePrimary (parser.go) lê e remove.
 func (l *Lexer) lexNumber() (Token, error) {
 	startLine := l.line
 	startCol := l.col
@@ -246,9 +260,70 @@ func (l *Lexer) lexNumber() (Token, error) {
 		sb.WriteRune(l.advance())
 	}
 
+	isFloat := false
+	isDouble := false
+
+	if l.current() == '.' && unicode.IsDigit(l.peek()) {
+		isFloat = true
+		sb.WriteRune(l.advance())
+		for l.pos < len(l.source) && unicode.IsDigit(l.current()) {
+			sb.WriteRune(l.advance())
+		}
+	}
+
+	if c := l.current(); c == 'e' || c == 'E' || c == 'd' || c == 'D' {
+		savedPos, savedLine, savedCol := l.pos, l.line, l.col
+		expMarker := c
+		l.advance()
+		sign := ""
+		if l.current() == '+' || l.current() == '-' {
+			sign = string(l.current())
+			l.advance()
+		}
+		if unicode.IsDigit(l.current()) {
+			isFloat = true
+			if expMarker == 'd' || expMarker == 'D' {
+				isDouble = true
+			}
+			sb.WriteRune('E') // normaliza p/ 'E' -- ParseFloat do Go só aceita 'e'/'E'
+			sb.WriteString(sign)
+			for l.pos < len(l.source) && unicode.IsDigit(l.current()) {
+				sb.WriteRune(l.advance())
+			}
+		} else {
+			// Não era um expoente de verdade (ex: "d" logo após um número
+			// sem dígito nenhum depois) -- devolve a posição, esse
+			// caractere pertence ao próximo token.
+			l.pos, l.line, l.col = savedPos, savedLine, savedCol
+		}
+	}
+
+	switch l.current() {
+	case '!':
+		isFloat = true
+		l.advance()
+	case '#':
+		isFloat = true
+		isDouble = true
+		l.advance()
+	}
+
+	if !isFloat {
+		return Token{
+			Type:   TokenNumber,
+			Value:  sb.String(),
+			Line:   startLine,
+			Column: startCol,
+		}, nil
+	}
+
+	marker := "S"
+	if isDouble {
+		marker = "D"
+	}
 	return Token{
-		Type:   TokenNumber,
-		Value:  sb.String(),
+		Type:   TokenFloat,
+		Value:  sb.String() + marker,
 		Line:   startLine,
 		Column: startCol,
 	}, nil
@@ -280,10 +355,46 @@ func (l *Lexer) lexHexNumber(prefix string) (Token, error) {
 	}, nil
 }
 
+// lexRadixNumber generaliza lexHexNumber para os literais octal (&O) e
+// binário (&B) -- mesmo padrão de normalizar o prefixo + dígitos em
+// maiúsculas no Value do token, que parsePrimary reconhece pelo prefixo.
+func (l *Lexer) lexRadixNumber(prefix string, isDigit func(rune) bool) (Token, error) {
+	startLine := l.line
+	startCol := l.col
+
+	for i := 0; i < len(prefix); i++ {
+		l.advance()
+	}
+
+	var sb strings.Builder
+	for l.pos < len(l.source) && isDigit(l.current()) {
+		sb.WriteRune(l.advance())
+	}
+
+	if sb.Len() == 0 {
+		return Token{}, fmt.Errorf("número %s inválido em %d:%d", prefix, startLine, startCol)
+	}
+
+	return Token{
+		Type:   TokenNumber,
+		Value:  prefix + sb.String(),
+		Line:   startLine,
+		Column: startCol,
+	}, nil
+}
+
 func isHexDigit(ch rune) bool {
 	return unicode.IsDigit(ch) ||
 		(ch >= 'a' && ch <= 'f') ||
 		(ch >= 'A' && ch <= 'F')
+}
+
+func isOctalDigit(ch rune) bool {
+	return ch >= '0' && ch <= '7'
+}
+
+func isBinaryDigit(ch rune) bool {
+	return ch == '0' || ch == '1'
 }
 
 func (l *Lexer) lexIdentOrKeyword() (Token, error) {
@@ -327,6 +438,8 @@ func (l *Lexer) lexIdentOrKeyword() (Token, error) {
 		"INTEGER":   TokenInteger,
 		"STRING":    TokenStringKw,
 		"BOOLEAN":   TokenBoolean,
+		"SINGLE":    TokenSingle,
+		"DOUBLE":    TokenDouble,
 		"RETURN":    TokenReturn,
 		"EXIT":      TokenExit,
 		"FOR":       TokenFor,

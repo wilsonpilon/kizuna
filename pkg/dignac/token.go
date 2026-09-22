@@ -13,6 +13,7 @@ const (
 	// Literais e Identificadores
 	TokenIdent
 	TokenNumber
+	TokenFloat // literal SINGLE/DOUBLE (ponto/expoente/sufixo != INTEGER puro)
 	TokenString
 
 	// Palavras-chave de Estrutura e Modularidade
@@ -30,6 +31,8 @@ const (
 	TokenInteger
 	TokenStringKw
 	TokenBoolean
+	TokenSingle
+	TokenDouble
 	TokenReturn
 	TokenExit
 
@@ -107,6 +110,7 @@ var tokenNames = map[TokenType]string{
 	TokenNewline:   "Newline",
 	TokenIdent:     "Identifier",
 	TokenNumber:    "Number",
+	TokenFloat:     "Float",
 	TokenString:    "String",
 	TokenModule:    "MODULE",
 	TokenEnd:       "END",
@@ -122,6 +126,8 @@ var tokenNames = map[TokenType]string{
 	TokenInteger:   "INTEGER",
 	TokenStringKw:  "STRING",
 	TokenBoolean:   "BOOLEAN",
+	TokenSingle:    "SINGLE",
+	TokenDouble:    "DOUBLE",
 	TokenReturn:    "RETURN",
 	TokenExit:      "EXIT",
 	TokenFor:       "FOR",
