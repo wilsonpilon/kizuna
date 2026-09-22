@@ -2,6 +2,7 @@ package dignac
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -181,6 +182,8 @@ func TestCompileAndLinkHelloAndCalc(t *testing.T) {
 		return
 	}
 
+	tmpDir := t.TempDir()
+
 	samples := []string{"../../sample/basic/hello.bas", "../../sample/basic/calc.bas"}
 	for _, path := range samples {
 		content, err := os.ReadFile(path)
@@ -205,14 +208,18 @@ func TestCompileAndLinkHelloAndCalc(t *testing.T) {
 			t.Fatalf("Erro na compilação de %s: %v\nAssembly:\n%s", path, err, asmOut)
 		}
 
-		// Salva temporariamente .mob
-		mobPath := strings.TrimSuffix(path, ".bas") + ".mob"
+		// Salva .mob/.com num diretório temporário -- nunca em cima dos
+		// fontes de sample/, que são versionados no Git (escrever ali
+		// sujava o working tree a cada `go test ./...` sem nenhuma mudança
+		// de fonte real, só reordenação interna da pool de strings).
+		base := strings.TrimSuffix(filepath.Base(path), ".bas")
+		mobPath := filepath.Join(tmpDir, base+".mob")
 		if err := mob.SaveToFile(mobPath, obj); err != nil {
 			t.Fatalf("Erro ao gravar %s: %v", mobPath, err)
 		}
 
 		// Linka com msxlib.hlib via MUSUBI
-		outCom := strings.TrimSuffix(path, ".bas") + ".com"
+		outCom := filepath.Join(tmpDir, base+".com")
 		cfg := musubi.LinkerConfig{
 			BaseAddress: 0x0100,
 			EntryPoint:  "Start",
