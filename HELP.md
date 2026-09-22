@@ -301,37 +301,47 @@ O KIZUNA inclui uma biblioteca de rotinas padrão prontas para uso em `lib/msxli
 | **`string`** | `StrLen`, `StrCopy`, `StrToUpper`, `PrintHex8`, `PrintHex16`, `PrintDec16`                                             | Manipulação de textos terminados em zero (`\0`) e conversão de números para hexadecimal e decimal formatado. |
 | **`math`**   | `Mul16`, `Div16`                                                                                                       | Multiplicação e divisão inteira não sinalizada de 16 bits rápida por deslocamento e soma.                    |
 
-### 11.1. Estado da depuração gráfica (em aberto)
+### 11.1. Estado da depuração gráfica (causa raiz encontrada na v4.5.2)
 
-**O traçado em SCREEN 2 ainda não está confiável.** Isolado, um único
-`VDP_PSet` funciona corretamente — inclusive duas chamadas separadas e
-independentes funcionam perfeitamente (ver `sample/basic/pset_test.bas` e
-`sample/basic/pset_two.bas`). O problema está especificamente no laço interno
-de `VDP_Line`/`VDP_BoxFill` (muitos pontos plotados em sequência apertada):
-o resultado sai com pixels dispersos e desconexos em vez de uma linha contínua
-(ver `sample/basic/line_test.bas`, o teste mínimo de reprodução: uma única
-`LINE` horizontal).
+**A causa raiz do traçado bagunçado em SCREEN 2 foi encontrada e corrigida
+na v4.5.2** — duas sessões anteriores (2026-09-10) tinham investigado e
+descartado timing de VRAM, atomicidade de `DI`/`EI` e o motor de comando de
+hardware do V9938 (esse último confirmado incompatível com SCREEN 2 por
+documentação externa: só funciona em Graphic 4-7/SCREEN 5-8, fica preservado
+em `VDP_PSet_HW`), sem achar o problema real. Eram dois bugs independentes:
 
-Já tentado e **descartado** por não resolver: mais `NOP`s de folga entre
-operações de VRAM; tornar o laço inteiro atômico com um único `DI`/`EI` em vez
-de por-chamada; usar o motor de comando de hardware do V9938/V9958
-(registradores 32-46) em vez do cálculo manual de endereço — esse motor só
-funciona nos modos bitmap Graphic 4-7 (SCREEN 5-8), nunca em SCREEN 2
-(confirmado via documentação técnica externa), e fica preservado em
-`VDP_PSet_HW` para quando a MSXLIB ganhar suporte a esses modos. O laço de
-`VDP_Line` foi revisado byte a byte contra o `.MOB` montado e está
-semanticamente correto — a causa raiz segue sem confirmação.
+1. **`KAJI80` codificava `CP (IX+d)`, `SUB (IX+d)` e demais operações ALU com
+   operando indexado como um imediato de 8 bits, em silêncio** —
+   `CP (IX+8)` virava `CP 0` (`FE 00`) em vez do `DD BE 08` correto, sem erro
+   de montagem. As 9 ocorrências dessa forma no projeto inteiro estavam
+   todas dentro de `VDP_Line`/`VDP_BoxFill`, que por isso desenhavam a partir
+   de parâmetros sempre lidos como zero (explicando, entre outras coisas, o
+   dump de VRAM de uma sessão anterior que parecia apontar para corrupção de
+   `DE` — na verdade era `VDP_Line` calculando um Bresenham totalmente
+   diferente do esperado a partir de DX/DY errados).
+2. **`VDP_PSet_Raw` sobrescrevia o byte inteiro do padrão em vez de fazer
+   leitura-modificação-escrita**, apagando os outros 7 pixels da mesma linha
+   da célula 8x8 a cada ponto plotado — mascarado pelo bug 1 até este ser
+   corrigido.
 
-Nessa investigação (2026-09-10) foram encontrados e corrigidos, à parte,
-dois bugs reais de dessincronia Pass 1/Pass 2 no assembler `KAJI80` (que
-corrompiam silenciosamente endereços de rótulo — ver `CHANGELOG.md`) e um bug
-de salto relativo no linker `MUSUBI`. O `KAJI80` agora verifica essa
-consistência internamente a cada montagem.
+Confirmado por remontagem e leitura direta dos bytes do `.MOB` gerado, não
+apenas análise estática do código-fonte. **Ainda não confirmado visualmente
+em hardware/emulador real** — próximo passo é rodar `sample/basic/chart.bas`
+de novo e conferir.
 
-Próximo passo sugerido: um dump de VRAM (formato texto `0x80, 0x00, ...`,
-como o já usado nesta investigação) tirado durante uma chamada de
-`VDP_Line`, comparando o endereço realmente escrito contra o calculado à mão
-para cada X, para achar onde os dois divergem.
+De brinde, a mesma auditoria corrigiu dois pontos de robustez no `MUSUBI`
+(nenhum relacionado ao bug gráfico): um segmento BSS num banco multi-banco
+podia deslocar o endereço de tudo posicionado depois dele no `.COM` (BSS
+agora vira zero-fill real no binário); e o bootstrap multi-banco usava o
+número lógico de banco do linker como se já fosse um segmento físico livre
+da Memory Mapper (agora aloca via `ALL_SEG` do EXTBIO quando disponível, com
+fallback para o comportamento antigo).
+
+Bugs históricos (2026-09-10) mantidos por completude: dois bugs reais de
+dessincronia Pass 1/Pass 2 no assembler `KAJI80` (que corrompiam
+silenciosamente endereços de rótulo — ver `CHANGELOG.md`) e um bug de salto
+relativo no linker `MUSUBI`. O `KAJI80` verifica essa consistência
+internamente a cada montagem.
 
 MSXgl e Fusion-C em `resource/` são referências de estudo e não são
 dependências da MSXLIB.

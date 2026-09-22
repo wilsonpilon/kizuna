@@ -3,7 +3,95 @@
 Todas as mudanças notáveis deste projeto são documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased] - Investigação gráfica SCREEN 2
+## [4.5.2] - 2026-09-21 - Release Yoake (夜明け)
+
+### Causa raiz real do bug gráfico de SCREEN 2 encontrada e corrigida
+
+Depois da sessão de 2026-09-10 (registrada abaixo) ter investigado e
+descartado timing de VRAM, atomicidade de `DI`/`EI` e o motor de comando de
+hardware do V9938, sem achar a causa, esta sessão encontrou **dois bugs
+independentes**, confirmados por remontagem e leitura direta dos bytes do
+`.MOB` gerado (não apenas análise estática):
+
+1. **`pkg/kaji80/assembler.go`, `encodeAlu8`/`estimateSize`**: operações ALU
+   de 8 bits (`ADD`, `ADC`, `SUB`, `SBC`, `AND`, `XOR`, `OR`, `CP`) com
+   operando indexado (`(IX+d)`/`(IY+d)`) não eram reconhecidas e caíam no
+   ramo de imediato de 8 bits — `parseImm8("(IX+8)")` não entende essa
+   sintaxe e devolve `0`, então `CP (IX+8)` virava `CP 0` (`FE 00`) em vez
+   do `DD BE 08` correto, **sem erro de montagem**. O agravante: `estimateSize`
+   também devolvia 2 bytes para essa forma (mesmo tamanho do Pass 2), então
+   a verificação de consistência Pass1/Pass2 adicionada em 2026-09-10 não
+   detectava a divergência — só verifica TAMANHO, não semântica. As únicas
+   9 ocorrências dessa forma no projeto inteiro estavam todas dentro de
+   `VDP_Line`/`VDP_BoxFill` (`lib/src/vdp.asm`), que por isso calculavam
+   Bresenham/limites de laço sempre a partir de `0` em vez do X/Y real —
+   isso também explica por que um dump de VRAM de uma sessão anterior
+   parecia (erradamente) indicar corrupção do registrador `DE` entre
+   chamadas de `VDP_PSet`: na verdade era `VDP_Line` desenhando uma "escada"
+   de parâmetros errados, não uma linha reta.
+   Corrigido adicionando detecção de operando indexado (`isIndexedOperand`)
+   antes do fallback de imediato, nos três blocos de `estimateSize` e em
+   `encodeAlu8`.
+2. **`lib/src/vdp.asm`, `VDP_PSet_Raw`**: escrevia a máscara do pixel
+   diretamente no byte do padrão (`OUT (VDP_DATA), C`), sobrescrevendo os
+   outros 7 pixels da mesma linha da célula 8x8 a cada chamada — por isso
+   sobrava só 1 pixel a cada 8 em qualquer `LINE`/`BOXFILL`. A Color Table já
+   recebia leitura-modificação-escrita corretamente; faltava fazer o mesmo
+   para o byte de padrão. Esse bug ficava mascarado pelo bug 1 (só teria
+   efeito visível depois de corrigi-lo).
+
+Ainda **não confirmado visualmente em hardware/emulador real** — próximo
+passo é rodar `sample/basic/chart.bas` de novo.
+
+### Robustez do MUSUBI (dois pontos encontrados na mesma auditoria, sem relação com o bug gráfico)
+
+- **`copyData` / offset de arquivo com BSS**: o formato `.MOB` nunca grava
+  bytes para segmentos `BSS` (só reserva `Size` no header do segmento), mas
+  o linker somava esse tamanho ao endereço do próximo item mesmo assim. Em
+  build multi-banco, qualquer coisa posicionada depois de um BSS na área
+  comum (dispatcher/trampolins) ficaria deslocada para trás no `.COM` real
+  em relação ao endereço que os relocs apontam, porque o arquivo ficava
+  `Size` bytes mais curto do que o endereço pressupõe. Corrigido
+  materializando BSS como zeros reais no binário final (bônus: garante
+  memória zerada, que o MSX-DOS não garante por si só). Nenhum frontend
+  (KAJI80/WIRTH80/DIGNAC) emite BSS hoje, então este bug nunca havia sido
+  disparado na prática.
+- **`buildBootstrapCode` / números de banco usados como segmento físico**:
+  o bootstrap multi-banco usava o número lógico de banco do linker (1, 2,
+  3…, decidido só pela ordem de descoberta dos módulos) diretamente como
+  número de segmento físico da Memory Mapper na Página 2, sem checar se
+  esse segmento já estava em uso pelo MSX-DOS 2 nas Páginas 0/1/3 (ou por
+  outro processo). Corrigido: quando o EXTBIO está disponível, o bootstrap
+  agora aloca um segmento real por banco pagineável via `ALL_SEG` (D=4,E=2
+  → tabela de saltos, offset 0; calling convention confirmada contra
+  `resource/MSXgl/engine/src/dos_mapper.c/h`) e guarda o mapeamento
+  banco-lógico → segmento-físico em `Musubi_BankTable`, lida tanto pelo
+  loop de cópia do bootstrap quanto por todo trampolim gerado por
+  `buildTrampolineCode`. Sem EXTBIO, cai no mapeamento identidade de antes
+  (não há allocator disponível para consultar).
+  Como consequência, a antiga fórmula de tamanho do bootstrap por contagem
+  manual de bytes (a mesma classe de bug já vista no KAJI80!) foi eliminada:
+  `bootstrapSize` agora é *medido* chamando `buildBootstrapCode` com bancos
+  fictícios (mesmos tamanhos, endereços zero), e uma verificação de
+  consistência ao preencher o bootstrap real confere que o tamanho bate,
+  falhando a linkagem com erro claro em vez de corromper o layout de
+  memória em silêncio caso divirja no futuro. Nenhum salto no bootstrap
+  usa mais deslocamento relativo (`JR`) calculado à mão — cada `JP`/`JP cc`
+  é emitido com um endereço reservado e corrigido (`patchJP`) a partir da
+  posição real onde os bytes acabaram.
+  Novo teste `TestBootstrapAllocSegStructure` (`pkg/musubi/linker_test.go`)
+  decodifica estruturalmente os bytes do bootstrap gerado para um build
+  multi-banco, e uma verificação byte-a-byte manual (script Python) do
+  `.COM` real de `sample/multibank` confirmou que ALL_SEG, `Musubi_BankTable`,
+  trampolins e o handler de falha `[NOMEM]` batem exatamente com o
+  projetado.
+
+`go build ./...`, `go vet ./...` e `go test ./...` limpos; toolchain inteira
+(`build.ps1` raiz, `lib/build.ps1`, `sample/*/build.ps1`) reconstruída sem
+erro, incluindo `sample/multibank` (exercita o novo bootstrap ALL_SEG) e
+`sample/basic/chart.bas` (exercita os dois bugs de VDP).
+
+## Histórico da investigação (sessão de 2026-09-10, antes da causa raiz ser encontrada)
 
 ### Intervenções do Claude Code (2026-09-10)
 

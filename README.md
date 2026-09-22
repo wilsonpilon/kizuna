@@ -10,7 +10,7 @@ num único executável — inclusive distribuindo módulos por bancos de
 memória diferentes, com troca de banco resolvida automaticamente pelo
 linker.
 
-Versão Atual: `v4.5.0` — Release **Hinode (日の出)**.
+Versão Atual: `v4.5.2` — Release **Yoake (夜明け)**.
 
 ## Por quê
 
@@ -35,7 +35,7 @@ BASIC estruturado no mesmo binário `.COM`.
 | `MUSUBI`  | Linker com Smart-Linking e Mapper     | **Concluído & Validado** (v4.3)   |
 | `HAKO`    | Bibliotecário / Empacotador (`.hlib`) | **Concluído & Validado** (v4.3)   |
 | `MOBDUMP` | Inspecionador de objetos `.MOB`       | **Concluído & Validado** (v4.2)   |
-| `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **Em depuração gráfica** (v4.5.1) |
+| `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **SCREEN 2 corrigida, aguardando confirmação em hardware** (v4.5.2) |
 | `OBI`     | Orquestrador de build (`Obifile`)     | _Em planejamento_ (Fase 6)        |
 
 Cada compilador/assembler gera um objeto relocável no formato próprio `.MOB`;
@@ -55,47 +55,68 @@ trampolins automáticos de bank switching) e produz o `.COM` final para MSX-DOS 
   - `calc.bas`: Aritmética de 16 bits, variáveis locais e formatação de texto com smart-linking.
   - `chart.bas`: Módulo gráfico paginado no banco 2 para desenhar gráficos com `LINE`, `BF` e `PSET`.
 
-### Estado atual da SCREEN 2 (em aberto)
+### Estado atual da SCREEN 2 (causa raiz encontrada — aguardando confirmação em hardware)
 
-**O traçado gráfico em SCREEN 2 ainda não está confiável e é o único bloqueio
-ativo do projeto no momento.** `VDP_PSet` isolado (um único ponto) funciona
-corretamente e comprovadamente — inclusive duas chamadas separadas e
-independentes a `VDP_PSet` funcionam perfeitamente. O problema aparece
-especificamente dentro do laço interno de `VDP_Line`/`VDP_BoxFill` (muitos
-pontos plotados em sequência apertada para formar uma linha ou área): o
-resultado sai com pixels dispersos e desconexos em vez de uma linha contínua.
-Ajustes de temporização (mais `NOP`s entre operações de VRAM) e de atomicidade
-(desabilitar interrupções durante o laço inteiro, não só por chamada) já foram
-tentados e **não resolveram** — o laço em si foi revisado byte a byte contra o
-objeto `.MOB` montado e está semanticamente correto, então a causa raiz segue
-sem confirmação. Uma tentativa de usar o motor de comando de hardware do
-V9938/V9958 (registradores 32-46, comando `PSET`) também não se aplica: esse
-motor só funciona nos modos bitmap Graphic 4-7 (SCREEN 5-8), não em SCREEN 2
-(Graphic 2, baseado em Pattern/Name/Color Table) — fica preservado em
-`VDP_PSet_HW` para quando a MSXLIB ganhar suporte a esses modos.
+**A causa raiz real do traçado gráfico bagunçado em SCREEN 2 foi encontrada e
+corrigida na v4.5.2, após várias sessões investigando na direção errada
+(timing de VRAM, atomicidade de interrupção, motor de comando de hardware do
+V9938 — nenhuma delas era o problema).** Eram **dois bugs independentes**:
 
-Nessa mesma investigação foram encontrados e corrigidos bugs reais e
-independentes do problema gráfico em si:
+1. **`KAJI80` codificava operações ALU com operando indexado
+   (`CP (IX+d)`, `SUB (IX+d)`, etc.) como se fossem um imediato de 8 bits —
+   em silêncio, sem erro de montagem.** `CP (IX+8)` virava `CP 0` (opcode
+   `FE 00`) em vez do `DD BE 08` correto. As únicas 9 ocorrências dessa forma
+   no projeto inteiro estavam todas dentro de `VDP_Line`/`VDP_BoxFill`
+   (`lib/src/vdp.asm`) — o que explica por que o bug só aparecia ali. Com a
+   comparação de fim de linha e o cálculo de Bresenham recebendo sempre `0`
+   em vez do X/Y real, `VDP_Line` desenhava uma escada de parâmetros errados
+   em vez de uma linha reta, e o teste de horizontal/vertical pura nunca
+   disparava — o que também explica o dump de VRAM de uma sessão anterior
+   que parecia (erradamente) apontar para corrupção do registrador `DE`
+   entre chamadas.
+2. **`VDP_PSet_Raw` sobrescrevia o byte inteiro do padrão em vez de fazer
+   leitura-modificação-escrita**, apagando os outros 7 pixels da mesma linha
+   da célula 8x8 a cada ponto plotado — por isso sobrava só 1 pixel a cada 8
+   em qualquer `LINE`/`BOXFILL`. Esse bug ficava mascarado pelo primeiro
+   (só teria efeito visível depois de corrigi-lo).
+
+Confirmado por remontagem e leitura direta dos bytes do `.MOB` (não apenas
+análise estática); ambos corrigidos juntos. **Ainda não confirmado em
+hardware/emulador real** — próximo passo é rodar `sample/basic/chart.bas`
+novamente e verificar visualmente.
+
+De brinde, a mesma auditoria encontrou (e corrigiu) mais dois pontos de
+robustez no linker `MUSUBI`, nenhum deles relacionado ao bug gráfico:
+- Um segmento `BSS` num banco comum não contribuía bytes reais ao `.COM`
+  (por design do formato `.MOB`), mas o endereço reservava o espaço mesmo
+  assim — em build multi-banco, isso deslocava para trás qualquer coisa
+  posicionada depois dele (dispatcher/trampolins). Corrigido materializando
+  BSS como zeros reais no binário final.
+- O bootstrap multi-banco usava o número lógico de banco do linker (1, 2, 3…)
+  diretamente como número de segmento físico da Memory Mapper, sem checar se
+  esse segmento já estava em uso pelo MSX-DOS 2 nas Páginas 0/1/3. Agora, com
+  EXTBIO disponível, cada banco pagineável é alocado via `ALL_SEG` real antes
+  do uso (com fallback para o comportamento antigo se o EXTBIO não estiver
+  presente).
+
+Bugs históricos já corrigidos em sessões anteriores, mantidos aqui por
+completude:
 - **Dois bugs de dessincronia Pass 1/Pass 2 no assembler `KAJI80`**
   (`LD A,(rótulo)` mal dimensionado, e `rótulo: DB valor` contando o próprio
   mnemônico como dado) — cada um corrompia silenciosamente o endereço de todo
-  rótulo declarado depois no mesmo módulo. O `Assemble()` agora verifica essa
+  rótulo declarado depois no mesmo módulo. O `Assemble()` verifica essa
   consistência internamente e falha a montagem com erro claro em vez de gerar
   um binário corrompido silenciosamente.
 - **Um bug real no linker `MUSUBI`**: um salto relativo (`JR Z`) calculado
-  errado por 1 byte no carregador multi-banco (`buildBootstrapCode`).
+  errado por 1 byte no carregador multi-banco.
 - **`BIOS_CHGET` só respondia à tecla ESC**, ignorando qualquer outra tecla.
-- **`VDP_PSet` nunca escrevia a cor** (só o bit do pixel) — corrigido.
+- **`VDP_PSet` nunca escrevia a cor** (só o bit do pixel).
 
-Ver `CHANGELOG.md` para o detalhamento completo. Próximo passo sugerido para
-quem retomar: um dump de VRAM (como o de `screen.bin`, formato texto
-`0x80, 0x00, ...`) tirado *durante* uma chamada de `VDP_Line` num teste
-mínimo, comparando o endereço realmente escrito contra o endereço calculado
-manualmente para cada X, para achar exatamente onde os dois divergem.
+Ver `CHANGELOG.md` para o detalhamento completo.
 
 Enquanto isso, **Assembly (KAJI80), Pascal (WIRTH80) e o restante de MSX-BASIC
-Dignified (DIGNAC) continuam avançando normalmente** — o problema é isolado às
-rotinas gráficas de VDP da MSXLIB, não à toolchain em si.
+Dignified (DIGNAC) continuam avançando normalmente** — o problema estava
+isolado às rotinas gráficas de VDP da MSXLIB, não à toolchain em si.
 
 O MSXgl e o Fusion-C em `resource/` são usados somente como referências de
 hardware e algoritmos. A implementação final continuará na ABI própria da

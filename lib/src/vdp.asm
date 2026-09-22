@@ -477,10 +477,32 @@ VDP_PSet_MaskLoop:
 VDP_PSet_MaskDone:
     LD C, A
 
-    ; Escreve diretamente a mascara no byte do padrao.
-    ; Nesta etapa cada ponto ocupa uma celula 8x8 independente.
-    ; (Sequencia de VDP_SetWriteAddr inlined -- sem DI/EI proprios, ja
-    ; estamos dentro do DI unico desta rotina.)
+    ; Le o byte atual do padrao e funde (OR) com a mascara do pixel antes
+    ; de regravar -- cada byte do padrao cobre 8 pixels horizontais da
+    ; mesma linha da celula 8x8; gravar so a mascara (como antes) apagava
+    ; os outros 7 pixels dessa linha a cada chamada, sobrando 1 pixel a
+    ; cada 8 em qualquer LINE/BOXFILL (a Color Table ja fazia esse mesmo
+    ; read-modify-write logo abaixo -- faltava aqui tambem).
+    ; Endereco de LEITURA (sem OR 40h) -- sequencia de VDP_SetReadAddr inlined.
+    LD A, L
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    LD A, H
+    AND 3Fh
+    OUT (VDP_CMD), A
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    IN A, (VDP_DATA)
+    OR C
+    LD C, A
+
+    ; Endereco de ESCRITA (com OR 40h) -- reaponta para o mesmo byte do padrao.
     LD A, L
     OUT (VDP_CMD), A
     NOP

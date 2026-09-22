@@ -360,6 +360,9 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			if src == "(HL)" {
 				return 1, nil
 			}
+			if isIndexedOperand(src) {
+				return 3, nil // ADD A,(IX+d) / ADD A,(IY+d): DD/FD 86 d
+			}
 			return 2, nil
 		}
 		if len(ops) == 1 {
@@ -369,6 +372,9 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			}
 			if op == "(HL)" {
 				return 1, nil
+			}
+			if isIndexedOperand(op) {
+				return 3, nil
 			}
 			return 2, nil
 		}
@@ -386,6 +392,9 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			if src == "(HL)" {
 				return 1, nil
 			}
+			if isIndexedOperand(src) {
+				return 3, nil // ADC/SBC A,(IX+d) / (IY+d): DD/FD 8E/9E d
+			}
 			return 2, nil
 		}
 		if len(ops) == 1 {
@@ -395,6 +404,9 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			}
 			if op == "(HL)" {
 				return 1, nil
+			}
+			if isIndexedOperand(op) {
+				return 3, nil
 			}
 			return 2, nil
 		}
@@ -408,6 +420,9 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			if src == "(HL)" {
 				return 1, nil
 			}
+			if isIndexedOperand(src) {
+				return 3, nil // SUB/AND/XOR/OR/CP (IX+d) / (IY+d): DD/FD <op> d
+			}
 			return 2, nil
 		}
 		if len(ops) == 1 {
@@ -417,6 +432,9 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			}
 			if op == "(HL)" {
 				return 1, nil
+			}
+			if isIndexedOperand(op) {
+				return 3, nil
 			}
 			return 2, nil
 		}
@@ -859,6 +877,22 @@ func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token,
 	return nil
 }
 
+// isIndexedOperand reporta se o operando é uma forma indexada (IX+d)/(IY+d).
+// Usado pelos estimadores de tamanho e codificadores das operações ALU de 8
+// bits (ADD, ADC, SUB, SBC, AND, XOR, OR, CP), que antes desta correção
+// caíam silenciosamente no ramo de "imediato de 8 bits" para esse operando:
+// parseImm8("(IX+8)") não reconhece a sintaxe e devolve 0, então "CP (IX+8)"
+// virava "CP 0" sem erro nenhum -- e o Pass 1 estimava o mesmo tamanho (2
+// bytes) que o Pass 2 emitia, então a verificação de consistência interna
+// do Assemble() não detectava a divergência semântica (só detecta diferença
+// de TAMANHO, não de significado). Foi a causa raiz real do bug gráfico de
+// SCREEN 2 em VDP_Line/VDP_BoxFill (lib/src/vdp.asm), que são os únicos
+// usos dessa forma no projeto inteiro.
+func isIndexedOperand(op string) bool {
+	isIX, isIY, _, ok := parseIndexed(op)
+	return ok && (isIX || isIY)
+}
+
 func (a *Assembler) encodeAlu8(mnem string, ops []string) error {
 	opCode := aluMap[mnem]
 	target := ops[0]
@@ -870,6 +904,13 @@ func (a *Assembler) encodeAlu8(mnem string, ops []string) error {
 		a.emit(0x80 | (opCode << 3) | r)
 	} else if upperTarget == "(HL)" {
 		a.emit(0x86 | (opCode << 3))
+	} else if isIX, isIY, disp, ok := parseIndexed(upperTarget); ok && (isIX || isIY) {
+		// ADD/ADC/SUB/SBC/AND/XOR/OR/CP A,(IX+d) ou (IY+d): DD/FD <opcode> d
+		prefix := uint8(0xDD)
+		if isIY {
+			prefix = 0xFD
+		}
+		a.emit(prefix, 0x86|(opCode<<3), uint8(disp))
 	} else {
 		// Imediato de 8 bits
 		val := a.parseImm8(target)

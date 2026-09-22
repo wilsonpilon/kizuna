@@ -23,20 +23,20 @@ const BankWindowSize = 0x4000 // 16.384 bytes (16KB)
 
 // LinkerConfig contém os parâmetros de configuração da linkagem.
 type LinkerConfig struct {
-	BaseAddress    uint16 // Endereço de início da área comum (padrão MSX-DOS .COM: 0x0100)
-	EntryPoint     string // Nome do símbolo de entrada (ex: "Start", "MAIN")
-	MapFile        string // Caminho opcional para exportar relatório de mapa de memória
+	BaseAddress     uint16 // Endereço de início da área comum (padrão MSX-DOS .COM: 0x0100)
+	EntryPoint      string // Nome do símbolo de entrada (ex: "Start", "MAIN")
+	MapFile         string // Caminho opcional para exportar relatório de mapa de memória
 	MapperPortPage2 uint8  // Porta I/O da Memory Mapper para a Página 2 (padrão: 0xFE)
-	Verbose        bool   // Modo detalhado
+	Verbose         bool   // Modo detalhado
 }
 
 // DefaultConfig retorna a configuração padrão para executáveis MSX-DOS 2 .COM
 func DefaultConfig() LinkerConfig {
 	return LinkerConfig{
-		BaseAddress:    0x0100, // TPA do MSX-DOS
-		EntryPoint:     "Start",
+		BaseAddress:     0x0100, // TPA do MSX-DOS
+		EntryPoint:      "Start",
 		MapperPortPage2: DefaultMapperPortPage2,
-		Verbose:        false,
+		Verbose:         false,
 	}
 }
 
@@ -230,12 +230,20 @@ func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 	isMultiBank := len(banksList) > 1 || (len(banksList) == 1 && banksList[0] != 0)
 
 	// Calcular tarefas de cópia de bancos se for multi-banco
-	type copyTask struct {
-		bank uint8
-		size uint16
-	}
-	var copyTasks []copyTask
-	var bootstrapSize uint16
+	// pageableBanks lista todo banco pagineável (1..N) que aparece em
+	// banksList, na mesma ordem, independente do seu tamanho -- é a lista
+	// usada para decidir quantos segmentos ALL_SEG o bootstrap precisa
+	// alocar e quantas entradas a Musubi_BankTable precisa ter (ver
+	// buildBootstrapCode). bSize soma o tamanho de TODOS os tipos de
+	// segmento do banco, incluindo BSS: desde a correção de copyData()
+	// (BSS agora vira zero-fill real no binário, não mais bytes omitidos
+	// silenciosamente), um banco cujo único conteúdo é BSS também precisa
+	// de um bloco de cópia (LDIR) no bootstrap -- excluir BSS aqui como
+	// antes desalinharia esta contagem da contagem real que o loop de
+	// cópia do bootstrap emite, reabrindo a mesma classe de bug de
+	// tamanho Pass1/Pass2 já vista no KAJI80.
+	var pageableBanks []uint8
+	bankSizes := make(map[uint8]uint16)
 	if isMultiBank {
 		for _, bInt := range banksList {
 			b := uint8(bInt)
@@ -244,16 +252,33 @@ func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 			}
 			var bSize uint16
 			for _, ref := range bankSegments[b] {
-				if ref.seg.Type != mob.SegmentBSS {
-					bSize += ref.seg.Size
-				}
+				bSize += ref.seg.Size
 			}
-			if bSize > 0 {
-				copyTasks = append(copyTasks, copyTask{bank: b, size: bSize})
-			}
+			pageableBanks = append(pageableBanks, b)
+			bankSizes[b] = bSize
 		}
-		// Alinhamento Slot 0xA8 (18 bytes) + EXTBIO mapper detection (32 bytes) + Print "[L]" (21 bytes) + 16 bytes por banco + 8 bytes epílogo
-		bootstrapSize = uint16(18 + 32 + 21 + len(copyTasks)*16 + 8)
+	}
+
+	// bootstrapSize é medido chamando buildBootstrapCode com dados fictícios
+	// (mesmos bancos e mesmos tamanhos que os reais terão, só os BYTES são
+	// zero) em vez de recalculado por uma fórmula de contagem manual --
+	// essa fórmula já foi historicamente a origem de bugs reais neste
+	// projeto (ver CHANGELOG.md / memória do bug de SCREEN 2) quando
+	// alguém muda o gerador de código do bootstrap sem atualizar a conta
+	// em paralelo. O tamanho do código gerado não depende dos VALORES de
+	// endereço (ainda desconhecidos nesta altura), só de quantos bancos
+	// existem e quais têm bytes para copiar -- por isso pode ser medido
+	// aqui com endereços fictícios (0) e reaproveitado depois com os
+	// endereços reais (ver a verificação de consistência mais abaixo,
+	// onde o Bootstrap Loader é de fato preenchido).
+	var bootstrapSize uint16
+	if isMultiBank {
+		var dummyBanks []*BankPayload
+		for _, b := range pageableBanks {
+			dummyBanks = append(dummyBanks, &BankPayload{Bank: b, Data: make([]byte, bankSizes[b])})
+		}
+		measured := l.buildBootstrapCode(dummyBanks, 0, 0, 0, 0, 0)
+		bootstrapSize = uint16(len(measured))
 	}
 
 	// 2. Posicionar segmentos na memória
@@ -368,10 +393,12 @@ func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 		}
 	}
 
-	// 4. Identificar necessidades de trampolim e alocar dispatcher + trampolins na Área Comum
+	// 4. Identificar necessidades de trampolim e alocar dispatcher + tabela
+	// de bancos + trampolins na Área Comum
 	trampolines := make(map[string]*Trampoline)
 	var putP2Addr uint16
 	var getP2Addr uint16
+	var bankTableAddr uint16
 
 	if isMultiBank {
 		dispatcherAddr := commonCurrentAddr
@@ -384,7 +411,29 @@ func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 			return nil, fmt.Errorf("área comum estourou limite de 0x8000 ao alocar dispatcher")
 		}
 
-		trampolineAddrCursor := commonCurrentAddr + dispSize
+		// Musubi_BankTable: bankNum -> segmento físico REAL do memory
+		// mapper, preenchida em runtime pelo bootstrap (ver
+		// buildBootstrapCode) via ALL_SEG do EXTBIO -- tanto o loop de
+		// cópia do próprio bootstrap quanto todo trampolim gerado abaixo
+		// leem o segmento real através dela em vez de embutir o número
+		// lógico de banco do linker como se já fosse um segmento físico
+		// livre. Indexada diretamente pelo número de banco (0..maxBank),
+		// então tem 1 byte de desperdício na entrada 0 (banco comum, nunca
+		// paginado) em troca de indexação trivial sem subtração.
+		var maxBank uint8
+		for _, bInt := range banksList {
+			if uint8(bInt) > maxBank {
+				maxBank = uint8(bInt)
+			}
+		}
+		bankTableSize := uint16(maxBank) + 1
+		bankTableAddr = commonCurrentAddr + dispSize
+
+		if uint32(bankTableAddr)+uint32(bankTableSize) > 0x8000 {
+			return nil, fmt.Errorf("área comum estourou limite de 0x8000 ao alocar Musubi_BankTable")
+		}
+
+		trampolineAddrCursor := bankTableAddr + bankTableSize
 
 		for mIdx, obj := range objects {
 			for _, reloc := range obj.Relocations {
@@ -400,7 +449,7 @@ func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 				if reloc.Type == mob.RelocAbs16 && ps.Bank != resolved.Bank && resolved.Kind == mob.SymbolProc {
 					if _, exists := trampolines[resolved.Name]; !exists {
 						// Criar novo trampolim na Área Comum
-						tCode := l.buildTrampolineCode(resolved.Bank, resolved.Address, putP2Addr, getP2Addr)
+						tCode := l.buildTrampolineCode(resolved.Bank, resolved.Address, putP2Addr, getP2Addr, bankTableAddr)
 						tSize := uint16(len(tCode))
 
 						if uint32(trampolineAddrCursor)+uint32(tSize) > 0x8000 {
@@ -420,9 +469,10 @@ func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 			}
 		}
 
-		// Segmento na Área Comum contendo Dispatcher + Trampolins
+		// Segmento na Área Comum contendo Dispatcher + Musubi_BankTable + Trampolins
 		var trampBytes []byte
 		trampBytes = append(trampBytes, dispatcherCode...)
+		trampBytes = append(trampBytes, make([]byte, bankTableSize)...) // Musubi_BankTable (preenchida em runtime)
 
 		// Ordenar trampolins por endereço para determinismo
 		var sortedTramps []*Trampoline
@@ -513,13 +563,15 @@ func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 		}
 		var bData []byte
 		for _, ps := range placedSegments {
-			if ps.Bank == b && ps.Type != mob.SegmentBSS && len(ps.Data) > 0 {
+			// BSS agora chega aqui com Data zero-preenchido (ver copyData);
+			// não filtra mais por tipo, senão reabre o bug de offset de
+			// arquivo descrito ali para bancos pagináveis com BSS.
+			if ps.Bank == b && len(ps.Data) > 0 {
 				bData = append(bData, ps.Data...)
 			}
 		}
 		bankPayloadsMap[b] = bData
 	}
-
 
 	var bankPayloads []*BankPayload
 	for _, bInt := range banksList {
@@ -543,14 +595,32 @@ func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 
 	if isMultiBank && bootstrapSeg != nil {
 		firstPayloadAddr := commonCurrentAddr
-		bootCode := l.buildBootstrapCode(bankPayloads, firstPayloadAddr, entryAddress, putP2Addr, getP2Addr)
+		bootCode := l.buildBootstrapCode(bankPayloads, firstPayloadAddr, entryAddress, putP2Addr, getP2Addr, bankTableAddr)
+		// Verificação de consistência: bootstrapSize foi medido antes (com
+		// bancos fictícios, mesmos tamanhos) chamando esta mesma função --
+		// se o tamanho real divergir agora, algo no gerador de código
+		// passou a depender dos VALORES de endereço (que antes eram todos
+		// 0) e não só da lista de bancos, o que corromperia o layout de
+		// memória do resto do Banco 0 em silêncio. Mesmo espírito da
+		// verificação Pass1/Pass2 do KAJI80 (ver Assemble() em
+		// pkg/kaji80/assembler.go).
+		if len(bootCode) != len(bootstrapSeg.Data) {
+			return nil, fmt.Errorf("inconsistência interna do MUSUBI: bootstrap loader mediu %d byte(s) mas gerou %d byte(s) -- isso desalinharia o restante do Banco 0 (bug no MUSUBI, não no código-fonte)",
+				len(bootstrapSeg.Data), len(bootCode))
+		}
 		copy(bootstrapSeg.Data, bootCode)
 	}
 
 	// Coletar dados brutos da Área Comum (Banco 0, incluindo bootstrap se houver)
+	// BSS agora chega aqui com Data zero-preenchido (ver copyData); não
+	// filtra mais por tipo, senão reabre o bug de offset de arquivo: em
+	// build multi-banco, o dispatcher/trampolins são posicionados em um
+	// endereço que já soma o tamanho do BSS, e se o BSS não contribuir
+	// bytes reais para o arquivo, tudo que vem depois dele fica deslocado
+	// para trás em relação ao endereço que os relocs apontam.
 	var commonBinary []byte
 	for _, ps := range placedSegments {
-		if ps.Bank == 0 && ps.Type != mob.SegmentBSS && len(ps.Data) > 0 {
+		if ps.Bank == 0 && len(ps.Data) > 0 {
 			commonBinary = append(commonBinary, ps.Data...)
 		}
 	}
@@ -626,29 +696,38 @@ func (l *Linker) buildDispatcherCode(baseAddr uint16) []byte {
 }
 
 // buildTrampolineCode gera os opcodes Z80 do trampolim de troca de banco para Página 2
-func (l *Linker) buildTrampolineCode(targetBank uint8, targetAddr uint16, putP2Addr uint16, getP2Addr uint16) []byte {
+// buildTrampolineCode gera os opcodes Z80 do trampolim de troca de banco para Página 2
+func (l *Linker) buildTrampolineCode(targetBank uint8, targetAddr uint16, putP2Addr uint16, getP2Addr uint16, bankTableAddr uint16) []byte {
 	getLo := uint8(getP2Addr & 0xFF)
 	getHi := uint8((getP2Addr >> 8) & 0xFF)
 	putLo := uint8(putP2Addr & 0xFF)
 	putHi := uint8((putP2Addr >> 8) & 0xFF)
 	addrLo := uint8(targetAddr & 0xFF)
 	addrHi := uint8((targetAddr >> 8) & 0xFF)
+	tblEntryAddr := bankTableAddr + uint16(targetBank)
+	tblLo := uint8(tblEntryAddr & 0xFF)
+	tblHi := uint8(tblEntryAddr >> 8)
 
 	// Trampolim com preservação integral de registradores e retorno em A/HL:
-	// CALL Musubi_GetP2 ; CD lo hi  (3 bytes) - obtém banco atual da Página 2
-	// PUSH AF           ; F5        (1 byte)  - salva banco anterior na pilha
-	// LD A, targetBank  ; 3E bank   (2 bytes) - carrega banco de destino
-	// CALL Musubi_PutP2 ; CD lo hi  (3 bytes) - ativa banco de destino na Página 2
-	// CALL targetAddr   ; CD lo hi  (3 bytes) - executa a rotina
-	// EX AF, AF'        ; 08        (1 byte)  - protege retorno em A e flags
-	// POP AF            ; F1        (1 byte)  - recupera o banco anterior
-	// CALL Musubi_PutP2 ; CD lo hi  (3 bytes) - restaura o banco original da Página 2
-	// EX AF, AF'        ; 08        (1 byte)  - restaura retorno em A e flags
-	// RET               ; C9        (1 byte)  - retorna ao chamador original
+	// CALL Musubi_GetP2      ; CD lo hi  (3 bytes) - obtém banco atual da Página 2
+	// PUSH AF                ; F5        (1 byte)  - salva banco anterior na pilha
+	// LD A,(Musubi_BankTable+targetBank) ; 3A lo hi (3 bytes) - segmento físico
+	//   REAL do banco de destino, alocado em runtime via ALL_SEG (ver
+	//   buildBootstrapCode) -- não embute mais o número lógico de banco do
+	//   linker diretamente: esse número é só um ID interno arbitrário
+	//   (ordem de descoberta dos módulos), não garantidamente um segmento
+	//   físico livre do memory mapper.
+	// CALL Musubi_PutP2      ; CD lo hi  (3 bytes) - ativa banco de destino na Página 2
+	// CALL targetAddr        ; CD lo hi  (3 bytes) - executa a rotina
+	// EX AF, AF'             ; 08        (1 byte)  - protege retorno em A e flags
+	// POP AF                 ; F1        (1 byte)  - recupera o banco anterior
+	// CALL Musubi_PutP2      ; CD lo hi  (3 bytes) - restaura o banco original da Página 2
+	// EX AF, AF'             ; 08        (1 byte)  - restaura retorno em A e flags
+	// RET                    ; C9        (1 byte)  - retorna ao chamador original
 	return []byte{
 		0xCD, getLo, getHi,
 		0xF5,
-		0x3E, targetBank,
+		0x3A, tblLo, tblHi,
 		0xCD, putLo, putHi,
 		0xCD, addrLo, addrHi,
 		0x08,
@@ -659,22 +738,50 @@ func (l *Linker) buildTrampolineCode(targetBank uint8, targetAddr uint16, putP2A
 	}
 }
 
-// buildBootstrapCode gera o código do Bootstrap Loader que copia os bancos para a Página 2
-func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint16, userEntry uint16, putP2Addr uint16, getP2Addr uint16) []byte {
-	var code []byte
+// patchJP corrige o endereço absoluto de uma instrução de 3 bytes (opcode +
+// endereço de 16 bits little-endian -- JP nn, JP cc,nn ou CALL nn, todas com
+// o mesmo layout) já emitida em code[pos:pos+3], usando o endereço de
+// destino REAL em vez de uma distância contada à mão -- ver o comentário em
+// buildBootstrapCode sobre por que esta função existe.
+func patchJP(code []byte, pos int, target uint16) {
+	code[pos+1] = uint8(target & 0xFF)
+	code[pos+2] = uint8(target >> 8)
+}
 
-	// 1. Alinhamento de Slot da Página 2 (0x8000..0xBFFF) com a Página 1 (RAM Mapper) via Porta 0xA8 (18 bytes)
-	// Garante que a Página 2 aponte para o slot do Memory Mapper mesmo com cartuchos de DOS externos
+// buildBootstrapCode gera o código do Bootstrap Loader que copia os bancos
+// para a Página 2 e, quando o EXTBIO da Memory Mapper está disponível,
+// aloca um segmento físico REAL por banco pagineável via ALL_SEG antes de
+// usá-lo -- em vez de assumir que o número lógico de banco do MUSUBI (1..N,
+// decidido só pela ordem em que os módulos declaram `BANK N`) já é por si
+// só um número de segmento físico livre do memory mapper, o que poderia
+// colidir com segmentos que o MSX-DOS 2 já usa nas Páginas 0/1/3 (ou com
+// outro processo). O mapeamento banco-lógico -> segmento-físico fica em
+// Musubi_BankTable, preenchida aqui e lida por este mesmo loop de cópia e
+// por todo trampolim gerado por buildTrampolineCode.
+//
+// Nenhum salto neste código usa deslocamento relativo (JR) calculado por
+// contagem manual de bytes: cada JP/JP cc é emitido com um endereço de
+// 16 bits reservado (placeholder) e corrigido por patchJP() assim que o
+// endereço de destino é conhecido, a partir da posição REAL onde os bytes
+// acabaram (len(code)) -- contagem manual já foi a causa raiz de bugs reais
+// e sutis neste projeto (ver o histórico de Pass1/Pass2 do KAJI80 em
+// Assemble(), pkg/kaji80/assembler.go) e um bootstrap com deslocamento
+// errado trava a máquina na inicialização de QUALQUER programa multi-banco.
+func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint16, userEntry uint16, putP2Addr uint16, getP2Addr uint16, bankTableAddr uint16) []byte {
+	base := l.config.BaseAddress
+	var code []byte
+	curAddr := func() uint16 { return base + uint16(len(code)) }
+
+	// ---- 1. Alinhamento de Slot da Página 2 (0x8000..0xBFFF) com a
+	// Página 1 (RAM Mapper) via Porta 0xA8 (18 bytes) -- garante que a
+	// Página 2 aponte para o slot do Memory Mapper mesmo com cartuchos de
+	// DOS externos. Inalterado por esta correção. ----
 	code = append(code,
 		0xDB, 0xA8, // IN A, (0xA8)
 		0x47,       // LD B, A
-		0x0F,       // RRCA
-		0x0F,       // RRCA
+		0x0F, 0x0F, // RRCA, RRCA
 		0xE6, 0x03, // AND 0x03 (isola slot da Página 1 - RAM)
-		0x07,       // RLCA
-		0x07,       // RLCA
-		0x07,       // RLCA
-		0x07,       // RLCA (posiciona bits no slot da Página 2)
+		0x07, 0x07, 0x07, 0x07, // RLCA x4 (posiciona bits no slot da Página 2)
 		0x4F,       // LD C, A
 		0x78,       // LD A, B
 		0xE6, 0xCF, // AND 0xCF (limpa slot atual da Página 2)
@@ -682,39 +789,101 @@ func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint1
 		0xD3, 0xA8, // OUT (0xA8), A
 	)
 
-	// 2. Consulta da Tabela de Suporte da Memory Mapper via EXTBIO (0xFFCA) (32 bytes)
+	// ---- 2. Duas células fixas usadas só durante o boot: ----
+	// Musubi_CallHL: não existe "CALL (HL)" no Z80 -- para chamar uma
+	// rotina cujo endereço só é conhecido em tempo de execução (ALL_SEG,
+	// dentro da tabela de saltos do EXTBIO, endereço em HL), usa-se
+	// "CALL Musubi_CallHL" (empilha o endereço de retorno correto: a
+	// instrução seguinte a este CALL) seguido deste "JP (HL)" fixo, cujo
+	// destino final devolve o controle via RET normalmente, desempilhando
+	// esse mesmo endereço.
+	callHLAddr := curAddr()
+	code = append(code, 0xE9) // JP (HL)
+	// Musubi_JumpTableBase: guarda a base da tabela de saltos do EXTBIO
+	// (recebida em HL) entre uma chamada de ALL_SEG e outra, já que a
+	// própria rotina do sistema é livre para usar HL internamente e não
+	// garante preservá-lo entre chamadas.
+	jumpTableScratchAddr := curAddr()
+	code = append(code, 0x00, 0x00)
+
+	// ---- 3. HOKVLD: suporte a EXTBIO presente? ----
+	code = append(code, 0x3A, 0x20, 0xFB) // LD A, (0xFB20) - flag HOKVLD
+	code = append(code, 0x0F)             // RRCA -> Carry = bit0 (1 = EXTBIO presente)
+	jpHokPos := len(code)
+	code = append(code, 0xD2, 0x00, 0x00) // JP NC, <fallback> (placeholder)
+
+	// ---- 4. Bloco EXTBIO: obtém a tabela de saltos da Memory Mapper e
+	// aloca um segmento real por banco pagineável via ALL_SEG (offset 0
+	// da tabela) antes de usar Musubi_PutP2/GetP2. ----
 	putPatchAddr := putP2Addr + 1
 	getPatchAddr := getP2Addr + 1
-	putPatchLo := uint8(putPatchAddr & 0xFF)
-	putPatchHi := uint8(putPatchAddr >> 8)
-	getPatchLo := uint8(getPatchAddr & 0xFF)
-	getPatchHi := uint8(getPatchAddr >> 8)
 
-	code = append(code,
-		0x3A, 0x20, 0xFB, // LD A, (0xFB20) - verifica flag HOKVLD
-		0x0F,             // RRCA
-		0x30, 0x1A,       // JR NC, +26 (salta se EXTBIO indisponível)
-		0xAF,             // XOR A
-		0x11, 0x02, 0x04, // LD DE, 0x0402 (D=4: Mapper, E=2: Obter Tabela)
-		0xCD, 0xCA, 0xFF, // CALL 0xFFCA (EXTBIO -> HL = Tabela, A = total segmentos)
-		0xB7,             // OR A
-		0x28, 0x10,       // JR Z, +16 (salta se nenhum segmento)
-		0xE5,             // PUSH HL
-		0x11, 0x24, 0x00, // LD DE, 0x0024 (+24h = PUT_P2)
-		0x19,             // ADD HL, DE
-		0x22, putPatchLo, putPatchHi, // LD (Musubi_PutP2 + 1), HL
-		0xE1,             // POP HL
-		0x11, 0x27, 0x00, // LD DE, 0x0027 (+27h = GET_P2)
-		0x19,             // ADD HL, DE
-		0x22, getPatchLo, getPatchHi, // LD (Musubi_GetP2 + 1), HL
-	)
+	code = append(code, 0xAF)             // XOR A
+	code = append(code, 0x11, 0x02, 0x04) // LD DE, 0x0402 (D=4: Mapper, E=2: Obter Tabela de Saltos)
+	code = append(code, 0xCD, 0xCA, 0xFF) // CALL 0xFFCA (EXTBIO -> HL = Tabela, A = total segmentos)
+	code = append(code, 0xB7)             // OR A
+	jpNoSegPos := len(code)
+	code = append(code, 0xCA, 0x00, 0x00) // JP Z, <fallback> (nenhum segmento suportado, placeholder)
 
-	// 3. Imprimir "[L]" para indicar execução do loader via BDOS função 02h (21 bytes)
+	code = append(code, 0x22, uint8(jumpTableScratchAddr&0xFF), uint8(jumpTableScratchAddr>>8)) // LD (Musubi_JumpTableBase), HL
+
+	// Patch de Musubi_PutP2 (+24h) e Musubi_GetP2 (+27h) -- como antes desta correção.
+	code = append(code, 0xE5)                                                   // PUSH HL
+	code = append(code, 0x11, 0x24, 0x00)                                       // LD DE, 0x0024 (+24h = PUT_P2)
+	code = append(code, 0x19)                                                   // ADD HL, DE
+	code = append(code, 0x22, uint8(putPatchAddr&0xFF), uint8(putPatchAddr>>8)) // LD (Musubi_PutP2 + 1), HL
+	code = append(code, 0xE1)                                                   // POP HL
+	code = append(code, 0x11, 0x27, 0x00)                                       // LD DE, 0x0027 (+27h = GET_P2)
+	code = append(code, 0x19)                                                   // ADD HL, DE
+	code = append(code, 0x22, uint8(getPatchAddr&0xFF), uint8(getPatchAddr>>8)) // LD (Musubi_GetP2 + 1), HL
+
+	// ALL_SEG por banco pagineável (13 bytes cada): A=0 (tipo=segmento RAM
+	// comum), CALL Musubi_CallHL executa a rotina em (Musubi_JumpTableBase+0);
+	// retorna com Carry setado se não houver segmento livre, senão A=segmento real.
+	var allocFailPositions []int
+	for _, b := range banks {
+		tblEntryAddr := bankTableAddr + uint16(b.Bank)
+		code = append(code, 0x2A, uint8(jumpTableScratchAddr&0xFF), uint8(jumpTableScratchAddr>>8)) // LD HL,(Musubi_JumpTableBase)
+		code = append(code, 0xAF)                                                                   // XOR A (tipo=0: segmento RAM comum)
+		code = append(code, 0xCD, uint8(callHLAddr&0xFF), uint8(callHLAddr>>8))                     // CALL Musubi_CallHL -> executa ALL_SEG
+		allocFailPositions = append(allocFailPositions, len(code))
+		code = append(code, 0xDA, 0x00, 0x00)                                       // JP C, <falha de alocação> (placeholder)
+		code = append(code, 0x32, uint8(tblEntryAddr&0xFF), uint8(tblEntryAddr>>8)) // LD (Musubi_BankTable+banco), A
+	}
+
+	jpSkipFallbackPos := len(code)
+	code = append(code, 0xC3, 0x00, 0x00) // JP <depois do fallback> (placeholder, incondicional)
+
+	// ---- 5. Fallback sem EXTBIO: mapeamento identidade (comportamento
+	// desta toolchain antes desta correção). Sem um allocator real
+	// disponível não há como saber quais segmentos estão livres; usa o
+	// número de banco do linker diretamente como número de segmento, como
+	// sempre foi feito -- só passou a ir através de Musubi_BankTable
+	// também, para o loop de cópia e os trampolins não precisarem de dois
+	// caminhos de código diferentes conforme EXTBIO esteja disponível ou não. ----
+	fallbackAddr := curAddr()
+	for _, b := range banks {
+		tblEntryAddr := bankTableAddr + uint16(b.Bank)
+		code = append(code, 0x3E, b.Bank)                                           // LD A, banco
+		code = append(code, 0x32, uint8(tblEntryAddr&0xFF), uint8(tblEntryAddr>>8)) // LD (Musubi_BankTable+banco), A
+	}
+	afterFallbackAddr := curAddr()
+
+	patchJP(code, jpHokPos, fallbackAddr)
+	patchJP(code, jpNoSegPos, fallbackAddr)
+	patchJP(code, jpSkipFallbackPos, afterFallbackAddr)
+
+	// ---- 6. Imprimir "[L]" para indicar execução do loader via BDOS
+	// função 02h (21 bytes) -- ponto de convergência: o caminho EXTBIO
+	// bem-sucedido pula até aqui pelo JP incondicional acima, e o
+	// fallback cai aqui direto por continuidade. ----
 	code = append(code, 0x1E, '[', 0x0E, 0x02, 0xCD, 0x05, 0x00)
 	code = append(code, 0x1E, 'L', 0x0E, 0x02, 0xCD, 0x05, 0x00)
 	code = append(code, 0x1E, ']', 0x0E, 0x02, 0xCD, 0x05, 0x00)
 
-	// 4. Copiar os payloads de cada banco para a Página 2 (0x8000) usando Musubi_PutP2 (16 bytes por banco)
+	// ---- 7. Copiar os payloads de cada banco para a Página 2 (0x8000),
+	// lendo o segmento REAL de Musubi_BankTable em vez de usar o número
+	// de banco do linker diretamente (17 bytes por banco). ----
 	putLo := uint8(putP2Addr & 0xFF)
 	putHi := uint8(putP2Addr >> 8)
 
@@ -724,32 +893,44 @@ func (l *Linker) buildBootstrapCode(banks []*BankPayload, firstPayloadAddr uint1
 			continue
 		}
 		size := uint16(len(b.Data))
-		// LD A, b.Bank
-		code = append(code, 0x3E, b.Bank)
-		// CALL Musubi_PutP2
-		code = append(code, 0xCD, putLo, putHi)
-		// LD HL, currSource
-		code = append(code, 0x21, uint8(currSource&0xFF), uint8(currSource>>8))
-		// LD DE, 0x8000
-		code = append(code, 0x11, 0x00, 0x80)
-		// LD BC, size
-		code = append(code, 0x01, uint8(size&0xFF), uint8(size>>8))
-		// LDIR
-		code = append(code, 0xED, 0xB0)
+		tblEntryAddr := bankTableAddr + uint16(b.Bank)
+		code = append(code, 0x3A, uint8(tblEntryAddr&0xFF), uint8(tblEntryAddr>>8)) // LD A,(Musubi_BankTable+banco)
+		code = append(code, 0xCD, putLo, putHi)                                     // CALL Musubi_PutP2
+		code = append(code, 0x21, uint8(currSource&0xFF), uint8(currSource>>8))     // LD HL, currSource
+		code = append(code, 0x11, 0x00, 0x80)                                       // LD DE, 0x8000
+		code = append(code, 0x01, uint8(size&0xFF), uint8(size>>8))                 // LD BC, size
+		code = append(code, 0xED, 0xB0)                                             // LDIR
 
 		currSource += size
 	}
 
-	// 5. Chavear Página 2 para o primeiro banco paginável (ex: Banco 1) via Musubi_PutP2 (5 bytes)
+	// ---- 8. Chavear Página 2 para o primeiro banco paginável (ex: Banco
+	// 1), também via Musubi_BankTable (6 bytes) ----
 	firstBank := uint8(1)
 	if len(banks) > 0 {
 		firstBank = banks[0].Bank
 	}
-	code = append(code, 0x3E, firstBank)
-	code = append(code, 0xCD, putLo, putHi)
+	firstTblEntryAddr := bankTableAddr + uint16(firstBank)
+	code = append(code, 0x3A, uint8(firstTblEntryAddr&0xFF), uint8(firstTblEntryAddr>>8)) // LD A,(Musubi_BankTable+firstBank)
+	code = append(code, 0xCD, putLo, putHi)                                               // CALL Musubi_PutP2
 
-	// 6. Saltar para o ponto de entrada do usuário (3 bytes)
+	// ---- 9. Saltar para o ponto de entrada do usuário (3 bytes) ----
 	code = append(code, 0xC3, uint8(userEntry&0xFF), uint8(userEntry>>8))
+
+	// ---- 10. Handler de falha de ALL_SEG: só alcançável pelos "JP C"
+	// acima, nunca pelo fluxo normal (a instrução anterior é o JP
+	// incondicional do passo 9). Imprime "[NOMEM]" e sai via BDOS
+	// função 00h -- não há memory mapper com segmentos suficientes para
+	// rodar este programa multi-banco. ----
+	failAddr := curAddr()
+	for _, ch := range []byte("[NOMEM]") {
+		code = append(code, 0x1E, ch, 0x0E, 0x02, 0xCD, 0x05, 0x00)
+	}
+	code = append(code, 0x0E, 0x00, 0xCD, 0x05, 0x00) // LD C, 0 / CALL 0x0005 (BDOS_Exit)
+
+	for _, pos := range allocFailPositions {
+		patchJP(code, pos, failAddr)
+	}
 
 	return code
 }
@@ -767,7 +948,27 @@ func (b *bytesBuilder) bytes() []byte {
 }
 
 func copyData(seg *mob.Segment) []byte {
-	if seg.Type == mob.SegmentBSS || len(seg.Data) == 0 {
+	if seg.Type == mob.SegmentBSS {
+		// O .MOB nunca guarda bytes para BSS (só reserva Size no header do
+		// segmento -- ver pkg/mob/writer.go e types.go/AddSegment). Mas o
+		// .COM do MSX-DOS é uma imagem de memória plana: não existe um
+		// "BSS" gerenciado pelo carregador que zere memória além do fim do
+		// arquivo, então qualquer conteúdo colocado DEPOIS de um segmento
+		// BSS na área comum (o dispatcher/trampolins de bank switching, em
+		// build multi-banco) ficaria no endereço computado errado se o
+		// arquivo simplesmente pulasse esses bytes: o endereço reserva o
+		// espaço do BSS, mas o arquivo ficaria Size bytes mais curto do
+		// que esse endereço pressupõe, deslocando tudo que vem depois.
+		// Corrigido materializando o BSS como zeros reais no binário --
+		// mais simples e robusto do que reordenar o layout para garantir
+		// que BSS seja sempre o último byte do arquivo, e como bônus
+		// garante memória zerada (que o MSX-DOS não garante por si só).
+		if seg.Size == 0 {
+			return nil
+		}
+		return make([]byte, seg.Size)
+	}
+	if len(seg.Data) == 0 {
 		return nil
 	}
 	d := make([]byte, len(seg.Data))

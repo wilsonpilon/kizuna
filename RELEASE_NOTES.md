@@ -1,3 +1,49 @@
+# Release Notes — KIZUNA v4.5.2 "Yoake" (夜明け)
+
+**Yoake** (夜明け) — "o romper da madrugada, o instante em que a escuridão
+finalmente cede". A resposta direta a *Kuyashii* (悔しい, a frustração da
+release anterior): depois de várias sessões investigando na direção errada,
+a causa raiz real do bug gráfico de SCREEN 2 foi encontrada e corrigida.
+
+A versão **v4.5.2** corrige **dois bugs independentes** que juntos explicam
+todo o caos visual observado em `VDP_Line`/`VDP_BoxFill` desde o início da
+investigação: o assembler `KAJI80` codificava operações ALU com operando
+indexado (`CP (IX+d)`, `SUB (IX+d)`, etc.) como um imediato de 8 bits em
+silêncio — as únicas ocorrências dessa forma no projeto inteiro estavam
+justamente dentro das rotinas de linha/área da `MSXLIB` — e `VDP_PSet_Raw`
+sobrescrevia o byte inteiro do padrão em vez de preservar os outros pixels
+da mesma célula. De brinde, a mesma auditoria corrigiu dois pontos de
+robustez no linker `MUSUBI`: um bug de offset de arquivo com segmentos BSS
+em build multi-banco, e a falta de alocação real de segmento (`ALL_SEG` via
+EXTBIO) para bancos pagináveis, que antes assumia que o número lógico de
+banco do linker já era um segmento físico livre da Memory Mapper.
+
+## Estado técnico atual - SCREEN 2
+
+- **Corrigido em software, confirmado por remontagem e leitura direta dos
+  bytes do `.MOB`/`.COM` gerados** (não apenas análise estática): os dois
+  bugs acima descritos em detalhe no `CHANGELOG.md`.
+- **Ainda não confirmado visualmente em hardware/emulador real** — esse é o
+  único passo que falta para fechar definitivamente o problema.
+- Todo o restante da toolchain (`KAJI80`, `WIRTH80`, `DIGNAC`, `MUSUBI`,
+  `HAKO`, `MOBDUMP`) segue **concluído e validado**; o bug estava isolado às
+  rotinas gráficas de VDP da `MSXLIB`.
+
+### Retomada da próxima sessão
+
+1. Rodar `sample/basic/chart.bas` em hardware/emulador real e confirmar
+   visualmente a moldura, os eixos e a curva.
+2. Se confirmado: fechar o bloqueio de vez e seguir para a Fase 6 (`OBI`).
+3. Se ainda houver artefato: já não é mais nenhuma das causas descartadas em
+   sessões anteriores (timing de VRAM, atomicidade, motor de comando de
+   hardware) nem os dois bugs corrigidos aqui — investigar do zero com um
+   dump de VRAM durante a execução real.
+
+As fontes em `resource/MSXgl` e `resource/MSXFusionC` permanecem material de
+referência; não fazem parte do build da MSXLIB.
+
+---
+
 # Release Notes — KIZUNA v4.5.1 "Kuyashii" (悔しい)
 
 **Kuyashii** (悔しい) — sentimento profundo de frustração honrosa e inconformismo por não ter atingido o resultado gráfico esperado no momento, mas acompanhado da convicção e energia para retornar, perseverar e conquistar a solução definitiva.

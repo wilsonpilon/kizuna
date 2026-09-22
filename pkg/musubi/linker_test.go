@@ -167,15 +167,142 @@ func TestMultiBankTrampolineGeneration(t *testing.T) {
 		t.Errorf("Expected CALL in mod0 to point to trampoline 0x%04X, got 0x%04X", tramp.Address, callTarget)
 	}
 
-	// O trampolim deve ter 19 bytes e chavear para o Banco 1 chamando Musubi_PutP2 e a rotina alvo (0x8000):
-	if len(tramp.Code) != 19 {
-		t.Fatalf("Expected trampoline length 19, got %d", len(tramp.Code))
+	// O trampolim deve ter 20 bytes e chavear para o Banco 1 chamando Musubi_PutP2 e a rotina alvo (0x8000):
+	// carrega o segmento real via "LD A,(Musubi_BankTable+1)" (0x3A, não
+	// mais "LD A,1" / 0x3E literal -- ver buildTrampolineCode) e, por isso,
+	// ocupa 1 byte a mais do que antes desta correção.
+	if len(tramp.Code) != 20 {
+		t.Fatalf("Expected trampoline length 20, got %d", len(tramp.Code))
 	}
-	if tramp.Code[3] != 0xF5 || tramp.Code[4] != 0x3E || tramp.Code[5] != 0x01 {
-		t.Errorf("Expected PUSH AF (0xF5) and LD A, 1 (0x3E 0x01), got %02X %02X %02X", tramp.Code[3], tramp.Code[4], tramp.Code[5])
+	if tramp.Code[3] != 0xF5 || tramp.Code[4] != 0x3A {
+		t.Errorf("Expected PUSH AF (0xF5) and LD A,(Musubi_BankTable+1) (0x3A ..), got %02X %02X", tramp.Code[3], tramp.Code[4])
 	}
-	if tramp.Code[9] != 0xCD || tramp.Code[10] != 0x00 || tramp.Code[11] != 0x80 {
-		t.Errorf("Expected CALL 0x8000 (0xCD 0x00 0x80), got %02X %02X %02X", tramp.Code[9], tramp.Code[10], tramp.Code[11])
+	if tramp.Code[10] != 0xCD || tramp.Code[11] != 0x00 || tramp.Code[12] != 0x80 {
+		t.Errorf("Expected CALL 0x8000 (0xCD 0x00 0x80), got %02X %02X %02X", tramp.Code[10], tramp.Code[11], tramp.Code[12])
+	}
+}
+
+// TestBootstrapAllocSegStructure decodifica estruturalmente o Bootstrap
+// Loader gerado para um build multi-banco, em vez de só conferir seu
+// tamanho: confirma que o loop de alocação de segmentos reais via ALL_SEG
+// (EXTBIO) e o caminho de fallback sem EXTBIO convergem para os endereços
+// corretos, e que o handler de falha de alocação está de fato fora do
+// fluxo normal de execução. Isto substitui a antiga verificação manual de
+// deslocamentos de JR/JP por contagem de bytes (ver buildBootstrapCode) por
+// uma verificação que lê os próprios bytes gerados -- sem isso, um erro de
+// 1 byte num dos saltos travaria a máquina na inicialização de qualquer
+// programa multi-banco sem que nenhum teste detectasse.
+func TestBootstrapAllocSegStructure(t *testing.T) {
+	mod0 := mob.NewObjectFile()
+	seg0 := mod0.AddSegment(mob.SegmentCode, 0, []byte{0xCD, 0x00, 0x00, 0xC9}, 0)
+	mod0.AddSymbol("Start", mob.SymbolPublic, mob.SymbolProc, seg0, 0x0000)
+	symB1 := mod0.AddSymbol("Bank1Func", mob.SymbolExtern, mob.SymbolProc, 0, 0)
+	mod0.AddRelocation(seg0, 1, symB1, mob.RelocAbs16)
+
+	mod1 := mob.NewObjectFile()
+	seg1 := mod1.AddSegment(mob.SegmentCode, 1, []byte{0x3E, 0x0A, 0xC9}, 0)
+	mod1.AddSymbol("Bank1Func", mob.SymbolPublic, mob.SymbolProc, seg1, 0x0000)
+
+	cfg := LinkerConfig{BaseAddress: 0x0100, EntryPoint: "Start"}
+	linker := NewLinker(cfg)
+	res, err := linker.Link(mod0, mod1)
+	if err != nil {
+		t.Fatalf("Link failed: %v", err)
+	}
+
+	// O Bootstrap é sempre res.Segments[0] em build multi-banco (ver
+	// linkObjects: bootstrapSeg é o primeiro a entrar em placedSegments).
+	boot := res.Segments[0]
+	if boot.ModuleIndex != -2 {
+		t.Fatalf("Expected Segments[0] to be the linker bootstrap (ModuleIndex -2), got %d", boot.ModuleIndex)
+	}
+	code := boot.Data
+	base := int(boot.BaseAddr)
+
+	// offset 18: Musubi_CallHL = JP (HL) = 0xE9
+	if code[18] != 0xE9 {
+		t.Fatalf("Expected Musubi_CallHL (JP (HL) / 0xE9) at offset 18, got 0x%02X", code[18])
+	}
+
+	// offset 21: LD A,(0xFB20) -- início do teste de HOKVLD
+	if code[21] != 0x3A || code[22] != 0x20 || code[23] != 0xFB {
+		t.Fatalf("Expected LD A,(0FB20h) at offset 21, got %02X %02X %02X", code[21], code[22], code[23])
+	}
+
+	// offset 24: RRCA
+	if code[24] != 0x0F {
+		t.Fatalf("Expected RRCA (0x0F) at offset 24, got 0x%02X", code[24])
+	}
+
+	// A partir daqui andamos por um cursor com comprimentos de instrução
+	// CONHECIDOS (a sequência exata que buildBootstrapCode emite), em vez
+	// de escanear bytes à procura de um opcode -- um opcode como 0xCA
+	// também aparece como BYTE DE OPERANDO em outra instrução da mesma
+	// sequência (0xFFCA, o endereço do EXTBIO), então escanear por valor
+	// de byte sem controlar limites de instrução dá falso positivo.
+	pos := 25
+	// JP NC,<fallback> (3 bytes)
+	if code[pos] != 0xD2 {
+		t.Fatalf("Expected JP NC,nn (0xD2) at offset %d, got 0x%02X", pos, code[pos])
+	}
+	fallbackTarget := int(binary.LittleEndian.Uint16(code[pos+1:pos+3])) - base
+	if fallbackTarget <= 0 || fallbackTarget >= len(code) {
+		t.Fatalf("JP NC target 0x%04X falls outside the bootstrap segment", fallbackTarget+base)
+	}
+	pos += 3
+	// O fallback (mapeamento identidade, sem EXTBIO) começa com "LD A, banco"
+	if code[fallbackTarget] != 0x3E {
+		t.Fatalf("Expected fallback to start with LD A,n (0x3E) at offset %d, got 0x%02X", fallbackTarget, code[fallbackTarget])
+	}
+
+	pos += 1 // XOR A
+	pos += 3 // LD DE,0x0402
+	pos += 3 // CALL 0xFFCA
+	pos += 1 // OR A
+
+	// JP Z,<fallback> (nenhum segmento suportado) -- deve apontar para o MESMO fallback.
+	if code[pos] != 0xCA {
+		t.Fatalf("Expected JP Z,nn (0xCA) at offset %d, got 0x%02X", pos, code[pos])
+	}
+	noSegTarget := int(binary.LittleEndian.Uint16(code[pos+1:pos+3])) - base
+	if noSegTarget != fallbackTarget {
+		t.Fatalf("JP Z target 0x%04X should match JP NC target 0x%04X", noSegTarget+base, fallbackTarget+base)
+	}
+	pos += 3
+
+	pos += 3 // LD (Musubi_JumpTableBase),HL
+	pos += 1 // PUSH HL
+	pos += 3 // LD DE,0x0024
+	pos += 1 // ADD HL,DE
+	pos += 3 // LD (Musubi_PutP2+1),HL
+	pos += 1 // POP HL
+	pos += 3 // LD DE,0x0027
+	pos += 1 // ADD HL,DE
+	pos += 3 // LD (Musubi_GetP2+1),HL
+
+	// Loop ALL_SEG (1 banco pagineável neste cenário): LD HL,(scratch) /
+	// XOR A / CALL Musubi_CallHL / JP C,<falha> / LD (BankTable+banco),A
+	pos += 3 // LD HL,(Musubi_JumpTableBase)
+	pos += 1 // XOR A
+	pos += 3 // CALL Musubi_CallHL
+	if code[pos] != 0xDA {
+		t.Fatalf("Expected JP C,nn (0xDA, falha de ALL_SEG) at offset %d, got 0x%02X", pos, code[pos])
+	}
+	failTarget := int(binary.LittleEndian.Uint16(code[pos+1:pos+3])) - base
+	if failTarget <= fallbackTarget || failTarget >= len(code) {
+		t.Fatalf("JP C (falha de ALL_SEG) target 0x%04X should be after the fallback block and inside the bootstrap", failTarget+base)
+	}
+	if code[failTarget] != 0x1E || code[failTarget+1] != '[' {
+		t.Fatalf("Expected ALL_SEG failure handler to start by printing '[' (0x1E 0x5B) at offset %d, got %02X %02X", failTarget, code[failTarget], code[failTarget+1])
+	}
+
+	// A própria falha nunca deve ser alcançada pelo fluxo normal: a última
+	// instrução antes dela (JP userEntry, incondicional) não pode ser um
+	// salto condicional que "caia" nela por engano -- checamos apenas que
+	// o byte imediatamente anterior a failTarget é o endereço-alvo (hi
+	// byte) do JP incondicional de 3 bytes que sai da rotina normalmente.
+	if code[failTarget-3] != 0xC3 {
+		t.Fatalf("Expected an unconditional JP (0xC3) right before the ALL_SEG failure handler at offset %d, got 0x%02X", failTarget-3, code[failTarget-3])
 	}
 }
 
@@ -184,9 +311,9 @@ func TestIntraBankCallNoTrampoline(t *testing.T) {
 	mod := mob.NewObjectFile()
 	seg := mod.AddSegment(mob.SegmentCode, 1, []byte{
 		0xCD, 0x00, 0x00, // CALL FuncB (offset 0)
-		0xC9,             // RET (offset 3)
-		0x3E, 0x2A,       // FuncB: LD A, 42 (offset 4)
-		0xC9,             // RET (offset 6)
+		0xC9,       // RET (offset 3)
+		0x3E, 0x2A, // FuncB: LD A, 42 (offset 4)
+		0xC9, // RET (offset 6)
 	}, 0)
 
 	symA := mod.AddSymbol("FuncA", mob.SymbolPublic, mob.SymbolProc, seg, 0x0000)
@@ -329,4 +456,3 @@ func TestSmartLinkingFromHlib(t *testing.T) {
 		t.Errorf("Expected CALL Add16 target 0x0104, got 0x%04X", callAddTarget)
 	}
 }
-

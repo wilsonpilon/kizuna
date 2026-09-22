@@ -1,7 +1,7 @@
-# KIZUNA — Manual do Usuário (v4.4.0 — Release Akatsuki)
+# KIZUNA — Manual do Usuário (v4.5.2 — Release Yoake)
 
 > Este manual descreve o uso da toolchain **KIZUNA** para MSX2+ / MSX-DOS 2.
-> As ferramentas `kaji80`, `wirth80`, `musubi`, `hako`, `mobdump` e a biblioteca `msxlib.hlib`
+> As ferramentas `kaji80`, `wirth80`, `dignac`, `musubi`, `hako`, `mobdump` e a biblioteca `msxlib.hlib`
 > estão totalmente implementadas e funcionais.
 
 ## 1. Visão geral do fluxo
