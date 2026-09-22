@@ -2,6 +2,7 @@ package kaji80
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -185,16 +186,32 @@ func (a *Assembler) Assemble(source string) (*mob.ObjectFile, error) {
 	// Mapear símbolos no .MOB
 	symIndexMap := make(map[string]uint16)
 
-	// Símbolos públicos (definidos aqui)
-	for name, offset := range a.symbols {
-		if a.publics[name] {
-			idx := obj.AddSymbol(name, mob.SymbolPublic, mob.SymbolProc, segIdx, offset)
-			symIndexMap[name] = idx
+	// Símbolos públicos (definidos aqui). Ordenados por nome antes de
+	// adicionar ao ObjectFile: a.symbols é um map, cuja ordem de iteração o
+	// Go embaralha a cada execução -- sem isso, montar o MESMO fonte duas
+	// vezes gera arquivos .MOB byte-a-byte diferentes (tabela de símbolos
+	// em ordem diferente), o que é inofensivo para o linker (resolve por
+	// nome) mas produz diffs espúrios permanentes em builds versionados no
+	// Git a cada recompilação.
+	publicNames := make([]string, 0, len(a.publics))
+	for name := range a.publics {
+		if _, ok := a.symbols[name]; ok {
+			publicNames = append(publicNames, name)
 		}
 	}
+	sort.Strings(publicNames)
+	for _, name := range publicNames {
+		idx := obj.AddSymbol(name, mob.SymbolPublic, mob.SymbolProc, segIdx, a.symbols[name])
+		symIndexMap[name] = idx
+	}
 
-	// Símbolos externos (importados)
+	// Símbolos externos (importados), mesma correção de determinismo.
+	externNames := make([]string, 0, len(a.externs))
 	for name := range a.externs {
+		externNames = append(externNames, name)
+	}
+	sort.Strings(externNames)
+	for _, name := range externNames {
 		idx := obj.AddSymbol(name, mob.SymbolExtern, mob.SymbolProc, 0, 0)
 		symIndexMap[name] = idx
 	}
