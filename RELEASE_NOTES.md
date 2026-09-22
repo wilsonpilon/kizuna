@@ -1,5 +1,7 @@
 # Release Notes — KIZUNA v4.5.3 "Kaisei" (快晴)
 
+> "Da frustração ao céu limpo — o mesmo laço que amarra as linguagens agora também desenha certo."
+
 **Kaisei** (快晴) — "céu completamente limpo, tempo perfeito, sem uma nuvem".
 O fechamento natural do arco iniciado em *Kuyashii* (悔しい, a frustração) e
 continuado em *Yoake* (夜明け, o instante em que a escuridão cede): agora que
