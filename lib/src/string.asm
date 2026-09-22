@@ -224,13 +224,17 @@ PrintDec16ToBuffer:
     ADD A, 30h
     CALL PDTB_WriteChar
 
-    LD A, (PDTB_Count)
-    LD B, A ; guarda o resultado antes de restaurar os registradores do chamador
-
     POP HL
     POP DE
     POP BC
-    LD A, B
+    ; Lê o resultado de PDTB_Count SÓ DEPOIS de restaurar BC do chamador --
+    ; guardar a contagem num registrador (ex: B) antes do POP BC seria
+    ; destruído pelo próprio POP (B faz parte do par BC restaurado ali).
+    ; Bug real desta forma já aconteceu aqui: a contagem escrita ficava
+    ; certa no buffer, mas o valor devolvido em A era o B original do
+    ; chamador (lixo), não a contagem -- fazendo BDOS_FileWrite escrever
+    ; um tamanho errado (por coincidência às vezes "certo", às vezes não).
+    LD A, (PDTB_Count)
     RET
 
 ; Subrotina interna: mesma lógica de PrintDecDigit, só que escrevendo no

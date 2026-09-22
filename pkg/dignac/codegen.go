@@ -53,6 +53,7 @@ type CodeGenerator struct {
 	needsSpriteDefine  bool
 	needsSpriteHideAll bool
 	needsPlaySequence  bool
+	needsMuteAll       bool
 	needsFileOpen      bool
 	needsFileCreate    bool
 	needsFileClose     bool
@@ -207,6 +208,9 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 	}
 	if cg.needsPlaySequence && !containsString(externs, "PSG_PlaySequence") {
 		externs = append(externs, "PSG_PlaySequence")
+	}
+	if cg.needsMuteAll && !containsString(externs, "PSG_MuteAll") {
+		externs = append(externs, "PSG_MuteAll")
 	}
 	if cg.needsFileOpen && !containsString(externs, "BDOS_FileOpen") {
 		externs = append(externs, "BDOS_FileOpen")
@@ -734,6 +738,7 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 
 	case *PlayStmt:
 		cg.needsPlaySequence = true
+		cg.needsMuteAll = true
 		events, err := parseMML(s.MML)
 		if err != nil {
 			return fmt.Errorf("PLAY: %w", err)
@@ -742,6 +747,13 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 		cg.extraData = append(cg.extraData, fmt.Sprintf("%s:\n%s", label, encodeEvents(events)))
 		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", label))
 		sb.WriteString("    CALL PSG_PlaySequence\n")
+		// O PSG é um chip com estado: sem isto, a última nota tocada
+		// continua soando indefinidamente (mesmo depois do programa sair
+		// de volta ao MSX-DOS) até algo mais reprogramar o canal --
+		// diferente de uma instrução que "termina" e não deixa efeito
+		// colateral pendente, o que seria a expectativa razoável de PLAY
+		// como statement autocontido.
+		sb.WriteString("    CALL PSG_MuteAll\n")
 		return nil
 
 	case *OpenStmt:
