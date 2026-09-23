@@ -6,9 +6,11 @@
   trampolim de troca de banco automaticamente (Main -> banco 1).
 
   Prova real de que as 3 linguagens de entrada do KIZUNA (Assembly, BASIC
-  Dignified e Pascal) linkam juntas num unico .COM multi-banco.
+  Dignified e Pascal) linkam juntas num unico .COM multi-banco -- agora
+  num banco paginavel de verdade (BANK <n> agora suportado no WIRTH80).
   ============================================================ }
 program GreetLib;
+BANK 1;
 PUBLIC Saudacao;
 
 procedure Saudacao(pontuacao: Integer);

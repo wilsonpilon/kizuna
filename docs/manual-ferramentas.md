@@ -480,11 +480,18 @@ musubi -o app.com main.mob lib.mob lib/msxlib.hlib
 
 O mesmo vale com `DIGNAC` no lugar do `KAJI80` como dono do `Start` — é
 literalmente o mesmo mecanismo que já une `KAJI80`+`DIGNAC` em
-`sample/obi/Obifile` (§7.2), agora também aberto pro `WIRTH80`. `demo/
-main.pas`/`demo/Obifile` (que ainda usam `{$USES}`, sintaxe que não existe)
-continuam sendo só o esboço de uma visão mais distante — `uses`/units de
-verdade cruzando arquivos — mas o mecanismo de exportar/chamar entre as três
-linguagens num único `.COM` já não é mais teórico.
+`sample/obi/Obifile` (§7.2), agora também aberto pro `WIRTH80`. Com
+`BANK <n>` também suportado no `WIRTH80` (`docs/manual-pascal.md` §2), o
+módulo-biblioteca acima nem precisa ficar no banco comum — `sample/obi/`
+é exatamente esse exemplo levado ao fim: `Main` (`KAJI80`, banco 0)
+chama `Desenhar` (`DIGNAC`, banco 2) e `Saudacao` (`WIRTH80`, **banco
+1**), com o `MUSUBI` gerando os dois trampolins de banco automaticamente
+— as três linguagens, cada uma no seu próprio banco, testado e confirmado
+em hardware real. `demo/main.pas`/`demo/Obifile` (que ainda usam
+`{$USES}`, sintaxe que não existe) continuam sendo só o esboço de uma
+visão mais distante — `uses`/units de verdade cruzando arquivos — mas o
+mecanismo de exportar/chamar entre as três linguagens num único `.COM`,
+cada uma em seu próprio banco, já não é mais teórico.
 
 ## 12. Ver também
 

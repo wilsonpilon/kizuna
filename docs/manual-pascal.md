@@ -48,8 +48,30 @@ end.
 ```
 
 Ordem completa (todas as partes depois de `program Nome;` são opcionais,
-mas quando presentes seguem sempre esta ordem): `PUBLIC`/`EXTERN` → `var` →
-`procedure`/`function` → bloco principal `begin...end.`.
+mas quando presentes seguem sempre esta ordem): `BANK <n>` → `PUBLIC`/`EXTERN`
+→ `var` → `procedure`/`function` → bloco principal `begin...end.`.
+
+`BANK <n>` (opcional, mesma posição e sintaxe do `KAJI80`/`DIGNAC`, mas
+terminada em `;` como qualquer declaração Pascal) escolhe o banco de
+alocação do módulo: `0` (padrão, se omitido) é o banco comum, sempre
+presente; `1..N` é um banco paginável na Página 2. Um módulo com `BANK`
+diferente de `0` normalmente também tem `begin end.` vazio e algum
+`PUBLIC` — vira uma biblioteca pura chamada de outro módulo, igual já
+funciona com `DIGNAC`.
+
+```pascal
+program GreetLib;
+BANK 1;
+PUBLIC Saudacao;
+
+procedure Saudacao(pontuacao: Integer);
+begin
+  WriteLn(pontuacao);
+end;
+
+begin
+end.
+```
 
 ## 3. Declaração de variáveis
 
@@ -254,11 +276,6 @@ Na ordem que mais desbloqueia o resto:
    (`Foo;` em vez de `Foo();`) — só uma simplificação de sintaxe, não um
    bloqueio real.
 5. Forward declarations e recursão indireta.
-6. Suporte à diretiva `BANK <n>` — hoje todo módulo `WIRTH80` sempre
-   compila pro banco comum (banco 0), sem nenhuma forma de mirar um banco
-   paginável (`codegen.go` grava `BANK 0` fixo). Não bloqueia linkar um
-   módulo `WIRTH80` junto com `KAJI80`/`DIGNAC` (`docs/manual-ferramentas.md`
-   §11) — só limita onde esse módulo pode morar num projeto multi-banco.
 
 ## 12. Ver também
 

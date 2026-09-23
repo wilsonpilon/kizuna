@@ -74,7 +74,24 @@ func (p *Parser) ParseProgram() (*ProgramNode, error) {
 		prog.Name = "Program"
 	}
 
-	// 2. PUBLIC/EXTERN opcionais, na mesma posição e formato do KAJI80/DIGNAC
+	// 2. BANK <n> opcional, mesma posição do KAJI80/DIGNAC (logo após o
+	// cabeçalho, antes de PUBLIC/EXTERN) -- terminado em ';' como qualquer
+	// declaração Pascal. Sem BANK, o módulo cai no banco comum (0), como
+	// sempre foi.
+	if p.match(TokenBank) {
+		if p.current.Type != TokenNumber {
+			return nil, fmt.Errorf("esperado número do banco após 'BANK' na linha %d:%d", p.current.Line, p.current.Column)
+		}
+		prog.Bank = int(p.current.Number)
+		if err := p.advance(); err != nil {
+			return nil, err
+		}
+		if _, err := p.expect(TokenSemi); err != nil {
+			return nil, err
+		}
+	}
+
+	// 3. PUBLIC/EXTERN opcionais, na mesma posição e formato do KAJI80/DIGNAC
 	// (mas terminados em ';', como qualquer declaração Pascal) -- só nomes de
 	// procedure/function fazem sentido aqui, já que só rotina é chamável
 	// entre módulos.
@@ -103,7 +120,7 @@ func (p *Parser) ParseProgram() (*ProgramNode, error) {
 		}
 	}
 
-	// 3. Declarações de variáveis opcionais: var ...
+	// 4. Declarações de variáveis opcionais: var ...
 	if p.match(TokenVar) {
 		for p.current.Type == TokenIdent {
 			decl, err := p.parseVarDecl()
@@ -114,7 +131,7 @@ func (p *Parser) ParseProgram() (*ProgramNode, error) {
 		}
 	}
 
-	// 4. procedure/function definidas pelo usuário, na ordem declarada
+	// 5. procedure/function definidas pelo usuário, na ordem declarada
 	// (declare-antes-de-usar: uma só pode chamar outra já declarada antes
 	// dela, sem forward declarations nesta leva).
 	for p.current.Type == TokenProcedure || p.current.Type == TokenFunction {
@@ -125,7 +142,7 @@ func (p *Parser) ParseProgram() (*ProgramNode, error) {
 		prog.Procs = append(prog.Procs, proc)
 	}
 
-	// 5. Bloco principal: begin ... end.
+	// 6. Bloco principal: begin ... end.
 	if p.current.Type != TokenBegin {
 		return nil, fmt.Errorf("esperado 'begin' do programa na linha %d:%d", p.current.Line, p.current.Column)
 	}
@@ -135,7 +152,7 @@ func (p *Parser) ParseProgram() (*ProgramNode, error) {
 	}
 	prog.Block = block
 
-	// 6. Ponto final '.'
+	// 7. Ponto final '.'
 	if _, err := p.expect(TokenDot); err != nil {
 		return nil, fmt.Errorf("esperado '.' no final do programa: %w", err)
 	}

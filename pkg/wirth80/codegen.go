@@ -103,7 +103,7 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 	cg.asm.WriteString("; =============================================================================\n\n")
 
 	cg.asm.WriteString(fmt.Sprintf("MODULE %s\n", modName))
-	cg.asm.WriteString("BANK 0\n\n")
+	cg.asm.WriteString(fmt.Sprintf("BANK %d\n\n", cg.prog.Bank))
 
 	// PUBLIC: "Start" só entra se o bloco principal (begin...end.) tiver
 	// algum comando -- mesma regra que o DIGNAC já usa (só gera Start se

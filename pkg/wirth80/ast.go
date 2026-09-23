@@ -20,6 +20,7 @@ type Stmt interface {
 // ProgramNode representa o programa Pascal completo
 type ProgramNode struct {
 	Name    string
+	Bank    int // 0 = área comum (padrão), 1..N = banco paginável
 	Publics []string
 	Externs []string
 	Vars    []*VarDecl

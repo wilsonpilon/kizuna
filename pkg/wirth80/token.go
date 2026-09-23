@@ -37,6 +37,7 @@ const (
 	TokenFunction
 	TokenPublic
 	TokenExtern
+	TokenBank
 
 	// Operadores e Delimitadores
 	TokenAssign    // :=
@@ -86,6 +87,7 @@ var tokenNames = map[TokenType]string{
 	TokenFunction:  "function",
 	TokenPublic:    "PUBLIC",
 	TokenExtern:    "EXTERN",
+	TokenBank:      "BANK",
 	TokenAssign:    ":=",
 	TokenPlus:      "+",
 	TokenMinus:     "-",

@@ -445,6 +445,70 @@ func TestCompileLibraryModuleOmitsStart(t *testing.T) {
 	}
 }
 
+// TestParseAndCompileBankDirective cobre a diretiva BANK <n>, opcional, na
+// mesma posição do KAJI80/DIGNAC (logo após o cabeçalho do programa). Sem
+// ela, o módulo cai no banco comum (0) -- com ela, o WIRTH80 finalmente
+// consegue gerar um módulo pra um banco paginável, igual o DIGNAC já fazia.
+func TestParseAndCompileBankDirective(t *testing.T) {
+	src := `
+	program Lib;
+	BANK 2;
+	PUBLIC Foo;
+	procedure Foo(a: Integer);
+	begin
+		WriteLn(a);
+	end;
+	begin
+	end.
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	prog, err := parser.ParseProgram()
+	if err != nil {
+		t.Fatalf("Erro ao parsear programa: %v", err)
+	}
+	if prog.Bank != 2 {
+		t.Fatalf("Esperado Bank=2, obteve %d", prog.Bank)
+	}
+
+	cg := NewCodeGenerator(prog)
+	_, asmSource, err := cg.Compile()
+	if err != nil {
+		t.Fatalf("Erro ao compilar módulo com BANK 2: %v\nAssembly:\n%s", err, asmSource)
+	}
+	if !strings.Contains(asmSource, "BANK 2") {
+		t.Errorf("Assembly gerado deveria conter 'BANK 2', obteve:\n%s", asmSource)
+	}
+}
+
+// TestParseProgramWithoutBankDefaultsToZero é a regressão complementar: sem
+// BANK declarado, o módulo continua caindo no banco comum, como sempre foi.
+func TestParseProgramWithoutBankDefaultsToZero(t *testing.T) {
+	src := `
+	program Simple;
+	var x: Integer;
+	begin
+		x := 1;
+	end.
+	`
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	prog, err := parser.ParseProgram()
+	if err != nil {
+		t.Fatalf("Erro ao parsear programa: %v", err)
+	}
+	if prog.Bank != 0 {
+		t.Errorf("Esperado Bank=0 (padrão) sem declaração BANK, obteve %d", prog.Bank)
+	}
+}
+
 // TestLinkKaji80AndWirth80LibraryTogether é o teste end-to-end que confirma
 // o objetivo final: um módulo KAJI80 que já define Start agora linka de
 // verdade com um módulo-biblioteca WIRTH80 (sem Start próprio) no mesmo
