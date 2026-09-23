@@ -725,16 +725,28 @@ Float_Cmp32_B_Done:
     LD A, (Float_RawB3)
     CP B
     JR NZ, Float_Cmp32_Result
+    ; "LD B,(nn)" NÃO existe no Z80 de verdade (só LD A,(nn) tem forma
+    ; absoluta de 16 bits pra registrador único) -- as 3 linhas abaixo
+    ; usavam essa forma inválida, que o KAJI80 monta em silêncio como
+    ; "LD B, n" com n=0 (cai no fallback de imediato de encodeLd, sem
+    ; erro), fazendo B sempre virar 0 em vez do byte de verdade. Só se
+    ; manifestava quando o byte3 transformado de A e B já eram iguais
+    ; (entra nessas comparações) -- ex.: qualquer comparação de igualdade,
+    ; ou dois positivos com faixa de expoente parecida. Corrigido
+    ; carregando o valor em A primeiro e só then movendo pra B.
+    LD A, (Float_MantHi)
+    LD B, A
     LD A, (Float_RawB2)
-    LD B, (Float_MantHi)
     CP B
     JR NZ, Float_Cmp32_Result
+    LD A, (Float_RawExp)
+    LD B, A
     LD A, (Float_RawB1)
-    LD B, (Float_RawExp)
     CP B
     JR NZ, Float_Cmp32_Result
+    LD A, (Float_Sign)
+    LD B, A
     LD A, (Float_RawB0)
-    LD B, (Float_Sign)
     CP B
 
 Float_Cmp32_Result:

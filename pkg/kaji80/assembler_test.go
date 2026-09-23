@@ -323,6 +323,47 @@ AfterDb:
 	}
 }
 
+// TestLdRegisterFromAbsoluteAddressRejected: só "LD A,(nn)" tem forma de
+// endereçamento absoluto de 16 bits pra um registrador de 8 bits no Z80 de
+// verdade -- "LD B,(nn)"/"LD C,(nn)"/etc. não existem. Sem uma checagem
+// explícita, isso caía no fallback de imediato (parseImm8, que não tem como
+// reportar erro) e montava em silêncio como "LD B, 0" -- bug real
+// encontrado em lib/src/float.asm (Float_Cmp32), onde 3 ocorrências de
+// "LD B,(Float_X)" quebravam comparações sempre que o fluxo as alcançava,
+// sem nenhum erro de montagem. Agora deve ser um erro de compilação claro.
+func TestLdRegisterFromAbsoluteAddressRejected(t *testing.T) {
+	src := `
+MODULE BadLd
+BANK 0
+PUBLIC Start
+Scratch: DB 00h
+Start:
+    LD B, (Scratch)
+    RET
+`
+	asm := NewAssembler()
+	_, err := asm.Assemble(src)
+	if err == nil {
+		t.Fatal("esperado erro de montagem para 'LD B,(Scratch)', mas montou com sucesso")
+	}
+}
+
+func TestLdAFromAbsoluteAddressStillWorks(t *testing.T) {
+	src := `
+MODULE GoodLd
+BANK 0
+PUBLIC Start
+Scratch: DB 00h
+Start:
+    LD A, (Scratch)
+    RET
+`
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err != nil {
+		t.Fatalf("LD A,(Scratch) deveria continuar funcionando, mas falhou: %v", err)
+	}
+}
+
 // TestMsxlibModulesAssembleConsistently monta todos os fontes da MSXLIB e
 // depende da verificacao interna de consistencia Pass1/Pass2 dentro de
 // Assemble() para pegar qualquer futura dessincronia de tamanho de

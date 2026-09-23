@@ -1025,6 +1025,17 @@ func (a *Assembler) encodeLd(ops []string) error {
 			a.emitAddressOrReloc(addr)
 			return nil
 		}
+		// O Z80 de verdade só tem endereçamento absoluto de 16 bits pra UM
+		// registrador de 8 bits através de A ("LD A,(nn)", opcode 0x3A) --
+		// "LD B,(nn)"/"LD C,(nn)"/etc. simplesmente não existem. Sem este
+		// check, cai no fallback de imediato abaixo (parseImm8, que não
+		// tem como reportar erro) e monta em silêncio como "LD r, 0" --
+		// bug real encontrado em lib/src/float.asm (Float_Cmp32): 3 linhas
+		// "LD B,(Float_MantHi)" etc viravam "LD B,0", quebrando comparações
+		// sempre que o fluxo alcançava esses trechos.
+		if strings.HasPrefix(src, "(") && strings.HasSuffix(src, ")") {
+			return fmt.Errorf("forma de LD não suportada: LD %s, %s -- só LD A,(nn) tem endereçamento absoluto de 16 bits pra um registrador de 8 bits; carregue em A e mova com LD %s,A", ops[0], ops[1], ops[0])
+		}
 		// LD r, n
 		val := a.parseImm8(ops[1])
 		a.emit(0x06|(d<<3), val)

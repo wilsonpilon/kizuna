@@ -6,12 +6,12 @@ Modo de Memória: Monobanco
 Bancos Utilizados: [0]
 Endereço Base:     0x0100
 Ponto de Entrada:  0x0100
-Tamanho do .COM:   1508 bytes (0x05E4)
+Tamanho do .COM:   1514 bytes (0x05EA)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x033E | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   574 bytes
 [ 1] 0x033E - 0x03A0 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
-[ 2] 0x03A0 - 0x06E4 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   836 bytes
+[ 2] 0x03A0 - 0x06EA | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   842 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
@@ -32,13 +32,13 @@ Tamanho do .COM:   1508 bytes (0x05E4)
 0x0261 [Banco  0] PROC Rel_End_26
 0x0279 [Banco  0] PROC If_Else_23
 0x0289 [Banco  0] PROC If_End_24
-0x028E [Banco  0] PROC StrLit_9
-0x029A [Banco  0] PROC StrLit_15
-0x02B4 [Banco  0] PROC StrLit_16
-0x02C5 [Banco  0] PROC StrLit_21
-0x02DE [Banco  0] PROC StrLit_22
-0x02F0 [Banco  0] PROC StrLit_27
-0x0309 [Banco  0] PROC StrLit_8
+0x028E [Banco  0] PROC StrLit_16
+0x029F [Banco  0] PROC StrLit_21
+0x02B8 [Banco  0] PROC StrLit_22
+0x02CA [Banco  0] PROC StrLit_27
+0x02E3 [Banco  0] PROC StrLit_8
+0x02F8 [Banco  0] PROC StrLit_9
+0x0304 [Banco  0] PROC StrLit_15
 0x031E [Banco  0] PROC SglLit_1
 0x0322 [Banco  0] PROC SglLit_2
 0x0326 [Banco  0] PROC SglLit_5
