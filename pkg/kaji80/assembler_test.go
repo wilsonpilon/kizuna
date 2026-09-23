@@ -329,7 +329,7 @@ AfterDb:
 // instrucao antes que ela corrompa silenciosamente algum rotulo.
 func TestMsxlibModulesAssembleConsistently(t *testing.T) {
 	libDir := filepath.Join("..", "..", "lib", "src")
-	files := []string{"bdos.asm", "bios.asm", "vdp.asm", "psg.asm", "string.asm", "math.asm"}
+	files := []string{"bdos.asm", "bios.asm", "vdp.asm", "psg.asm", "string.asm", "math.asm", "float.asm"}
 
 	for _, f := range files {
 		t.Run(f, func(t *testing.T) {

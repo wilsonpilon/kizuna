@@ -10,33 +10,33 @@ Tamanho do .COM:   920 bytes (0x0398)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x02B7 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   439 bytes
-[ 1] 0x02B7 - 0x0319 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
-[ 2] 0x0319 - 0x035B | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    66 bytes
+[ 1] 0x02B7 - 0x02F9 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    66 bytes
+[ 2] 0x02F9 - 0x035B | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    98 bytes
 [ 3] 0x035B - 0x0498 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:   317 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
 0x0106 [Banco  0] PROC Main
-0x0202 [Banco  0] PROC StrLit_6
-0x0220 [Banco  0] PROC StrLit_7
-0x023F [Banco  0] PROC StrLit_1
-0x0268 [Banco  0] PROC StrLit_2
-0x0291 [Banco  0] PROC StrLit_3
-0x0297 [Banco  0] PROC StrLit_4
-0x029D [Banco  0] PROC StrLit_5
-0x02B7 [Banco  0] PROC BDOS_Call
-0x02BB [Banco  0] PROC BDOS_PrintChar
-0x02D1 [Banco  0] PROC BDOS_PrintString
-0x02E7 [Banco  0] PROC BDOS_ReadChar
-0x02EF [Banco  0] PROC BDOS_Exit
-0x02F5 [Banco  0] PROC BDOS_FileOpen
-0x02FB [Banco  0] PROC BDOS_FileCreate
-0x0301 [Banco  0] PROC BDOS_FileClose
-0x0307 [Banco  0] PROC BDOS_FileRead
-0x030D [Banco  0] PROC BDOS_FileWrite
-0x0313 [Banco  0] PROC BDOS_FileSeek
-0x0319 [Banco  0] PROC Mul16
-0x032E [Banco  0] PROC Div16
+0x0202 [Banco  0] PROC StrLit_1
+0x022B [Banco  0] PROC StrLit_2
+0x0254 [Banco  0] PROC StrLit_3
+0x025A [Banco  0] PROC StrLit_4
+0x0260 [Banco  0] PROC StrLit_5
+0x027A [Banco  0] PROC StrLit_6
+0x0298 [Banco  0] PROC StrLit_7
+0x02B7 [Banco  0] PROC Mul16
+0x02CC [Banco  0] PROC Div16
+0x02F9 [Banco  0] PROC BDOS_Call
+0x02FD [Banco  0] PROC BDOS_PrintChar
+0x0313 [Banco  0] PROC BDOS_PrintString
+0x0329 [Banco  0] PROC BDOS_ReadChar
+0x0331 [Banco  0] PROC BDOS_Exit
+0x0337 [Banco  0] PROC BDOS_FileOpen
+0x033D [Banco  0] PROC BDOS_FileCreate
+0x0343 [Banco  0] PROC BDOS_FileClose
+0x0349 [Banco  0] PROC BDOS_FileRead
+0x034F [Banco  0] PROC BDOS_FileWrite
+0x0355 [Banco  0] PROC BDOS_FileSeek
 0x035B [Banco  0] PROC StrLen
 0x0369 [Banco  0] PROC StrCopy
 0x0379 [Banco  0] PROC StrToUpper

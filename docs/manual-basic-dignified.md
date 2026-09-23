@@ -86,23 +86,61 @@ linguagens (ver `docs/manual-ferramentas.md`). Limitações atuais:
   (`IF nome$ = ...`, aritmética, argumento de função) é um erro de
   compilação claro, não um resultado errado.
 
-### SINGLE / DOUBLE — declaráveis, mas sem aritmética ainda
+### SINGLE — declarar, `+`/`-`/comparação com operandos simples
 
 ```basic
-DIM x!, y#
+DIM a!, b!, soma!
 PROCEDURE Main()
-    x! = 3.14
-    y# = 2.71828d0
+    a! = 1.0
+    b! = 0.5
+    soma! = a! + b!         ' Float_Add32
+    IF soma! > a! THEN      ' Float_Cmp32
+        PRINT "maior"
+    END IF
 END PROCEDURE
 ```
 
-Declarar, atribuir por cópia (literal ou outra variável do mesmo tipo) e
-alocar espaço funciona. **Qualquer aritmética ou `PRINT` de uma variável
-SINGLE/DOUBLE é um erro de compilação** ("aritmética de ponto flutuante
-ainda não implementada") — de propósito: a engine de ponto flutuante
-completa (+, -, \*, /, comparação, conversão pra texto) é grande o
-suficiente para ser um projeto à parte, e o objetivo é nunca deixar algo
-incompleto fingir que funciona.
+`SINGLE` (IEEE 754 binary32) tem um motor de aritmética de verdade em
+`lib/src/float.asm` (`Float_Add32`/`Float_Sub32`/`Float_Cmp32`,
+MSXLIB). Funciona:
+
+- Declarar, atribuir por cópia (literal ou outra variável do mesmo tipo).
+- `x! = a! + b!` e `x! = a! - b!` — soma/subtração de verdade.
+- Comparação (`=`, `<>`, `<`, `<=`, `>`, `>=`) entre duas variáveis
+  `SINGLE`, ou uma variável `SINGLE` e um literal numérico.
+
+**Limitações desta leva, aceitas e documentadas (não escondidas)**:
+
+- **Só operandos simples ("expressões chatas")**: `x! = a! + b!` funciona,
+  `x! = (a! + b!) - c!` **não** (erro de compilação claro) — não existe
+  alocação de temporários ainda, então uma sub-expressão float aninhada
+  dentro de outra é recusada, não computada errado.
+- **`*` e `/` ainda não implementados** para `SINGLE` — erro de compilação
+  claro ("só '+' e '-' estão implementados... nesta leva"). A normalização
+  do produto/quociente de mantissa de 24 bits se mostrou bem mais delicada
+  do que somar/subtrair durante a implementação (é fácil inverter a
+  direção do ajuste de expoente por engano), e a decisão foi entregar
+  soma/subtração/comparação **verificadas** agora e deixar `*`/`/` para uma
+  leva futura, em vez de arriscar um bloco de código malfeito.
+- **`DOUBLE` continua só declarável/atribuível por cópia** — nenhuma
+  aritmética, mesmo erro de antes.
+- **`PRINT` de `SINGLE`/`DOUBLE` continua um erro de compilação** — a
+  conversão de ponto flutuante pra texto decimal é o item mais difícil de
+  todos, fica pra uma leva própria.
+- **Comparação mista** (um lado `SINGLE`, outro `INTEGER`, ou `SINGLE`
+  contra `DOUBLE`) é erro de compilação claro, não um resultado errado.
+- **Sem bit de guarda/arredondamento fino**: os deslocamentos de
+  alinhamento/normalização truncam em vez de arredondar ao mais próximo —
+  parte dos resultados fica 1 ULP (a última casa binária) diferente do
+  IEEE754 "de verdade". Em subtrações de magnitudes muito próximas
+  (cancelamento catastrófico) esse erro de 1 bit pode ser amplificado pela
+  normalização — também aceito nesta leva.
+- **Sem tratamento de `Infinity`/`NaN`/overflow de expoente**; subnormais
+  são tratados como zero.
+
+Exemplo real, hardware-testável (usa `IF`/`PRINT` de texto pra tornar o
+resultado observável sem depender de `PRINT` de float):
+`sample/basic/floatmath.bas`.
 
 ## 4. Literais numéricos
 

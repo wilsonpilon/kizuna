@@ -101,6 +101,9 @@ type CodeGenerator struct {
 	needsStrCopyLen    bool
 	needsPrintLenStr   bool
 	needsForStepSign   bool
+	needsFloatAdd32    bool
+	needsFloatSub32    bool
+	needsFloatCmp32    bool
 
 	extraData []string     // blocos DB pré-renderizados (padrões de sprite, sequências MML, caminhos de arquivo, literais de PRINT #n)
 	fileNums  map[int]bool // números de arquivo (#n) realmente usados no módulo
@@ -277,6 +280,15 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 	}
 	if cg.needsPrintLenStr && !containsString(externs, "BDOS_PrintLenStr") {
 		externs = append(externs, "BDOS_PrintLenStr")
+	}
+	if cg.needsFloatAdd32 && !containsString(externs, "Float_Add32") {
+		externs = append(externs, "Float_Add32")
+	}
+	if cg.needsFloatSub32 && !containsString(externs, "Float_Sub32") {
+		externs = append(externs, "Float_Sub32")
+	}
+	if cg.needsFloatCmp32 && !containsString(externs, "Float_Cmp32") {
+		externs = append(externs, "Float_Cmp32")
 	}
 
 	if len(externs) > 0 {
@@ -1120,6 +1132,13 @@ func (cg *CodeGenerator) generateExpr(sb *strings.Builder, expr Expr) error {
 		return nil
 
 	case *BinaryExpr:
+		switch e.Op {
+		case TokenEqual, TokenNotEqual, TokenLess, TokenLessEq, TokenGreater, TokenGreaterEq:
+			if floatType, ok := cg.detectFloatComparisonType(e.Left, e.Right); ok {
+				return cg.generateFloatComparison(sb, e, floatType)
+			}
+		}
+
 		// Avalia lado esquerdo
 		if err := cg.generateExpr(sb, e.Left); err != nil {
 			return err
@@ -1377,12 +1396,174 @@ func (cg *CodeGenerator) generateFloatAssign(sb *strings.Builder, s *AssignStmt,
 		if err := cg.loadVarAddress(sb, v.Name); err != nil {
 			return err
 		}
+	case *BinaryExpr:
+		// PUSH HL (endereço de destino) já foi feito acima -- desfaz, o
+		// caminho de aritmética float cuida do próprio endereçamento (ele
+		// mesmo faz loadVarAddress do destino de novo, duas vezes, uma pra
+		// copiar o operando esquerdo e outra pra chamar Float_Add32/Sub32).
+		sb.WriteString("    POP HL\n") // descarta -- ver comentário acima
+		return cg.generateFloatBinaryAssign(sb, s, targetType, v)
 	default:
 		return fmt.Errorf("atribuição a '%s' (%s) só suporta literal numérico ou outra variável %s por enquanto -- aritmética de ponto flutuante ainda não implementada", s.VarName, targetType, targetType)
 	}
 
 	sb.WriteString("    POP DE\n")
 	cg.emitRawCopy(sb, typeSize(targetType))
+	return nil
+}
+
+// loadFloatOperandAddress carrega em HL o endereço de um operando float
+// "simples" (SINGLE/DOUBLE): uma variável do MESMO tipo, ou um literal
+// numérico/float (promovido via floatLiteralLabel). Qualquer outra coisa
+// (sub-expressão aninhada, ex. "(a!+b!)") é um erro de compilação claro --
+// expressões float continuam "chatas" nesta leva (ver SPEC do motor em
+// lib/src/float.asm), evita ter que desenhar alocação de temporários.
+func (cg *CodeGenerator) loadFloatOperandAddress(sb *strings.Builder, expr Expr, targetType string) error {
+	switch v := expr.(type) {
+	case *FloatExpr:
+		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", cg.floatLiteralLabel(v, targetType)))
+		return nil
+	case *NumberExpr:
+		fe := &FloatExpr{Value: float64(v.Value), IsDouble: targetType == "DOUBLE"}
+		sb.WriteString(fmt.Sprintf("    LD HL, %s\n", cg.floatLiteralLabel(fe, targetType)))
+		return nil
+	case *VarExpr:
+		srcType := cg.varType(v.Name)
+		if srcType != targetType {
+			return fmt.Errorf("operando '%s' é do tipo %s, esperado %s (aritmética/comparação de ponto flutuante)", v.Name, srcType, targetType)
+		}
+		return cg.loadVarAddress(sb, v.Name)
+	default:
+		return fmt.Errorf("expressão de ponto flutuante só suporta uma variável ou um literal numérico simples por enquanto -- sub-expressões aninhadas (%T) ainda não implementadas", expr)
+	}
+}
+
+// generateFloatBinaryAssign implementa "x! = a! + b!" / "x! = a! - b!"
+// (SINGLE/DOUBLE, operandos simples, sem aninhamento). Copia o operando
+// esquerdo pro endereço de destino (Float_Add32/Sub32 escrevem o resultado
+// EM LUGAR do primeiro operando), depois chama a rotina certa com
+// HL=destino, DE=endereço do operando direito.
+func (cg *CodeGenerator) generateFloatBinaryAssign(sb *strings.Builder, s *AssignStmt, targetType string, bin *BinaryExpr) error {
+	var opName string
+	switch bin.Op {
+	case TokenPlus:
+		opName = "Float_Add32"
+		cg.needsFloatAdd32 = true
+	case TokenMinus:
+		opName = "Float_Sub32"
+		cg.needsFloatSub32 = true
+	default:
+		return fmt.Errorf("atribuição a '%s' (%s): só '+' e '-' estão implementados para ponto flutuante nesta leva ('*'/'/ ' ficam para uma leva futura)", s.VarName, targetType)
+	}
+
+	// copia o operando esquerdo pro endereço de destino (destino antes da
+	// origem, mesmo padrão de generateFloatAssign/generateStringAssign)
+	if err := cg.loadVarAddress(sb, s.VarName); err != nil {
+		return err
+	}
+	sb.WriteString("    PUSH HL\n")
+	if err := cg.loadFloatOperandAddress(sb, bin.Left, targetType); err != nil {
+		return err
+	}
+	sb.WriteString("    POP DE\n")
+	cg.emitRawCopy(sb, typeSize(targetType))
+
+	// HL = endereço de destino (também operando A, em lugar), DE = endereço
+	// do operando B -- calcula B primeiro pra não perder o endereço de
+	// destino no meio do cálculo de B (mesmo truque de PUSH/POP já usado
+	// acima)
+	if err := cg.loadFloatOperandAddress(sb, bin.Right, targetType); err != nil {
+		return err
+	}
+	sb.WriteString("    PUSH HL\n")
+	if err := cg.loadVarAddress(sb, s.VarName); err != nil {
+		return err
+	}
+	sb.WriteString("    POP DE\n") // HL = destino (também operando A), DE = endereço de B
+	sb.WriteString(fmt.Sprintf("    CALL %s\n", opName))
+	return nil
+}
+
+// exprFloatType devolve "SINGLE"/"DOUBLE" se expr é uma variável já
+// declarada desse tipo, "" caso contrário (inclui literais, que não
+// fixam um tipo sozinhos -- só ficam determinados quando pareados com uma
+// variável do outro lado da comparação).
+func (cg *CodeGenerator) exprFloatType(expr Expr) string {
+	if v, ok := expr.(*VarExpr); ok {
+		t := cg.varType(v.Name)
+		if t == "SINGLE" || t == "DOUBLE" {
+			return t
+		}
+	}
+	return ""
+}
+
+// detectFloatComparisonType decide se uma comparação binária deve usar
+// Float_Cmp32 em vez do caminho inteiro (SBC HL,DE) -- só quando pelo
+// menos um lado é uma variável SINGLE/DOUBLE (isso fixa o tipo alvo). Se
+// os dois lados forem variáveis float de tipos DIFERENTES, devolve false
+// (deixa loadFloatOperandAddress, chamado por generateFloatComparison só
+// quando ok=true, dar o erro claro -- mas aqui os dois já são float então
+// cai nesse caminho mesmo, com o tipo do lado esquerdo como alvo, garantindo
+// que a mistura SINGLE/DOUBLE também produz erro claro em vez de silêncio).
+func (cg *CodeGenerator) detectFloatComparisonType(left, right Expr) (string, bool) {
+	lt := cg.exprFloatType(left)
+	rt := cg.exprFloatType(right)
+	if lt != "" {
+		return lt, true
+	}
+	if rt != "" {
+		return rt, true
+	}
+	return "", false
+}
+
+// generateFloatComparison implementa comparação SINGLE/DOUBLE "chata"
+// (dois operandos simples, sem aninhamento) usando Float_Cmp32 -- reusa a
+// MESMA convenção de branching (JP Z/JP C/JP NC -> HL=0000h/0001h) que o
+// caminho de comparação inteira já usa, só que disparada pelas flags que
+// Float_Cmp32 deixa (documentado em lib/src/float.asm: Z=iguais, C=A<B,
+// mesma semântica de um SBC HL,DE entre inteiros).
+func (cg *CodeGenerator) generateFloatComparison(sb *strings.Builder, e *BinaryExpr, floatType string) error {
+	if err := cg.loadFloatOperandAddress(sb, e.Left, floatType); err != nil {
+		return err
+	}
+	sb.WriteString("    PUSH HL\n")
+	if err := cg.loadFloatOperandAddress(sb, e.Right, floatType); err != nil {
+		return err
+	}
+	sb.WriteString("    EX DE, HL\n") // DE = endereço de B
+	sb.WriteString("    POP HL\n")    // HL = endereço de A
+	cg.needsFloatCmp32 = true
+	sb.WriteString("    CALL Float_Cmp32\n")
+
+	trueLbl := cg.newLabel("Rel_True")
+	endLbl := cg.newLabel("Rel_End")
+
+	switch e.Op {
+	case TokenEqual:
+		sb.WriteString(fmt.Sprintf("    JP Z, %s\n", trueLbl))
+	case TokenNotEqual:
+		sb.WriteString(fmt.Sprintf("    JP NZ, %s\n", trueLbl))
+	case TokenLess:
+		sb.WriteString(fmt.Sprintf("    JP C, %s\n", trueLbl))
+	case TokenLessEq:
+		sb.WriteString(fmt.Sprintf("    JP C, %s\n", trueLbl))
+		sb.WriteString(fmt.Sprintf("    JP Z, %s\n", trueLbl))
+	case TokenGreater:
+		sb.WriteString(fmt.Sprintf("    JP Z, %s\n", endLbl))
+		sb.WriteString(fmt.Sprintf("    JP NC, %s\n", trueLbl))
+	case TokenGreaterEq:
+		sb.WriteString(fmt.Sprintf("    JP NC, %s\n", trueLbl))
+	default:
+		return fmt.Errorf("operador de comparação não suportado para ponto flutuante: %v", e.Op)
+	}
+
+	sb.WriteString("    LD HL, 0000h\n")
+	sb.WriteString(fmt.Sprintf("    JP %s\n", endLbl))
+	sb.WriteString(fmt.Sprintf("%s:\n", trueLbl))
+	sb.WriteString("    LD HL, 0001h\n")
+	sb.WriteString(fmt.Sprintf("%s:\n", endLbl))
 	return nil
 }
 

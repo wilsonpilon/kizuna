@@ -1,0 +1,93 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
+===============================================================================
+
+Modo de Memória: Monobanco
+Bancos Utilizados: [0]
+Endereço Base:     0x0100
+Ponto de Entrada:  0x0100
+Tamanho do .COM:   1508 bytes (0x05E4)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x033E | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   574 bytes
+[ 1] 0x033E - 0x03A0 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
+[ 2] 0x03A0 - 0x06E4 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   836 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x0100 [Banco  0] PROC Start
+0x0106 [Banco  0] PROC Main
+0x0175 [Banco  0] PROC Rel_True_6
+0x0178 [Banco  0] PROC Rel_End_7
+0x0190 [Banco  0] PROC If_Else_3
+0x01A0 [Banco  0] PROC If_End_4
+0x01DB [Banco  0] PROC Rel_True_13
+0x01DE [Banco  0] PROC Rel_End_14
+0x01F6 [Banco  0] PROC If_Else_10
+0x0206 [Banco  0] PROC If_End_11
+0x021E [Banco  0] PROC Rel_True_19
+0x0221 [Banco  0] PROC Rel_End_20
+0x0239 [Banco  0] PROC If_Else_17
+0x0249 [Banco  0] PROC If_End_18
+0x025E [Banco  0] PROC Rel_True_25
+0x0261 [Banco  0] PROC Rel_End_26
+0x0279 [Banco  0] PROC If_Else_23
+0x0289 [Banco  0] PROC If_End_24
+0x028E [Banco  0] PROC StrLit_9
+0x029A [Banco  0] PROC StrLit_15
+0x02B4 [Banco  0] PROC StrLit_16
+0x02C5 [Banco  0] PROC StrLit_21
+0x02DE [Banco  0] PROC StrLit_22
+0x02F0 [Banco  0] PROC StrLit_27
+0x0309 [Banco  0] PROC StrLit_8
+0x031E [Banco  0] PROC SglLit_1
+0x0322 [Banco  0] PROC SglLit_2
+0x0326 [Banco  0] PROC SglLit_5
+0x032A [Banco  0] PROC SglLit_12
+0x032E [Banco  0] PROC Global_a_sgl
+0x0332 [Banco  0] PROC Global_b_sgl
+0x0336 [Banco  0] PROC Global_diferenca_sgl
+0x033A [Banco  0] PROC Global_soma_sgl
+0x033E [Banco  0] PROC BDOS_Call
+0x0342 [Banco  0] PROC BDOS_PrintChar
+0x0358 [Banco  0] PROC BDOS_PrintString
+0x036E [Banco  0] PROC BDOS_ReadChar
+0x0376 [Banco  0] PROC BDOS_Exit
+0x037C [Banco  0] PROC BDOS_FileOpen
+0x0382 [Banco  0] PROC BDOS_FileCreate
+0x0388 [Banco  0] PROC BDOS_FileClose
+0x038E [Banco  0] PROC BDOS_FileRead
+0x0394 [Banco  0] PROC BDOS_FileWrite
+0x039A [Banco  0] PROC BDOS_FileSeek
+0x03A0 [Banco  0] PROC Float_UnpA
+0x03A1 [Banco  0] PROC Float_UnpA_Exp
+0x03A2 [Banco  0] PROC Float_UnpA_M0
+0x03A3 [Banco  0] PROC Float_UnpA_M1
+0x03A4 [Banco  0] PROC Float_UnpA_M2
+0x03A5 [Banco  0] PROC Float_UnpB
+0x03A6 [Banco  0] PROC Float_UnpB_Exp
+0x03A7 [Banco  0] PROC Float_UnpB_M0
+0x03A8 [Banco  0] PROC Float_UnpB_M1
+0x03A9 [Banco  0] PROC Float_UnpB_M2
+0x03AF [Banco  0] PROC Float_RawB0
+0x03B0 [Banco  0] PROC Float_RawB1
+0x03B1 [Banco  0] PROC Float_RawB2
+0x03B2 [Banco  0] PROC Float_RawB3
+0x03B3 [Banco  0] PROC Float_Sign
+0x03B4 [Banco  0] PROC Float_RawExp
+0x03B5 [Banco  0] PROC Float_MantHi
+0x03B6 [Banco  0] PROC Float_DestAddr
+0x03B8 [Banco  0] PROC Float_AddrB
+0x03BA [Banco  0] PROC Float_Unpack
+0x0423 [Banco  0] PROC Float_Pack
+0x048D [Banco  0] PROC Float_CopyUnp
+0x049C [Banco  0] PROC Float_MantIsZero
+0x04AC [Banco  0] PROC Float_Mant_Add
+0x04C0 [Banco  0] PROC Float_Mant_Sub
+0x04D4 [Banco  0] PROC Float_Mant_Cmp
+0x04F1 [Banco  0] PROC Float_Mant_Shr1
+0x04FE [Banco  0] PROC Float_Mant_Shl1
+0x0509 [Banco  0] PROC Float_AddCore
+0x05FB [Banco  0] PROC Float_AddSubCommon
+0x064C [Banco  0] PROC Float_Add32
+0x0651 [Banco  0] PROC Float_Sub32
+0x0656 [Banco  0] PROC Float_Cmp32

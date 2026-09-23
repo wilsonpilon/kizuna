@@ -1,6 +1,7 @@
 package dignac
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -418,7 +419,14 @@ func TestCompileSingleDoubleDeclareAndAssign(t *testing.T) {
 	}
 }
 
-func TestFloatArithmeticNotYetImplementedError(t *testing.T) {
+// TestFloatMulDivNotYetImplementedError: '+'/'-' e comparação de SINGLE
+// ganharam suporte real (ver TestCompileFloatAddSubAssign e
+// TestCompileFloatComparison abaixo) -- '*'/'/' continuam de fora nesta
+// leva (motor Z80 só tem Float_Add32/Sub32/Cmp32, Mul32/Div32 ficaram pra
+// uma leva futura por complexidade de normalização descoberta durante a
+// implementação). Este teste, que antes cobria TODA aritmética float como
+// erro, foi ajustado pra continuar cobrindo o que ainda É erro.
+func TestFloatMulDivNotYetImplementedError(t *testing.T) {
 	src := `
 	MODULE FloatArith
 	PUBLIC Main
@@ -427,7 +435,7 @@ func TestFloatArithmeticNotYetImplementedError(t *testing.T) {
 	PROCEDURE Main
 		x! = 1.0
 		y! = 2.0
-		x! = x! + y!
+		x! = x! * y!
 	END PROCEDURE
 	END MODULE
 	`
@@ -444,9 +452,168 @@ func TestFloatArithmeticNotYetImplementedError(t *testing.T) {
 
 	cg := NewCodeGenerator(mod)
 	if _, err := cg.GenerateAsm(); err == nil {
-		t.Fatalf("Esperado erro de compilação ao somar dois SINGLE, mas compilou com sucesso")
+		t.Fatalf("Esperado erro de compilação ao multiplicar dois SINGLE, mas compilou com sucesso")
 	} else if !strings.Contains(err.Error(), "ponto flutuante") {
 		t.Errorf("Esperado erro mencionando 'ponto flutuante', obteve: %v", err)
+	}
+}
+
+// TestCompileFloatAddSubAssign: "x! = a! + b!" e "x! = a! - b!" agora
+// compilam de verdade, chamando Float_Add32/Float_Sub32 do MSXLIB.
+func TestCompileFloatAddSubAssign(t *testing.T) {
+	for _, tc := range []struct {
+		op       string
+		wantCall string
+		wantExt  string
+	}{
+		{"+", "CALL Float_Add32", "Float_Add32"},
+		{"-", "CALL Float_Sub32", "Float_Sub32"},
+	} {
+		src := fmt.Sprintf(`
+		MODULE FloatArith
+		PUBLIC Main
+		DIM x!, a!, b!
+
+		PROCEDURE Main
+			a! = 1.0
+			b! = 2.0
+			x! = a! %s b!
+		END PROCEDURE
+		END MODULE
+		`, tc.op)
+
+		lexer := NewLexer(src)
+		parser, err := NewParser(lexer)
+		if err != nil {
+			t.Fatalf("[%s] Erro ao criar parser: %v", tc.op, err)
+		}
+		mod, err := parser.ParseModule()
+		if err != nil {
+			t.Fatalf("[%s] Erro ao parsear módulo: %v", tc.op, err)
+		}
+
+		cg := NewCodeGenerator(mod)
+		asm, err := cg.GenerateAsm()
+		if err != nil {
+			t.Fatalf("[%s] Erro ao compilar: %v", tc.op, err)
+		}
+		if !strings.Contains(asm, tc.wantCall) {
+			t.Errorf("[%s] esperava '%s' na assembly gerada, não achou:\n%s", tc.op, tc.wantCall, asm)
+		}
+		if !strings.Contains(asm, "EXTERN") || !strings.Contains(asm, tc.wantExt) {
+			t.Errorf("[%s] esperava EXTERN '%s' na assembly gerada, não achou:\n%s", tc.op, tc.wantExt, asm)
+		}
+	}
+}
+
+// TestCompileFloatComparison: "IF a! > b! THEN" compila usando
+// Float_Cmp32, não o caminho inteiro (SBC HL,DE).
+func TestCompileFloatComparison(t *testing.T) {
+	src := `
+	MODULE FloatCmp
+	PUBLIC Main
+	DIM a!, b!
+
+	PROCEDURE Main
+		a! = 1.0
+		b! = 2.0
+		IF a! > b! THEN
+			a! = b!
+		END IF
+	END PROCEDURE
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	cg := NewCodeGenerator(mod)
+	asm, err := cg.GenerateAsm()
+	if err != nil {
+		t.Fatalf("Erro ao compilar: %v", err)
+	}
+	if !strings.Contains(asm, "CALL Float_Cmp32") {
+		t.Errorf("esperava 'CALL Float_Cmp32' na assembly gerada, não achou:\n%s", asm)
+	}
+	if !strings.Contains(asm, "EXTERN") || !strings.Contains(asm, "Float_Cmp32") {
+		t.Errorf("esperava EXTERN 'Float_Cmp32' na assembly gerada, não achou:\n%s", asm)
+	}
+}
+
+// TestFloatNestedExpressionStillErrors: expressões float aninhadas
+// ("(a!+b!)*c!" -- aqui simplificado pra uma soma dentro de outra soma)
+// continuam dando erro de compilação claro -- não existe alocação de
+// temporários nesta leva, então só operandos simples são aceitos.
+func TestFloatNestedExpressionStillErrors(t *testing.T) {
+	src := `
+	MODULE FloatNested
+	PUBLIC Main
+	DIM x!, a!, b!, c!
+
+	PROCEDURE Main
+		a! = 1.0
+		b! = 2.0
+		c! = 3.0
+		x! = a! + b! + c!
+	END PROCEDURE
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	cg := NewCodeGenerator(mod)
+	if _, err := cg.GenerateAsm(); err == nil {
+		t.Fatalf("Esperado erro de compilação numa expressão float aninhada, mas compilou com sucesso")
+	}
+}
+
+// TestFloatMixedTypeComparisonStillErrors: comparar um SINGLE com um
+// INTEGER continua sendo um erro de compilação claro, não um resultado
+// silenciosamente errado.
+func TestFloatMixedTypeComparisonStillErrors(t *testing.T) {
+	src := `
+	MODULE FloatMixedCmp
+	PUBLIC Main
+	DIM a!, n%
+
+	PROCEDURE Main
+		a! = 1.0
+		n% = 2
+		IF a! > n% THEN
+			n% = 0
+		END IF
+	END PROCEDURE
+	END MODULE
+	`
+
+	lexer := NewLexer(src)
+	parser, err := NewParser(lexer)
+	if err != nil {
+		t.Fatalf("Erro ao criar parser: %v", err)
+	}
+	mod, err := parser.ParseModule()
+	if err != nil {
+		t.Fatalf("Erro ao parsear módulo: %v", err)
+	}
+
+	cg := NewCodeGenerator(mod)
+	if _, err := cg.GenerateAsm(); err == nil {
+		t.Fatalf("Esperado erro de compilação numa comparação SINGLE/INTEGER mista, mas compilou com sucesso")
 	}
 }
 

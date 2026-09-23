@@ -18,7 +18,7 @@ Write-Host "    KIZUNA (絆) - Compilacao da Biblioteca Padrao MSXLIB         " 
 Write-Host "=================================================================" -ForegroundColor Cyan
 
 # Lista dos módulos da biblioteca
-$Modules = @("bdos", "bios", "vdp", "psg", "string", "math")
+$Modules = @("bdos", "bios", "vdp", "psg", "string", "math", "float")
 $MobFiles = @()
 
 foreach ($m in $Modules) {
