@@ -291,6 +291,31 @@ func (l *Lexer) readNumber() (Token, error) {
 	for l.pos < l.length && (isHexRune(l.current()) || l.current() == 'h' || l.current() == 'H' || l.current() == 'b' || l.current() == 'B' || l.current() == 'x' || l.current() == 'X') {
 		l.advance()
 	}
+
+	// Ponto decimal (número de ponto flutuante, ex. 1.5, 45.0) -- só se
+	// seguido de dígito. Sem este caso, "1.5" virava DOIS tokens (NUMBER
+	// "1" + IDENTIFIER ".5", já que '.' é caractere de identificador
+	// válido) e a resolução de rótulo local (Fase 2, resolveLocalLabels)
+	// tentava tratar ".5" como referência de rótulo local -- quebrava
+	// qualquer literal decimal com ponto usado dentro de uma expressão
+	// (ex.: "EQU FIX(1.5)"). O campo Number (int64) não guarda a fração
+	// -- quem precisa do valor exato (o avaliador de expressões, Fase 1)
+	// relexa o texto reconstruído do zero, não depende deste campo pra
+	// literais float.
+	if l.pos < l.length && l.current() == '.' && l.pos+1 < l.length && l.src[l.pos+1] >= '0' && l.src[l.pos+1] <= '9' {
+		l.advance() // consome o '.'
+		for l.pos < l.length && l.current() >= '0' && l.current() <= '9' {
+			l.advance()
+		}
+		raw := string(l.src[start:l.pos])
+		intPart := raw[:strings.IndexByte(raw, '.')]
+		var intVal int64
+		if intPart != "" {
+			intVal, _ = strconv.ParseInt(intPart, 10, 64)
+		}
+		return Token{Type: TokenNumber, Value: raw, Number: intVal}, nil
+	}
+
 	raw := string(l.src[start:l.pos])
 
 	// Verificar sufixo 'H' (hexadecimal) antes de 0b para suportar 0BFh, 0B8h, etc.

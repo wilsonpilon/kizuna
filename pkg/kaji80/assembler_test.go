@@ -669,6 +669,35 @@ Function2:
 	}
 }
 
+// TestFloatLiteralInExpressionDoesNotCollideWithLocalLabel: achado real
+// ao montar um exemplo de hardware com FIX(1.5) -- o lexer antes tratava
+// "1.5" como DOIS tokens (NUMBER "1" + IDENTIFIER ".5", já que '.' é
+// caractere de identificador válido), e a resolução de rótulo local
+// (Fase 2) tentava tratar ".5" como referência de rótulo local, dando
+// erro de "rótulo local usado antes de qualquer rótulo global" mesmo sem
+// nenhum rótulo local de verdade no arquivo.
+func TestFloatLiteralInExpressionDoesNotCollideWithLocalLabel(t *testing.T) {
+	src := `
+MODULE FloatLitLocalLabel
+BANK 0
+PUBLIC Start
+VAL_FIX EQU FIX(1.5)
+Start:
+    LD HL, VAL_FIX
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	// FIX(1.5) = 1.5*256 = 384 = 0180h
+	expected := []byte{0x21, 0x80, 0x01, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
 // TestLocalLabelBeforeAnyGlobalErrors: um rótulo local usado antes de
 // qualquer rótulo global no arquivo é um erro de compilação claro, não um
 // símbolo fantasma silencioso.

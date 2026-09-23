@@ -1,0 +1,24 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
+===============================================================================
+
+Modo de Memória: Monobanco
+Bancos Utilizados: [0]
+Endereço Base:     0x0100
+Ponto de Entrada:  0x0100
+Tamanho do .COM:   466 bytes (0x01D2)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x02D2 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   466 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x0100 [Banco  0] PROC Start
+0x0181 [Banco  0] PROC MsgTitle
+0x01BB [Banco  0] PROC MsgExprOK
+0x01DC [Banco  0] PROC MsgExprFail
+0x0201 [Banco  0] PROC MsgFixOK
+0x021D [Banco  0] PROC MsgFixFail
+0x0239 [Banco  0] PROC MsgIfOK
+0x0287 [Banco  0] PROC MsgReptIntro
+0x02B8 [Banco  0] PROC MsgCRLF
+0x02BB [Banco  0] PROC MsgFim

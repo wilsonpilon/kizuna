@@ -13,8 +13,8 @@ Tamanho do .COM:   2441 bytes (0x0989)
 [ 1] 0x017E - 0x01A4 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:    38 bytes
 [ 2] 0x01A4 - 0x0206 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:    98 bytes
 [ 3] 0x0206 - 0x06D5 | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:  1231 bytes
-[ 4] 0x06D5 - 0x0788 | Banco:  0 | Tipo: CODE | Mod:  6 | Tam:   179 bytes
-[ 5] 0x0788 - 0x07CA | Banco:  0 | Tipo: CODE | Mod:  7 | Tam:    66 bytes
+[ 4] 0x06D5 - 0x0717 | Banco:  0 | Tipo: CODE | Mod:  6 | Tam:    66 bytes
+[ 5] 0x0717 - 0x07CA | Banco:  0 | Tipo: CODE | Mod:  7 | Tam:   179 bytes
 [ 6] 0x07CA - 0x0907 | Banco:  0 | Tipo: CODE | Mod:  8 | Tam:   317 bytes
 [ 7] 0x0907 - 0x0951 | Banco:  0 | Tipo: DATA | Mod:  3 | Tam:    74 bytes
 [ 8] 0x8000 - 0x8038 | Banco:  1 | Tipo: CODE | Mod:  2 | Tam:    56 bytes
@@ -82,16 +82,16 @@ Tamanho do .COM:   2441 bytes (0x0989)
 0x069F [Banco  0] PROC VDP_SpriteHide
 0x06BB [Banco  0] PROC VDP_SpriteHideAll
 0x06CE [Banco  0] PROC VDP_SpriteSetSize
-0x06D5 [Banco  0] PROC BIOS_Call
-0x06E7 [Banco  0] PROC BIOS_CHPUT
-0x06F6 [Banco  0] PROC BIOS_CHGET
-0x0720 [Banco  0] PROC BIOS_CLS
-0x0727 [Banco  0] PROC BIOS_POSIT
-0x0728 [Banco  0] PROC BIOS_BEEP
-0x0738 [Banco  0] PROC BIOS_INIT32
-0x0740 [Banco  0] PROC BIOS_CHGMOD
-0x0788 [Banco  0] PROC Mul16
-0x079D [Banco  0] PROC Div16
+0x06D5 [Banco  0] PROC Mul16
+0x06EA [Banco  0] PROC Div16
+0x0717 [Banco  0] PROC BIOS_Call
+0x0729 [Banco  0] PROC BIOS_CHPUT
+0x0738 [Banco  0] PROC BIOS_CHGET
+0x0762 [Banco  0] PROC BIOS_CLS
+0x0769 [Banco  0] PROC BIOS_POSIT
+0x076A [Banco  0] PROC BIOS_BEEP
+0x077A [Banco  0] PROC BIOS_INIT32
+0x0782 [Banco  0] PROC BIOS_CHGMOD
 0x07CA [Banco  0] PROC StrLen
 0x07D8 [Banco  0] PROC StrCopy
 0x07E8 [Banco  0] PROC StrToUpper
