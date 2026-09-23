@@ -34,7 +34,7 @@ $ZipFilePath = Join-Path $RootDir $ZipFileName
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "    KIZUNA (絆) - Build & Empacotamento para Distribuicao        " -ForegroundColor Cyan
-Write-Host "    Versao: v$KizunaVersion [Release Yuugou (融合)]               " -ForegroundColor Cyan
+Write-Host "    Versao: v$KizunaVersion [Release Jisshou (実証)]              " -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "Diretorio Raiz: $RootDir" -ForegroundColor Gray
 Write-Host "Destino:        $DistDir" -ForegroundColor Gray
@@ -190,6 +190,8 @@ Copy-Item -Path "$RootDir/sample/basic/chart.bas" -Destination "$BasicDir/chart.
 Copy-Item -Path "$RootDir/sample/basic/chart.com" -Destination "$BasicDir/chart.com"
 Copy-Item -Path "$RootDir/sample/basic/showcase.bas" -Destination "$BasicDir/showcase.bas"
 Copy-Item -Path "$RootDir/sample/basic/showcase.com" -Destination "$BasicDir/showcase.com"
+Copy-Item -Path "$RootDir/sample/basic/floatmath.bas" -Destination "$BasicDir/floatmath.bas"
+Copy-Item -Path "$RootDir/sample/basic/floatmath.com" -Destination "$BasicDir/floatmath.com"
 Copy-Item -Path "$RootDir/sample/basic/build.ps1" -Destination "$BasicDir/build.ps1"
 
 # OBI (Obifile declarativo: KAJI80 + DIGNAC + resource + biblioteca)
@@ -256,6 +258,7 @@ $kizunaComs = @(
     "sample/basic/calc.com",
     "sample/basic/chart.com",
     "sample/basic/showcase.com",
+    "sample/basic/floatmath.com",
     "sample/pascal/hello.com",
     "sample/pascal/calc.com",
     "sample/libdemo/libdemo.com",

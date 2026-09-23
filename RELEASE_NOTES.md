@@ -1,3 +1,118 @@
+# Release Notes — KIZUNA v4.10.0 "Jisshou" (実証)
+
+> "Não basta parecer certo no papel — só conta o que roda de verdade, no emulador e na placa."
+
+**Jisshou** (実証) — "prova empírica, verificação pela prática". Depois de
+*Yuugou* (融合, as três linguagens linkando juntas), esta release entrega
+aritmética `SINGLE` de verdade no `DIGNAC` — e, ao testá-la em hardware,
+um lembrete direto do porquê desse nome: um bug real que sobreviveu a
+várias rodadas de verificação no papel só caiu depois que o projeto
+ganhou sua primeira ferramenta de execução real de Z80.
+
+## DIGNAC ganha aritmética SINGLE de verdade: soma, subtração e comparação
+
+```basic
+DIM a!, b!, soma!
+a! = 1.0 : b! = 0.5
+soma! = a! + b!        ' Float_Add32
+IF soma! > a! THEN      ' Float_Cmp32
+    PRINT "maior"
+END IF
+```
+
+`x! = a! + b!`, `x! = a! - b!` e comparação (`=`,`<>`,`<`,`<=`,`>`,`>=`)
+agora funcionam para `SINGLE` (IEEE 754 binary32), via um motor de
+software novo em `lib/src/float.asm` — `Float_Add32`/`Float_Sub32`/
+`Float_Cmp32`, três novas rotinas na `MSXLIB`.
+
+**Escopo desta leva, deliberado**: só operandos simples — `x! = a! + b!`
+funciona, `x! = (a!+b!)*c!` continua um erro de compilação claro (sem
+alocação de temporários ainda). `*`/`/` e `DOUBLE` ficam pra uma leva
+futura: a normalização de mantissa 24×24→48 bits do produto/quociente se
+mostrou bem mais delicada do que soma/subtração — decidido entregar
+Add/Sub/Cmp **verificados** agora em vez de arriscar `*`/`/` malfeitos.
+`PRINT` de float continua fora de escopo (conversão decimal é o item mais
+difícil de todos).
+
+**Metodologia**: o algoritmo (unpack/align/normalize/repack) foi escrito
+primeiro num protótipo em Go, testado contra ~200 mil pares aleatórios
+comparados com a aritmética `float32` nativa do Go — achou e corrigiu 2
+bugs de normalização antes de qualquer linha de Z80 ser escrita. Na
+transliteração pro Z80, mais 3 bugs reais: `KAJI80` não suporta
+aritmética `Label+N` em operandos (virava `EXTERN` fantasma silencioso),
+`LD DE,(nn)` não existe no Z80 de verdade, e comparar o expoente (signed)
+com `CP` direto é uma comparação *unsigned* e errava sempre que os dois
+expoentes tinham sinais diferentes — só descoberto ao escolher
+deliberadamente um exemplo pra hand-trace que exercitasse esse caminho.
+
+## Bug real que só apareceu em hardware — e a primeira ferramenta de execução real de Z80 do projeto
+
+Wilson testou `sample/basic/floatmath.bas` em hardware/openMSX: soma
+falhava, uma das duas comparações falhava, subtração e a outra
+comparação funcionavam. Um padrão que resistiu a várias re-verificações
+por hand-tracing — não existia emulador Z80 no repositório até então, só
+montagem, leitura de código e raciocínio manual.
+
+A causa raiz só foi encontrada depois de montar um harness em Go usando
+`github.com/remogatto/z80` (scratchpad, fora do repositório) pra
+**executar de verdade** o `.com` linkado, com registradores controlados —
+primeira vez que este projeto teve acesso a execução real de Z80 pra
+depuração. Em minutos: `Float_Cmp32` usava `LD B, (Float_MantHi)` — uma
+forma que **não existe** no Z80 de verdade (só `LD A,(nn)` tem
+endereçamento absoluto de 16 bits pra um registrador de 8 bits) — e o
+`KAJI80` montava isso em silêncio como `LD B, 0`. Só quebrava quando o
+byte mais significativo (sinal + topo do expoente) de A e B já eram
+iguais — ou seja, **qualquer comparação de igualdade**, ou dois positivos
+com faixa de expoente parecida, exatamente o padrão observado.
+
+Corrigido e **reconfirmado em hardware pelo usuário** no mesmo dia.
+Verificado também com 20.000 pares aleatórios rodados no emulador contra
+a aritmética `float32` nativa do Go: `Cmp32` foi de "falhava em quase
+todo caso de byte-alto igual" pra 0 falhas em 20.000.
+
+## Auditoria do KAJI80: uma classe inteira de bug fechada de uma vez
+
+A pedido de Wilson, logo depois do bug acima: existem outros pontos no
+assembler com a mesma forma — um operando que deveria ser rejeitado
+caindo em silêncio num fallback de imediato/símbolo em vez de dar erro?
+
+Achados e corrigidos dois:
+
+1. `emitAddressOrReloc`/`emitRelativeOrReloc` (usadas por `CALL`, `JP`,
+   `JR`, `DJNZ`, `LD (nn),A/HL`, `LD HL,(nn)`, `LD rr,nn`, `LD IX/IY,nn`,
+   `DW`) não validavam o nome do símbolo — qualquer string virava uma
+   "relocation" válida em silêncio. Mesma causa raiz do bug de `Label+N`
+   já conhecido, agora fechada na fonte, não só contornada num arquivo.
+   De brinde, fecha também `LD DE,(nn)`/`LD BC,(nn)`.
+2. `encodeAlu8` (`ADD`/`ADC`/`SUB`/`SBC`/`AND`/`XOR`/`OR`/`CP`) ganhou o
+   mesmo tipo de guarda pra endereço absoluto entre parênteses — `CP
+   (Algo)` virava `CP 0` em silêncio.
+
+Rebuild completo de `MSXLIB` e todos os exemplos `BASIC`/`Pascal`/`OBI`
+confirma: pura proteção, nada legítimo dependia do comportamento antigo.
+
+## WIRTH80 ganha a diretiva BANK <n>
+
+Item já sinalizado como "próximo passo" na v4.9.0. Programas Pascal
+(`WIRTH80`) agora podem declarar `BANK <n>;` logo após `program Nome;`
+(mesma posição do `KAJI80`/`DIGNAC`, terminada com `;` pra combinar com a
+sintaxe `PUBLIC`/`EXTERN` já estabelecida). `sample/obi/` — as 3
+linguagens linkadas num único `.COM` — agora tem cada linguagem no seu
+próprio banco de verdade, não mais duas forçadas a dividir o banco 0.
+
+## Próximos passos
+
+- `Float_Mul32`/`Float_Div32` — deliberadamente deferidos nesta leva.
+- Expressões `SINGLE` aninhadas (`(a!+b!)*c!`) — precisa de alocação de
+  temporários.
+- `DOUBLE` com aritmética de verdade (mesmo algoritmo, mantissa de 52
+  bits).
+- `PRINT`/conversão decimal de `SINGLE`/`DOUBLE`.
+- `uses`/units de verdade cruzando arquivos no `WIRTH80` (`{$USES}`).
+- `for...to/downto...do` no `WIRTH80` (tokens já reservados, sem parser).
+
+---
+
 # Release Notes — KIZUNA v4.9.0 "Yuugou" (融合)
 
 > "O laço (絆) finalmente amarra as três: Assembly, BASIC e Pascal, linkados de verdade num único .COM, testado em hardware real."

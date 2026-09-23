@@ -3,6 +3,73 @@
 Todas as mudanças notáveis deste projeto são documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
+## [4.10.0] - 2026-09-23 - Release Jisshou (実証)
+
+### DIGNAC ganha aritmética SINGLE de verdade: Float_Add32/Sub32/Cmp32
+
+`x! = a! + b!`, `x! = a! - b!` e comparação (`=`,`<>`,`<`,`<=`,`>`,`>=`)
+agora funcionam para `SINGLE` (IEEE 754 binary32), via um motor de
+software novo em `lib/src/float.asm` (`Float_Add32`/`Float_Sub32`/
+`Float_Cmp32`, MSXLIB). Escopo desta leva: operandos simples (variável
+ou literal, sem aninhar — `x! = (a!+b!)*c!` continua erro de compilação
+claro), `*`/`/` e `DOUBLE` ficam pra uma leva futura (a normalização de
+mantissa 24×24→48 bits se mostrou bem mais delicada que soma/subtração).
+`PRINT` de float continua fora de escopo.
+
+Algoritmo verificado num protótipo em Go contra ~200 mil pares
+aleatórios antes de tocar em Z80 — achou e corrigiu 2 bugs de
+normalização antes de escrever a primeira linha de assembly. Na
+transliteração, mais 3 bugs reais encontrados e corrigidos: KAJI80 não
+suporta aritmética `Label+N` em operandos (virava `EXTERN` fantasma
+silencioso), `LD DE,(nn)` não existe no Z80 de verdade, e comparação de
+expoente signed usando `CP` direto (comparação unsigned) errava sempre
+que os dois expoentes tinham sinais diferentes.
+
+### Bug real encontrado só em hardware — e uma ferramenta nova pro projeto: um emulador Z80
+
+Wilson testou o exemplo (`sample/basic/floatmath.bas`) em hardware/
+openMSX: soma falhava, uma das duas comparações falhava, subtração e a
+outra comparação funcionavam — um padrão que resistiu a várias
+re-verificações por hand-tracing (não existe emulador Z80 no repositório
+até então). Causa raiz só foi achada montando um harness em Go com
+`github.com/remogatto/z80` (scratchpad, primeira vez que o projeto tem
+acesso a execução real de Z80 pra depuração) pra *rodar* o `.com`
+linkado de verdade: `Float_Cmp32` usava `LD B, (Float_MantHi)` — forma
+que não existe no Z80 (só `LD A,(nn)` tem endereçamento absoluto de 16
+bits pra um registrador de 8 bits) — e o KAJI80 montava isso em
+silêncio como `LD B, 0`. Só quebrava quando o byte mais significativo
+(sinal+topo do expoente) de A e B já eram iguais — qualquer comparação
+de igualdade, ou dois positivos com faixa de expoente parecida.
+Corrigido e **reconfirmado em hardware pelo usuário** no mesmo dia.
+Verificado também com 20.000 casos aleatórios rodados no emulador contra
+a aritmética float32 nativa do Go (`Cmp32` 0 falhas).
+
+### Auditoria do KAJI80 fecha uma classe inteira de bug de "operando de memória vira imediato em silêncio"
+
+A pedido de Wilson, depois do bug acima: qualquer operando que parece
+um endereço de memória (`(algo)`) mas não bate com nenhuma forma real do
+Z80 pra aquela instrução caía num fallback de imediato/símbolo sem
+nenhuma validação, virando `0` ou um "símbolo" fantasma em silêncio —
+mesma causa raiz do já conhecido bug de `Label+N`. `emitAddressOrReloc`/
+`emitRelativeOrReloc` (usadas por `CALL`, `JP`, `JR`, `DJNZ`, `LD
+(nn),A/HL`, `LD HL,(nn)`, `LD rr,nn`, `LD IX/IY,nn`, `DW`) agora validam
+o nome do símbolo antes de aceitar — fecha essa classe inteira de uma
+vez (inclusive `LD DE,(nn)`/`LD BC,(nn)`, de brinde). `encodeAlu8`
+ganhou o mesmo tipo de guarda pra endereço absoluto entre parênteses
+(`CP (Algo)` virava `CP 0` em silêncio). Rebuild completo de MSXLIB e
+todos os exemplos confirma que nada legítimo dependia do comportamento
+antigo.
+
+### WIRTH80 ganha a diretiva BANK <n>
+
+Programas Pascal (`WIRTH80`) agora podem declarar `BANK <n>;` logo após
+`program Nome;` (mesma posição do `KAJI80`/`DIGNAC`, terminada com `;`
+pra combinar com a sintaxe `PUBLIC`/`EXTERN` já estabelecida) — antes,
+todo módulo `WIRTH80` caía sempre no banco comum. `sample/obi/`
+(`KAJI80`+`DIGNAC`+`WIRTH80` linkados num único `.COM`) agora tem cada
+linguagem em seu próprio banco de verdade, não mais duas linguagens
+forçadas a dividir o banco 0.
+
 ## [4.9.0] - 2026-09-23 - Release Yuugou (融合)
 
 ### As 3 linguagens de entrada linkam juntas num único .COM — pela primeira vez, testado e confirmado em hardware

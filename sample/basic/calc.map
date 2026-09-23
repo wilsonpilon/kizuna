@@ -17,13 +17,13 @@ Tamanho do .COM:   920 bytes (0x0398)
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
 0x0106 [Banco  0] PROC Main
-0x0202 [Banco  0] PROC StrLit_5
-0x021C [Banco  0] PROC StrLit_6
-0x023A [Banco  0] PROC StrLit_7
-0x0259 [Banco  0] PROC StrLit_1
-0x0282 [Banco  0] PROC StrLit_2
-0x02AB [Banco  0] PROC StrLit_3
-0x02B1 [Banco  0] PROC StrLit_4
+0x0202 [Banco  0] PROC StrLit_4
+0x0208 [Banco  0] PROC StrLit_5
+0x0222 [Banco  0] PROC StrLit_6
+0x0240 [Banco  0] PROC StrLit_7
+0x025F [Banco  0] PROC StrLit_1
+0x0288 [Banco  0] PROC StrLit_2
+0x02B1 [Banco  0] PROC StrLit_3
 0x02B7 [Banco  0] PROC BDOS_Call
 0x02BB [Banco  0] PROC BDOS_PrintChar
 0x02D1 [Banco  0] PROC BDOS_PrintString

@@ -10,7 +10,7 @@ num único executável — inclusive distribuindo módulos por bancos de
 memória diferentes, com troca de banco resolvida automaticamente pelo
 linker.
 
-Versão Atual: `v4.9.0` — Release **Yuugou (融合)**.
+Versão Atual: `v4.10.0` — Release **Jisshou (実証)**.
 
 ## Por quê
 
@@ -29,9 +29,9 @@ BASIC estruturado no mesmo binário `.COM`.
 
 | Nome      | Papel                                 | Status                            |
 | --------- | ------------------------------------- | --------------------------------- |
-| `KAJI80`  | Assembler Z80 modular                 | **Concluído & Validado** (v4.3)   |
-| `WIRTH80` | Compilador Pascal (TP4-like)          | **Concluído & Validado — `procedure`/`function`, `PUBLIC`/`EXTERN`** (v4.9.0) |
-| `DIGNAC`  | Compilador MSX-BASIC Dignified        | **Concluído & Validado — tipos reais (STRING/INTEGER/SINGLE/DOUBLE), sprites, música, arquivo** (v4.8.0) |
+| `KAJI80`  | Assembler Z80 modular                 | **Concluído & Validado — auditoria fecha classe de bug de operando de memória mal-formado** (v4.10.0) |
+| `WIRTH80` | Compilador Pascal (TP4-like)          | **Concluído & Validado — `procedure`/`function`, `PUBLIC`/`EXTERN`, `BANK <n>`** (v4.10.0) |
+| `DIGNAC`  | Compilador MSX-BASIC Dignified        | **Concluído & Validado — tipos reais + aritmética SINGLE (`+`/`-`/comparação), confirmado em hardware** (v4.10.0) |
 | `MUSUBI`  | Linker com Smart-Linking e Mapper     | **Concluído & Validado — um único ponto de entrada garantido por executável** (v4.9.0) |
 | `HAKO`    | Bibliotecário / Empacotador (`.hlib`) | **Concluído & Validado** (v4.3)   |
 | `MOBDUMP` | Inspecionador de objetos `.MOB`       | **Concluído & Validado** (v4.2)   |
