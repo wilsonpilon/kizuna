@@ -3,7 +3,52 @@
 Todas as mudanças notáveis deste projeto são documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
-## [4.10.0] - 2026-09-23 - Release Jisshou (実証)
+## [4.11.0] - 2026-09-23 - Release Kakuchou (拡張)
+
+### KAJI80 ganha recursos de macro-assembler ao estilo asMSX, com sintaxe própria do KIZUNA
+
+8 fases entregues, aprovadas de antemão como um plano único: avaliador de
+expressões numéricas em tempo de montagem (aritmética, bits, lógica,
+funções matemáticas, `PI`, ponto fixo `FIX`/`FIXMUL`/`FIXDIV`/`INT`,
+`RANDOM`), rótulos locais (`.nome:`, escopados ao rótulo global mais
+recente), montagem condicional (`IF`/`ELSE`/`ENDIF`), repetição de bloco
+(`REPT`/`ENDR`), macros (`MACRO @param.../ENDM`), rótulos pré-definidos
+de BIOS/BDOS/variáveis de sistema (sem precisar de `EXTERN`),
+`CALLBIOS`/`CALLDOS` (chamada inter-slot de BIOS e chamada de MSX-DOS) e
+`INCBIN "arquivo", SKIP=x, SIZE=y`.
+
+Vários desvios deliberados da sintaxe literal do asMSX, sempre pra evitar
+quebrar uma convenção que o KAJI80 já tinha antes desta leva: `MOD` em
+vez de `%` (já é o prefixo de literal binário), `@param` em vez de
+`#param` nas macros (já é o prefixo de literal hexadecimal), `SKIP=x`/
+`SIZE=y` em vez de espaço (evita uma ambiguidade real na reconstrução de
+operando). A tabela `BDOS` de códigos de função do MSX-DOS é nova — o
+asMSX não tem equivalente.
+
+Dois bugs reais encontrados e corrigidos como efeito colateral de
+reproduzir exemplos reais do asMSX em testes, não como objetivo direto de
+nenhuma fase: `INC (HL)`/`DEC (HL)` nunca tinham sido implementados
+(instrução Z80 padrão), e a separação de operandos por vírgula não
+respeitava profundidade de parênteses (`DB POW(2,3)` quebrava errado em
+dois operandos).
+
+Um terceiro bug, mais sutil, só apareceu testando os recursos **juntos**:
+um literal decimal com ponto (`FIX(1.5)`) colidia com a resolução de
+rótulo local, porque o lexer nunca soube reconhecer ponto decimal em
+número (`"1.5"` virava dois tokens, `NUMBER "1"` + `IDENTIFIER ".5"`, já
+que `.` sempre foi caractere de identificador válido). Corrigido na raiz
+no lexer — nenhuma fase individual tinha esse bug isolada, só a
+combinação.
+
+Novo `sample/macroasm/` — três programas reais em KAJI80 puro (sem
+DIGNAC/WIRTH80) exercitando os 8 recursos, cada um imprimindo
+`[OK]`/`[FALHOU]` visível via BDOS pra confirmação em hardware real.
+Verificados num emulador Z80 (harness próprio deste projeto, usado antes
+pro motor de float) antes da entrega: saída impressa capturada e
+conferida por completo pra dois dos três programas; o terceiro
+(`CALLBIOS CHGMOD`, troca de tela de verdade) teve a chamada inter-slot
+confirmada até o ponto de entrada real da ROM — a mudança de tela em si
+só é verificável em hardware/openMSX de verdade.
 
 ### DIGNAC ganha aritmética SINGLE de verdade: Float_Add32/Sub32/Cmp32
 

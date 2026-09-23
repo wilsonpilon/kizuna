@@ -1,3 +1,101 @@
+# Release Notes — KIZUNA v4.11.0 "Kakuchou" (拡張)
+
+> "Um assembler bom não é o que copia outro de verdade — é o que sabe quando NÃO copiar."
+
+**Kakuchou** (拡張) — "expansão, extensão". Depois de *Jisshou* (実証, a
+aritmética `SINGLE` e a primeira ferramenta de execução real de Z80 do
+projeto), esta release é inteiramente sobre o `KAJI80` amadurecendo: oito
+recursos de macro-assembler inspirados no [asMSX](https://github.com/Fubukimaru/asMSX),
+um cross-assembler Z80 consagrado na cena MSX, mas com sintaxe e escolhas
+próprias do KIZUNA onde fazia sentido divergir — nunca uma cópia cega.
+
+## KAJI80 ganha um motor de macro-assembler completo, em 8 fases
+
+Wilson pediu pra estudar a documentação do asMSX e trazer recursos
+equivalentes pro `KAJI80`. O plano de 8 fases foi desenhado e aprovado
+de uma vez antes de qualquer código, e entregue fase por fase, cada uma
+verificada e commitada antes da próxima:
+
+1. **Avaliador de expressões numéricas** em tempo de montagem —
+   aritmética, bits, lógica, comparação, funções matemáticas (`SIN`,
+   `COS`, `SQRT`, `POW`...), a constante `PI`, conversão de ponto fixo
+   8.8 (`FIX`/`FIXMUL`/`FIXDIV`/`INT` — necessário porque o Z80 não tem
+   ponto flutuante nativo) e `RANDOM(n)` (constante pseudoaleatória
+   embutida em tempo de montagem). `EQU` passa a aceitar a expressão
+   inteira; nova forma `Nome = expressão` pra variáveis reatribuíveis.
+2. **Rótulos locais** (`.nome:`) — escopados ao rótulo global mais
+   recente, sem custo em runtime, evitam ter que inventar um nome novo
+   pra cada `.loop`/`.done` trivial de cada rotina.
+3. **Montagem condicional** (`IF`/`ELSE`/`ENDIF`).
+4. **Repetição de bloco** (`REPT n`/`ENDR`), com desambiguação
+   automática de rótulo local entre iterações.
+5. **Macros** (`MACRO @param.../ENDM`), incluindo substituição de
+   parâmetro dentro de um identificador maior (`.reset_@VAR:`).
+6. **Rótulos pré-definidos** de BIOS (~120), variáveis de sistema
+   (~130) e uma tabela nova de códigos de função do MSX-DOS/MSX-DOS2 —
+   sem precisar de `EXTERN` nem `INCLUDE`.
+7. **`CALLBIOS`/`CALLDOS`** — chamada inter-slot de BIOS e chamada de
+   MSX-DOS reduzidas a uma linha.
+8. **`INCBIN "arquivo", SKIP=x, SIZE=y`** — inclusão direta de um
+   arquivo binário no objeto.
+
+## "Nossa própria sintaxe": divergências deliberadas do asMSX
+
+Cada uma resolve um conflito real com algo que o `KAJI80` já tinha, não
+capricho: `MOD` em vez de `%` pra módulo (`%` já é o prefixo de literal
+binário, `%1010`), `@param` em vez de `#param` nas macros (`#` já é
+prefixo de literal hexadecimal), `SKIP=x`/`SIZE=y` em vez de espaço no
+`INCBIN` (evita uma ambiguidade real de como o assembler reconstrói um
+operando internamente). A tabela de códigos `BDOS` é inteiramente nova —
+o asMSX nem tem equivalente.
+
+## Bugs reais encontrados no caminho
+
+Dois, como efeito colateral de reproduzir exemplos reais da própria
+documentação do asMSX em testes: `INC (HL)`/`DEC (HL)` — instrução Z80
+padrão — nunca tinham sido implementados; e a separação de operandos por
+vírgula não respeitava parênteses (`DB POW(2,3)` quebrava errado em dois
+operandos).
+
+Um terceiro, mais interessante, só apareceu **testando os recursos
+juntos**, não isolados — exatamente o tipo de bug que testes por fase não
+pegam. `EQU FIX(1.5)` (Fase 1) dentro de um arquivo com rótulos locais
+(Fase 2) quebrava com "rótulo local usado antes de qualquer rótulo
+global", mesmo sem nenhum rótulo local de verdade no arquivo. Causa raiz:
+o lexer nunca soube reconhecer um ponto decimal dentro de um número —
+`"1.5"` sempre virou dois tokens, já que `.` é caractere de identificador
+válido desde sempre (usado pelos próprios rótulos locais). Inofensivo
+antes da Fase 2 existir; um bug de verdade assim que ela passou a tratar
+qualquer identificador com ponto na frente como referência de rótulo
+local. Corrigido na raiz, no lexer.
+
+## Três programas reais pra testar em hardware
+
+`sample/macroasm/` — `expr_labels.asm`, `predefined.asm` e `incbin.asm`,
+em `KAJI80` puro (sem `DIGNAC`/`WIRTH80`), cada um imprimindo
+`[OK]`/`[FALHOU]` visível no console via BDOS. Verificados antes da
+entrega num emulador Z80 (o mesmo harness deste projeto usado pro motor
+de float): saída completa capturada e conferida pros dois primeiros;
+`predefined.asm` (que troca `SCREEN 1`/`0` de verdade via `CALLBIOS
+CHGMOD`) teve a chamada inter-slot confirmada até o ponto de entrada real
+da ROM — a mudança de tela em si só é verificável em hardware/openMSX de
+verdade, e é exatamente o que foi pedido a Wilson pra fechar o ciclo.
+
+## Próximos passos
+
+- Confirmação em hardware/openMSX dos três programas de
+  `sample/macroasm/` (pendente).
+- `parseImm8` continua sem forma de reportar erro, e os operandos de
+  porta de `IN`/`OUT` e o número de bit de `BIT`/`RES`/`SET` passam por
+  ela sem guarda contra a mesma classe de bug já fechada em outros
+  pontos do `KAJI80` — risco prático baixo (portas de I/O no projeto
+  inteiro sempre usam constantes `EQU`), documentado, não escondido.
+- `INCLUDE` (inclusão de outro arquivo-fonte `.asm`) nunca foi pedido
+  nem entrou no plano das 8 fases — candidato natural pra uma leva
+  futura se fizer falta.
+
+---
+
 # Release Notes — KIZUNA v4.10.0 "Jisshou" (実証)
 
 > "Não basta parecer certo no papel — só conta o que roda de verdade, no emulador e na placa."

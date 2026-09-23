@@ -34,7 +34,7 @@ $ZipFilePath = Join-Path $RootDir $ZipFileName
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "    KIZUNA (絆) - Build & Empacotamento para Distribuicao        " -ForegroundColor Cyan
-Write-Host "    Versao: v$KizunaVersion [Release Jisshou (実証)]              " -ForegroundColor Cyan
+Write-Host "    Versao: v$KizunaVersion [Release Kakuchou (拡張)]             " -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "Diretorio Raiz: $RootDir" -ForegroundColor Gray
 Write-Host "Destino:        $DistDir" -ForegroundColor Gray
@@ -133,6 +133,11 @@ Write-Host "      - Compilando sample/fileio -> sample/fileio/fileio.com..." -Fo
 & pwsh -ExecutionPolicy Bypass -File "$RootDir/sample/fileio/build.ps1"
 if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/fileio" }
 
+# 6.10. Exemplos de recursos de macro-assembler ao estilo asMSX (KAJI80 puro)
+Write-Host "      - Compilando sample/macroasm -> expr_labels/predefined/incbin.com..." -ForegroundColor Gray
+& pwsh -ExecutionPolicy Bypass -File "$RootDir/sample/macroasm/build.ps1"
+if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/macroasm" }
+
 # 7. Copiar documentação essencial e licença
 Write-Host "[6/8] Copiando documentacao de usuario e licenca..." -ForegroundColor Yellow
 Copy-Item -Path "$RootDir/README.md" -Destination "$DocsDir/README.md"
@@ -226,6 +231,18 @@ Copy-Item -Path "$RootDir/sample/fileio/main.asm" -Destination "$FileioDir/main.
 Copy-Item -Path "$RootDir/sample/fileio/fileio.com" -Destination "$FileioDir/fileio.com"
 Copy-Item -Path "$RootDir/sample/fileio/build.ps1" -Destination "$FileioDir/build.ps1"
 
+# Recursos de macro-assembler ao estilo asMSX (KAJI80 puro)
+$MacroasmDir = Join-Path $SampDir "macroasm"
+New-Item -ItemType Directory -Path $MacroasmDir -Force | Out-Null
+Copy-Item -Path "$RootDir/sample/macroasm/expr_labels.asm" -Destination "$MacroasmDir/expr_labels.asm"
+Copy-Item -Path "$RootDir/sample/macroasm/expr_labels.com" -Destination "$MacroasmDir/expr_labels.com"
+Copy-Item -Path "$RootDir/sample/macroasm/predefined.asm" -Destination "$MacroasmDir/predefined.asm"
+Copy-Item -Path "$RootDir/sample/macroasm/predefined.com" -Destination "$MacroasmDir/predefined.com"
+Copy-Item -Path "$RootDir/sample/macroasm/incbin.asm" -Destination "$MacroasmDir/incbin.asm"
+Copy-Item -Path "$RootDir/sample/macroasm/incbin.com" -Destination "$MacroasmDir/incbin.com"
+Copy-Item -Path "$RootDir/sample/macroasm/greeting.dat" -Destination "$MacroasmDir/greeting.dat"
+Copy-Item -Path "$RootDir/sample/macroasm/build.ps1" -Destination "$MacroasmDir/build.ps1"
+
 # 9. Gerar pacote compactado .ZIP
 Write-Host "[8/8] Criando arquivo compactado $ZipFileName..." -ForegroundColor Yellow
 if (Test-Path $ZipFilePath) {
@@ -262,7 +279,10 @@ $kizunaComs = @(
     "sample/pascal/hello.com",
     "sample/pascal/calc.com",
     "sample/libdemo/libdemo.com",
-    "sample/multibank/multibank.com"
+    "sample/multibank/multibank.com",
+    "sample/macroasm/expr_labels.com",
+    "sample/macroasm/predefined.com",
+    "sample/macroasm/incbin.com"
 )
 foreach ($rel in $kizunaComs) {
     $full = Join-Path $RootDir $rel

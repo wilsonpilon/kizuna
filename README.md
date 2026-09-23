@@ -10,7 +10,7 @@ num único executável — inclusive distribuindo módulos por bancos de
 memória diferentes, com troca de banco resolvida automaticamente pelo
 linker.
 
-Versão Atual: `v4.10.0` — Release **Jisshou (実証)**.
+Versão Atual: `v4.11.0` — Release **Kakuchou (拡張)**.
 
 ## Por quê
 
@@ -29,7 +29,7 @@ BASIC estruturado no mesmo binário `.COM`.
 
 | Nome      | Papel                                 | Status                            |
 | --------- | ------------------------------------- | --------------------------------- |
-| `KAJI80`  | Assembler Z80 modular                 | **Concluído & Validado — auditoria fecha classe de bug de operando de memória mal-formado** (v4.10.0) |
+| `KAJI80`  | Assembler Z80 modular                 | **Concluído & Validado — recursos de macro-assembler ao estilo asMSX (expressões, rótulos locais, `IF`/`REPT`/`MACRO`, rótulos pré-definidos de BIOS/BDOS, `CALLBIOS`/`CALLDOS`, `INCBIN`)** (v4.11.0) |
 | `WIRTH80` | Compilador Pascal (TP4-like)          | **Concluído & Validado — `procedure`/`function`, `PUBLIC`/`EXTERN`, `BANK <n>`** (v4.10.0) |
 | `DIGNAC`  | Compilador MSX-BASIC Dignified        | **Concluído & Validado — tipos reais + aritmética SINGLE (`+`/`-`/comparação), confirmado em hardware** (v4.10.0) |
 | `MUSUBI`  | Linker com Smart-Linking e Mapper     | **Concluído & Validado — um único ponto de entrada garantido por executável** (v4.9.0) |

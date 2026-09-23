@@ -5,7 +5,7 @@
 
 | Manual | Cobre |
 | ------- | ------ |
-| [`docs/manual-assembly.md`](docs/manual-assembly.md) | Sintaxe do Assembly Z80 (`KAJI80`): diretivas, instruções suportadas, literais, linha de comando. |
+| [`docs/manual-assembly.md`](docs/manual-assembly.md) | Sintaxe do Assembly Z80 (`KAJI80`): diretivas, instruções suportadas, literais, linha de comando, recursos de macro-assembler (avaliador de expressões, rótulos locais, `IF`/`REPT`/`MACRO`, rótulos pré-definidos de BIOS/BDOS, `CALLBIOS`/`CALLDOS`, `INCBIN`). |
 | [`docs/manual-basic-dignified.md`](docs/manual-basic-dignified.md) | Sintaxe do MSX-BASIC Dignified (`DIGNAC`): tipos, controle de fluxo, sprites, música, arquivos, linha de comando. |
 | [`docs/manual-pascal.md`](docs/manual-pascal.md) | Sintaxe do Pascal (`WIRTH80`) — escopo real hoje vs. visão do projeto, linha de comando. |
 | [`docs/manual-ferramentas.md`](docs/manual-ferramentas.md) | Formato `.MOB`/`.MAP`, o linker `MUSUBI`, bank switching, `HAKO`/`.HLIB`, `MSXLIB`, o orquestrador `OBI`, `MOBDUMP`, e um exemplo combinando as três linguagens num mesmo projeto. |
