@@ -168,14 +168,30 @@ CALL_simbolo:
 
 Se chamador e chamado estão no **mesmo** banco, `MUSUBI` emite `CALL`
 direto — sem overhead nenhum de trampolim (otimização automática, não
-precisa pedir).
+precisa pedir). A mesma otimização vale sempre que o **alvo** é o banco
+comum (banco 0), não importa em qual banco o chamador está — a área
+comum está sempre presente na memória, independente do que estiver
+mapeado na Página 2 no momento, então uma rotina num banco paginável
+chamando de volta uma rotina `MSXLIB` no banco comum (ex: um
+`PROCEDURE` `DIGNAC` no banco 2 chamando `VDP_PSet`) também vira `CALL`
+direto. **Bug real corrigido em 2026-09-23**: antes disso, esse caminho
+específico gerava um trampolim mesmo assim, que lia uma entrada da
+tabela de bancos nunca inicializada pelo bootstrap (só preenche
+1..N, nunca a entrada 0) — `sample/obi/main.com` carregava e voltava
+limpo pro MSX-DOS, mas o desenho em SCREEN 2 nunca aparecia (tela
+preta). Corrigido e confirmado em hardware — ver `CHANGELOG.md`.
 
 ### 4.3. Bootstrap multi-banco
 
 Um `.COM` que usa mais de um banco é ainda um único arquivo autocontido: o
 bootstrap gerado copia o payload de cada banco pra sua página de RAM
-estendida na inicialização, via `ALL_SEG` do EXTBIO quando disponível
-(com fallback pro comportamento antigo de mapeamento por identidade).
+estendida na inicialização, usando mapeamento por identidade (segmento
+físico da Memory Mapper = número lógico do banco no `MUSUBI`) — a
+alocação dinâmica via `ALL_SEG` do EXTBIO foi tentada em uma versão
+anterior, mas nunca funcionou de verdade em hardware real e foi
+revertida; o mecanismo de detecção de EXTBIO que resta só decide *como*
+trocar de página (via rotinas oficiais quando disponíveis, com
+fallback pra porta de I/O direta), não *qual* segmento físico usar.
 
 ### 4.4. Compilando um programa multi-banco
 

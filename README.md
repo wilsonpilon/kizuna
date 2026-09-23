@@ -10,7 +10,7 @@ num único executável — inclusive distribuindo módulos por bancos de
 memória diferentes, com troca de banco resolvida automaticamente pelo
 linker.
 
-Versão Atual: `v4.7.0` — Release **Kaika (開花)**.
+Versão Atual: `v4.9.0` — Release **Yuugou (融合)**.
 
 ## Por quê
 
@@ -30,13 +30,13 @@ BASIC estruturado no mesmo binário `.COM`.
 | Nome      | Papel                                 | Status                            |
 | --------- | ------------------------------------- | --------------------------------- |
 | `KAJI80`  | Assembler Z80 modular                 | **Concluído & Validado** (v4.3)   |
-| `WIRTH80` | Compilador Pascal (TP4-like)          | **Concluído & Validado** (v4.4)   |
-| `DIGNAC`  | Compilador MSX-BASIC Dignified        | **Concluído & Validado** (v4.5)   |
-| `MUSUBI`  | Linker com Smart-Linking e Mapper     | **Concluído & Validado** (v4.3)   |
+| `WIRTH80` | Compilador Pascal (TP4-like)          | **Concluído & Validado — `procedure`/`function`, `PUBLIC`/`EXTERN`** (v4.9.0) |
+| `DIGNAC`  | Compilador MSX-BASIC Dignified        | **Concluído & Validado — tipos reais (STRING/INTEGER/SINGLE/DOUBLE), sprites, música, arquivo** (v4.8.0) |
+| `MUSUBI`  | Linker com Smart-Linking e Mapper     | **Concluído & Validado — um único ponto de entrada garantido por executável** (v4.9.0) |
 | `HAKO`    | Bibliotecário / Empacotador (`.hlib`) | **Concluído & Validado** (v4.3)   |
 | `MOBDUMP` | Inspecionador de objetos `.MOB`       | **Concluído & Validado** (v4.2)   |
 | `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **Concluído & Validado — SCREEN 2, sprites, música PSG e I/O de arquivo confirmados em hardware** (v4.7.0) |
-| `OBI`     | Orquestrador de build (`Obifile`)     | **Concluído & Validado, confirmado em hardware** (v4.6.0) |
+| `OBI`     | Orquestrador de build (`Obifile`)     | **Concluído & Validado, confirmado em hardware — as 3 linguagens linkadas num único `.COM`, testado em hardware real** (v4.9.0) |
 
 Cada compilador/assembler gera um objeto relocável no formato próprio `.MOB`;
 `MUSUBI` linka os módulos (com eliminação de código morto via Smart-Linking e

@@ -1,3 +1,96 @@
+# Release Notes — KIZUNA v4.9.0 "Yuugou" (融合)
+
+> "O laço (絆) finalmente amarra as três: Assembly, BASIC e Pascal, linkados de verdade num único .COM, testado em hardware real."
+
+**Yuugou** (融合) — "fusão, integração, as partes se tornando um todo".
+Depois de *Minori* (実り, a colheita — tipos reais no DIGNAC), esta release
+entrega o que o próprio nome do projeto promete: **as três linguagens de
+entrada do KIZUNA — Assembly, MSX-BASIC Dignified e Pascal — linkando
+juntas num único `.COM`, executando de verdade em hardware real.** Não é
+mais teoria nem só teste unitário isolado.
+
+## WIRTH80 ganha procedimentos, funções, PUBLIC e EXTERN
+
+Até aqui, todo programa `WIRTH80` era seu próprio `Start` autocontido —
+sem `procedure`/`function` definidas pelo usuário, sem nada pra exportar
+ou importar. Agora:
+
+- **`procedure`/`function`** na posição clássica de Pascal, reaproveitando
+  a mesma ABI de pilha já provada pelo `KAJI80`/`DIGNAC` (parâmetros
+  empilhados esquerda→direita, frame pointer `IX`). `function` devolve
+  valor por atribuição ao próprio nome (`Dobro := x * 2;`), estilo Turbo
+  Pascal clássico.
+- **`PUBLIC`/`EXTERN`** com a mesma palavra-chave nua do resto da
+  toolchain — decisão deliberada, prioriza um modelo mental só.
+- **Um único ponto de entrada por executável, garantido**: `Start` do
+  `WIRTH80` agora só é gerado se o programa tiver de fato um bloco
+  principal (mesma regra que o `DIGNAC` já usa pra `PROCEDURE Main`), e
+  `MUSUBI` recusa a linkagem com um erro claro ("múltiplos pontos de
+  entrada...") se mais de um módulo tentar assumir esse papel — pedido
+  explícito de Wilson: "prefiro que exista apenas um único main".
+
+`sample/obi/` — já o exemplo real de `KAJI80`+`DIGNAC` linkados num único
+`.COM` multi-banco — ganha um terceiro módulo, `greet_lib.pas`
+(`WIRTH80`, biblioteca pura, sem `Start` próprio). `main.asm` (dono do
+`Start`) agora chama tanto uma rotina `DIGNAC` (cross-bank, via
+trampolim) quanto uma rotina `WIRTH80` (mesmo banco, `CALL` direto). Não
+é mais só uma prova de conceito.
+
+**De brinde**: achado e corrigido um bug real ao escrever o `CallExpr` do
+`WIRTH80` — o mesmo padrão já existia no `DIGNAC` com um bug nunca pego
+(corrompia o valor de retorno de uma função usada dentro de uma expressão
+maior, nunca exercitado por nenhum teste antes). Corrigido nos dois.
+
+## Bug real corrigido: tela preta ao desenhar em SCREEN 2 a partir de um banco paginável
+
+Wilson testou o `sample/obi/main.com` de 3 linguagens em hardware e
+reportou: banner e `SCREEN 2` apareciam, mas o gráfico nunca desenhava —
+tela preta, depois voltava pra tela de texto e encerrava normalmente.
+
+Isolado o problema reconstruindo a versão anterior (só 2 linguagens, sem
+o módulo `WIRTH80` novo): **o mesmo bug já acontecia** — confirmando que
+era um bug pré-existente, não algo introduzido nesta sessão.
+
+**Causa raiz**: o módulo `DIGNAC` que desenha o gráfico (banco 2) chama
+de volta rotinas da `MSXLIB` que vivem no banco comum (`VDP_PSet`,
+`VDP_BoxFill`, `VDP_Line`). O `MUSUBI` gerava um trampolim de troca de
+banco pra cada uma dessas chamadas — mesmo o alvo sendo o banco comum,
+que está **sempre** presente na memória, não importa o que estiver
+mapeado na Página 2. Esse trampolim lia uma tabela de bancos que o
+bootstrap nunca inicializava pra essa entrada específica (o comentário no
+próprio código já admitia a entrada como "desperdício", mas a suposição
+de que nunca seria lida estava errada) — resultado, cada chamada de
+desenho trocava a Página 2 pra um segmento físico aleatório antes de
+rodar.
+
+Esse caminho específico (um banco paginável chamando de volta pro banco
+comum) nunca tinha sido exercitado por nenhum teste confirmado em
+hardware antes — o bug do bootstrap multi-banco corrigido no dia anterior
+foi validado com um exemplo que só chama a BDOS diretamente, nunca uma
+rotina `MSXLIB` de volta. Corrigido: uma chamada mirando o banco comum
+agora sempre vira `CALL` direto, não importa de onde vem. **Confirmado
+corrigido em hardware pelo usuário** — primeira vez na história do
+projeto que esse caminho específico funciona de verdade.
+
+## Dois bugs pequenos do DIGNAC, prometidos na v4.8.0, corrigidos
+
+`FOR...STEP` negativo (o teste de término assumia sempre passo positivo)
+e `OPEN...FOR APPEND` (se comportava igual a `FOR OUTPUT`, truncando em
+vez de acrescentar).
+
+## Próximos passos
+
+- `WIRTH80` ainda não suporta a diretiva `BANK <n>` — todo módulo seu cai
+  sempre no banco comum. Não bloqueia a integração das 3 linguagens (que
+  já funciona), só limita onde um módulo `WIRTH80` pode morar num projeto
+  multi-banco.
+- `uses`/units de verdade cruzando arquivos (`{$USES}`) — o mecanismo de
+  `PUBLIC`/`EXTERN` dentro de um único arquivo já está pronto como
+  pré-requisito.
+- `for...to/downto...do` no `WIRTH80` (tokens já reservados, sem parser).
+
+---
+
 # Release Notes — KIZUNA v4.8.0 "Minori" (実り)
 
 > "A flor de Kaika amadurece: variáveis de verdade, e uma documentação honesta sobre o que ainda não é fruto."

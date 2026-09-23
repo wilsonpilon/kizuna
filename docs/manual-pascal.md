@@ -254,6 +254,11 @@ Na ordem que mais desbloqueia o resto:
    (`Foo;` em vez de `Foo();`) — só uma simplificação de sintaxe, não um
    bloqueio real.
 5. Forward declarations e recursão indireta.
+6. Suporte à diretiva `BANK <n>` — hoje todo módulo `WIRTH80` sempre
+   compila pro banco comum (banco 0), sem nenhuma forma de mirar um banco
+   paginável (`codegen.go` grava `BANK 0` fixo). Não bloqueia linkar um
+   módulo `WIRTH80` junto com `KAJI80`/`DIGNAC` (`docs/manual-ferramentas.md`
+   §11) — só limita onde esse módulo pode morar num projeto multi-banco.
 
 ## 12. Ver também
 

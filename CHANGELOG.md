@@ -3,6 +3,90 @@
 Todas as mudanças notáveis deste projeto são documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
+## [4.9.0] - 2026-09-23 - Release Yuugou (融合)
+
+### As 3 linguagens de entrada linkam juntas num único .COM — pela primeira vez, testado e confirmado em hardware
+
+`WIRTH80` ganha `procedure`/`function` definidas pelo usuário (posição
+clássica de Pascal, valor de retorno por atribuição ao próprio nome —
+`Nome := expr;`, estilo Turbo Pascal) e `PUBLIC`/`EXTERN` com a mesma
+palavra-chave nua do `KAJI80`/`DIGNAC`, reaproveitando a ABI de pilha já
+provada (parâmetros empilhados esquerda→direita, frame pointer `IX`,
+limpeza pelo chamador). `Start`/`PUBLIC Start` agora só é gerado se o
+bloco principal (`begin...end.`) tiver algum comando — mesma regra que o
+`DIGNAC` já usa pra `PROCEDURE Main` — permitindo que um módulo `WIRTH80`
+vire uma "biblioteca" pura, sem ponto de entrada próprio.
+
+Isso, combinado com **exatamente um Main por executável agora sendo
+garantido**: `MUSUBI` dá um erro específico ("múltiplos pontos de
+entrada...") em vez do genérico "símbolo duplicado" quando mais de um
+módulo tenta definir o ponto de entrada — decisão explícita de Wilson,
+já que a alternativa (deixar o usuário escolher no link, ou avisar sem
+bloquear) abriria espaço pra ambiguidade silenciosa.
+
+`sample/obi/` ganha um terceiro módulo, `greet_lib.pas` (`WIRTH80`,
+biblioteca pura) — prova real, não só testes unitários isolados, de que
+as 3 linguagens linkam juntas: `main.asm` (`KAJI80`, banco 0, dono do
+`Start`) chama tanto `Desenhar` (`chart_lib.bas`, `DIGNAC`, banco 2,
+cross-bank) quanto `Saudacao` (`greet_lib.pas`, `WIRTH80`, banco 0,
+`CALL` direto).
+
+**Achado real no processo**: `WIRTH80` ainda não suporta a diretiva
+`BANK <n>` (todo módulo seu cai sempre no banco comum) — documentado,
+não bloqueia o objetivo desta leva.
+
+**Bug real encontrado e corrigido ao escrever o `CallExpr` do `WIRTH80`**:
+o mesmo padrão já existia no `DIGNAC` (`pkg/dignac/codegen.go`) com um
+bug nunca pego — somava o tamanho de limpeza da pilha direto no `HL` do
+retorno antes de trocar registradores, corrompendo o valor de qualquer
+chamada de função usada dentro de uma expressão maior (nunca exercitado
+por nenhum teste/sample antes, só chamadas como comando isolado).
+Corrigido nos dois compiladores.
+
+### Bug real corrigido: trampolim de banco gerado por engano pra chamadas de volta ao banco comum — tela preta em SCREEN 2
+
+Reportado por Wilson ao testar o `sample/obi/main.com` de 3 linguagens:
+banner e `SCREEN 2` apareciam, mas o gráfico nunca desenhava (tela
+preta), voltava pra tela de texto e encerrava normalmente. Isolado
+reconstruindo a versão de 2 linguagens (pré-`WIRTH80`) — **mesmo bug**,
+confirmando que era pré-existente, não introduzido pelas mudanças desta
+sessão.
+
+Causa raiz: `DIGNAC PROCEDURE Desenhar` (banco 2) chama de volta rotinas
+da `MSXLIB` no banco comum (`VDP_PSet`, `VDP_BoxFill`, `VDP_Line`,
+`Mul16`, `Div16`) — e `MUSUBI` gerava um trampolim de troca de banco pra
+cada uma dessas chamadas, mesmo o alvo sendo o banco comum, que está
+**sempre** presente na memória independente do que a Página 2 tem
+mapeado no momento. Esse trampolim lê uma tabela de bancos pra saber
+qual segmento físico ativar — só que o bootstrap nunca escreve a entrada
+do banco 0 (só popula 1..N; o próprio comentário no código já dizia
+"desperdício na entrada 0 (banco comum, nunca paginado)", mas a suposição
+de que nenhum trampolim miraria o banco 0 estava errada). Resultado: um
+`OUT` pra Página 2 com um segmento físico nunca inicializado antes de
+cada chamada de desenho.
+
+Nunca tinha sido pego porque o bug do bootstrap multi-banco corrigido no
+dia anterior foi validado via `sample/multibank`, que só chama `BDOS`
+diretamente a partir dos bancos pagináveis — nunca uma rotina `MSXLIB` no
+banco comum. Esse caminho específico (banco paginável chamando de volta
+pro banco comum) nunca tinha sido exercitado por nenhum teste
+confirmado antes.
+
+Corrigido: uma chamada mirando o banco comum agora sempre vira `CALL`
+direto, não importa de onde vem — mesma otimização que já existia pra
+"mesmo banco", estendida. `sample/obi/main.com` caiu de 5 trampolins (4
+deles quebrados) pra 1 só, 2499 → 2399 bytes. **Confirmado corrigido em
+hardware pelo usuário** — primeira vez na história do projeto que esse
+caminho (banco paginável chamando de volta pro banco comum) funciona de
+verdade em execução real.
+
+### Dois bugs pequenos do DIGNAC corrigidos
+
+`FOR...STEP` negativo (o teste de término do laço assumia sempre passo
+positivo) e `OPEN...FOR APPEND` (se comportava igual a `FOR OUTPUT`,
+truncando em vez de acrescentar) — ambos documentados como limitação
+conhecida na v4.8.0, corrigidos logo em seguida como prometido.
+
 ## [4.8.0] - 2026-09-22 - Release Minori (実り)
 
 ### DIGNAC ganha um sistema de tipos real: STRING, INTEGER, SINGLE, DOUBLE
