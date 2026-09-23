@@ -10,8 +10,8 @@ Tamanho do .COM:   1514 bytes (0x05EA)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x033E | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   574 bytes
-[ 1] 0x033E - 0x0688 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:   842 bytes
-[ 2] 0x0688 - 0x06EA | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    98 bytes
+[ 1] 0x033E - 0x03A0 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
+[ 2] 0x03A0 - 0x06EA | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   842 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
@@ -32,13 +32,13 @@ Tamanho do .COM:   1514 bytes (0x05EA)
 0x0261 [Banco  0] PROC Rel_End_26
 0x0279 [Banco  0] PROC If_Else_23
 0x0289 [Banco  0] PROC If_End_24
-0x028E [Banco  0] PROC StrLit_15
-0x02A8 [Banco  0] PROC StrLit_16
-0x02B9 [Banco  0] PROC StrLit_21
-0x02D2 [Banco  0] PROC StrLit_22
-0x02E4 [Banco  0] PROC StrLit_27
-0x02FD [Banco  0] PROC StrLit_8
-0x0312 [Banco  0] PROC StrLit_9
+0x028E [Banco  0] PROC StrLit_8
+0x02A3 [Banco  0] PROC StrLit_9
+0x02AF [Banco  0] PROC StrLit_15
+0x02C9 [Banco  0] PROC StrLit_16
+0x02DA [Banco  0] PROC StrLit_21
+0x02F3 [Banco  0] PROC StrLit_22
+0x0305 [Banco  0] PROC StrLit_27
 0x031E [Banco  0] PROC SglLit_1
 0x0322 [Banco  0] PROC SglLit_2
 0x0326 [Banco  0] PROC SglLit_5
@@ -47,47 +47,47 @@ Tamanho do .COM:   1514 bytes (0x05EA)
 0x0332 [Banco  0] PROC Global_b_sgl
 0x0336 [Banco  0] PROC Global_diferenca_sgl
 0x033A [Banco  0] PROC Global_soma_sgl
-0x033E [Banco  0] PROC Float_UnpA
-0x033F [Banco  0] PROC Float_UnpA_Exp
-0x0340 [Banco  0] PROC Float_UnpA_M0
-0x0341 [Banco  0] PROC Float_UnpA_M1
-0x0342 [Banco  0] PROC Float_UnpA_M2
-0x0343 [Banco  0] PROC Float_UnpB
-0x0344 [Banco  0] PROC Float_UnpB_Exp
-0x0345 [Banco  0] PROC Float_UnpB_M0
-0x0346 [Banco  0] PROC Float_UnpB_M1
-0x0347 [Banco  0] PROC Float_UnpB_M2
-0x034D [Banco  0] PROC Float_RawB0
-0x034E [Banco  0] PROC Float_RawB1
-0x034F [Banco  0] PROC Float_RawB2
-0x0350 [Banco  0] PROC Float_RawB3
-0x0351 [Banco  0] PROC Float_Sign
-0x0352 [Banco  0] PROC Float_RawExp
-0x0353 [Banco  0] PROC Float_MantHi
-0x0354 [Banco  0] PROC Float_DestAddr
-0x0356 [Banco  0] PROC Float_AddrB
-0x0358 [Banco  0] PROC Float_Unpack
-0x03C1 [Banco  0] PROC Float_Pack
-0x042B [Banco  0] PROC Float_CopyUnp
-0x043A [Banco  0] PROC Float_MantIsZero
-0x044A [Banco  0] PROC Float_Mant_Add
-0x045E [Banco  0] PROC Float_Mant_Sub
-0x0472 [Banco  0] PROC Float_Mant_Cmp
-0x048F [Banco  0] PROC Float_Mant_Shr1
-0x049C [Banco  0] PROC Float_Mant_Shl1
-0x04A7 [Banco  0] PROC Float_AddCore
-0x0599 [Banco  0] PROC Float_AddSubCommon
-0x05EA [Banco  0] PROC Float_Add32
-0x05EF [Banco  0] PROC Float_Sub32
-0x05F4 [Banco  0] PROC Float_Cmp32
-0x0688 [Banco  0] PROC BDOS_Call
-0x068C [Banco  0] PROC BDOS_PrintChar
-0x06A2 [Banco  0] PROC BDOS_PrintString
-0x06B8 [Banco  0] PROC BDOS_ReadChar
-0x06C0 [Banco  0] PROC BDOS_Exit
-0x06C6 [Banco  0] PROC BDOS_FileOpen
-0x06CC [Banco  0] PROC BDOS_FileCreate
-0x06D2 [Banco  0] PROC BDOS_FileClose
-0x06D8 [Banco  0] PROC BDOS_FileRead
-0x06DE [Banco  0] PROC BDOS_FileWrite
-0x06E4 [Banco  0] PROC BDOS_FileSeek
+0x033E [Banco  0] PROC BDOS_Call
+0x0342 [Banco  0] PROC BDOS_PrintChar
+0x0358 [Banco  0] PROC BDOS_PrintString
+0x036E [Banco  0] PROC BDOS_ReadChar
+0x0376 [Banco  0] PROC BDOS_Exit
+0x037C [Banco  0] PROC BDOS_FileOpen
+0x0382 [Banco  0] PROC BDOS_FileCreate
+0x0388 [Banco  0] PROC BDOS_FileClose
+0x038E [Banco  0] PROC BDOS_FileRead
+0x0394 [Banco  0] PROC BDOS_FileWrite
+0x039A [Banco  0] PROC BDOS_FileSeek
+0x03A0 [Banco  0] PROC Float_UnpA
+0x03A1 [Banco  0] PROC Float_UnpA_Exp
+0x03A2 [Banco  0] PROC Float_UnpA_M0
+0x03A3 [Banco  0] PROC Float_UnpA_M1
+0x03A4 [Banco  0] PROC Float_UnpA_M2
+0x03A5 [Banco  0] PROC Float_UnpB
+0x03A6 [Banco  0] PROC Float_UnpB_Exp
+0x03A7 [Banco  0] PROC Float_UnpB_M0
+0x03A8 [Banco  0] PROC Float_UnpB_M1
+0x03A9 [Banco  0] PROC Float_UnpB_M2
+0x03AF [Banco  0] PROC Float_RawB0
+0x03B0 [Banco  0] PROC Float_RawB1
+0x03B1 [Banco  0] PROC Float_RawB2
+0x03B2 [Banco  0] PROC Float_RawB3
+0x03B3 [Banco  0] PROC Float_Sign
+0x03B4 [Banco  0] PROC Float_RawExp
+0x03B5 [Banco  0] PROC Float_MantHi
+0x03B6 [Banco  0] PROC Float_DestAddr
+0x03B8 [Banco  0] PROC Float_AddrB
+0x03BA [Banco  0] PROC Float_Unpack
+0x0423 [Banco  0] PROC Float_Pack
+0x048D [Banco  0] PROC Float_CopyUnp
+0x049C [Banco  0] PROC Float_MantIsZero
+0x04AC [Banco  0] PROC Float_Mant_Add
+0x04C0 [Banco  0] PROC Float_Mant_Sub
+0x04D4 [Banco  0] PROC Float_Mant_Cmp
+0x04F1 [Banco  0] PROC Float_Mant_Shr1
+0x04FE [Banco  0] PROC Float_Mant_Shl1
+0x0509 [Banco  0] PROC Float_AddCore
+0x05FB [Banco  0] PROC Float_AddSubCommon
+0x064C [Banco  0] PROC Float_Add32
+0x0651 [Banco  0] PROC Float_Sub32
+0x0656 [Banco  0] PROC Float_Cmp32

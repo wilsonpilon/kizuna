@@ -470,3 +470,153 @@ Start:
 	}
 }
 
+// TestEquWithExpression: EQU passa a aceitar uma expressão completa, não só
+// um literal único -- resolve o exemplo motivador do Wilson
+// ((2*8)/(1+3))<<2.
+func TestEquWithExpression(t *testing.T) {
+	src := `
+MODULE EquExpr
+BANK 0
+PUBLIC Start
+VAL EQU ((2*8)/(1+3))<<2
+Start:
+    LD A, VAL
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	// LD A,n = 3E nn -- VAL deve valer 16 (0x10).
+	expected := []byte{0x3E, 0x10, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestEquWithUnknownSymbolErrors: EQU não aceita mais nome de símbolo solto
+// silenciosamente virando zero (comportamento antigo de parseConstant) --
+// agora é um erro de compilação claro.
+func TestEquWithUnknownSymbolErrors(t *testing.T) {
+	src := `
+MODULE BadEqu
+BANK 0
+PUBLIC Start
+VAL EQU RotuloQueNaoExiste
+Start:
+    RET
+`
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro de montagem para EQU com símbolo desconhecido, mas montou com sucesso")
+	}
+}
+
+// TestVariableAssignAndReassign: "Nome = expressão" -- variável
+// reatribuível, reavaliada em cada DB subsequente na ordem sequencial em
+// que aparecem (não só o valor final depois de todo o Pass 1 rodar).
+func TestVariableAssignAndReassign(t *testing.T) {
+	src := `
+MODULE VarAssign
+BANK 0
+PUBLIC Start
+Start:
+X = 5
+    DB X
+X = X + 1
+    DB X
+X = X * 10
+    DB X
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{5, 6, 60, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestDbWithMultiArgFunctionExpression: confirma que parseLine agora separa
+// operandos por vírgula respeitando profundidade de parênteses -- antes
+// desta correção, "DB POW(2,3)" quebrava incorretamente em dois operandos
+// ("POW(2" e "3)") em vez de um único operando de expressão.
+func TestDbWithMultiArgFunctionExpression(t *testing.T) {
+	src := `
+MODULE DbPow
+BANK 0
+PUBLIC Start
+Start:
+    DB POW(2,3), 1+1, "AB"
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{8, 2, 'A', 'B', 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestDwWithExpressionAndSymbol: DW aceita uma expressão numérica pura
+// (nova nesta leva) e continua aceitando, sem quebrar, um símbolo/rótulo
+// comum (comportamento pré-existente, resolvido só na linkagem via
+// relocation -- por isso o segundo operando fica reservado como 00 00 até
+// o MUSUBI resolver, não testável só com Assemble()).
+func TestDwWithExpressionAndSymbol(t *testing.T) {
+	src := `
+MODULE DwExpr
+BANK 0
+PUBLIC Start, Alvo
+Start:
+    DW 1+2, Alvo
+Alvo:
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	data := obj.Segments[0].Data
+	// 1+2=3 (03 00 little-endian) resolvido em tempo de montagem; os 2
+	// bytes seguintes (endereço de Alvo) ficam reservados como 00 00,
+	// preenchidos só na linkagem via relocation.
+	expected := []byte{0x03, 0x00, 0x00, 0x00, 0xC9}
+	if !bytes.Equal(data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", data, expected)
+	}
+	if len(obj.Relocations) != 1 {
+		t.Fatalf("esperada 1 relocation (pro operando 'Alvo'), obtida %d", len(obj.Relocations))
+	}
+}
+
+// TestDeftAlias: DT/DEFT são aliases de DB pra literais de texto, pedidos
+// explicitamente por Wilson (compatibilidade com outros assemblers Z80).
+func TestDeftAlias(t *testing.T) {
+	src := `
+MODULE DeftAlias
+BANK 0
+PUBLIC Start
+Start:
+    DEFT "OK"
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{'O', 'K', 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+

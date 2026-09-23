@@ -2,6 +2,7 @@ package kaji80
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -52,6 +53,7 @@ type Assembler struct {
 	publics    map[string]bool
 	externs    map[string]bool
 	constants  map[string]int64  // Constantes definidas por EQU
+	variables  map[string]float64 // Variáveis reatribuíveis ("Nome = expressão")
 	symbols    map[string]uint16 // label -> offset no segmento
 	codeBytes  []byte
 	relocs     []tempReloc
@@ -71,6 +73,7 @@ func NewAssembler() *Assembler {
 		publics:    make(map[string]bool),
 		externs:    make(map[string]bool),
 		constants:  make(map[string]int64),
+		variables:  make(map[string]float64),
 		symbols:    make(map[string]uint16),
 		codeBytes:  make([]byte, 0),
 		relocs:     make([]tempReloc, 0),
@@ -128,8 +131,31 @@ func (a *Assembler) Assemble(source string) (*mob.ObjectFile, error) {
 			}
 		case "EQU":
 			if line.label != "" && len(line.operands) > 0 {
-				val := a.parseConstant(line.operands[0])
-				a.constants[line.label] = val
+				val, ok, err := a.EvalExpr(line.operands[0])
+				if err != nil {
+					return nil, fmt.Errorf("linha %d: EQU %s: %w", line.lineNum, line.label, err)
+				}
+				if !ok {
+					return nil, fmt.Errorf("linha %d: EQU %s: '%s' não é uma expressão numérica válida (EQU não aceita nome de símbolo/rótulo)", line.lineNum, line.label, line.operands[0])
+				}
+				a.constants[line.label] = int64(math.Round(val))
+			}
+		case "ASSIGN":
+			// "Nome = expressão" -- variável reatribuível, distinta de EQU
+			// (que só permite definir uma vez). Avaliada de novo no Pass 2
+			// (ver encodeInstruction) na mesma ordem sequencial, porque o
+			// valor pode mudar várias vezes ao longo do arquivo e DB/DW
+			// precisam enxergar o valor certo NO PONTO em que aparecem, não
+			// o valor final depois do Pass 1 inteiro já ter rodado.
+			if line.label != "" && len(line.operands) > 0 {
+				val, ok, err := a.EvalExpr(line.operands[0])
+				if err != nil {
+					return nil, fmt.Errorf("linha %d: %s = ...: %w", line.lineNum, line.label, err)
+				}
+				if !ok {
+					return nil, fmt.Errorf("linha %d: %s = ...: '%s' não é uma expressão numérica válida", line.lineNum, line.label, line.operands[0])
+				}
+				a.variables[line.label] = val
 			}
 		default:
 			// Instrução ou diretiva de dados: estimar tamanho
@@ -143,7 +169,15 @@ func (a *Assembler) Assemble(source string) (*mob.ObjectFile, error) {
 
 	a.symbols = labelOffsets
 
-	// Passo 2: Codificar instruções e gerar relocações
+	// Passo 2: Codificar instruções e gerar relocações. "variables" (Nome =
+	// expressão) precisa ser reconstruída do zero aqui -- o Pass 1 já a
+	// deixou no valor FINAL depois de percorrer o arquivo inteiro, mas o
+	// Pass 2 precisa dos valores INTERMEDIÁRIOS, no ponto exato em que cada
+	// DB/DW aparece (ex.: X=0 / DB X / X=X+1 / DB X -- os dois DB devem
+	// emitir valores diferentes). "ASSIGN" por isso NÃO está na lista de
+	// diretivas "já tratadas" abaixo -- tem seu próprio case mais adiante,
+	// que reavalia e atualiza a.variables na mesma ordem sequencial.
+	a.variables = make(map[string]float64)
 	a.codeBytes = make([]byte, 0, currentOffset)
 	for _, line := range lines {
 		if line.mnemonic == "" {
@@ -165,7 +199,7 @@ func (a *Assembler) Assemble(source string) (*mob.ObjectFile, error) {
 			// com rótulo, ambos subestimados em 1 byte no Pass 1).
 			estSize, estErr := a.estimateSize(upperMnem, line.operands, line.rawTokens)
 			beforeLen := len(a.codeBytes)
-			err := a.encodeInstruction(upperMnem, line.operands, line.rawTokens, line.lineNum)
+			err := a.encodeInstruction(upperMnem, line.label, line.operands, line.rawTokens, line.lineNum)
 			if err != nil {
 				return nil, fmt.Errorf("linha %d: erro ao codificar '%s': %w", line.lineNum, line.mnemonic, err)
 			}
@@ -279,7 +313,9 @@ func (a *Assembler) parseLine(tokens []Token) (parsedLine, error) {
 	}
 
 	idx := 0
-	// Verificar se começa com label (IDENT seguido de COLON ou se seguido de EQU)
+	// Verificar se começa com label (IDENT seguido de COLON, EQU, ou '=' --
+	// esta última é a nova forma "Nome = expressão", variável reatribuível,
+	// distinta de EQU, que só permite definir uma vez).
 	if idx < len(tokens) && tokens[idx].Type == TokenIdentifier {
 		if idx+1 < len(tokens) && tokens[idx+1].Type == TokenColon {
 			pl.label = tokens[idx].Value
@@ -287,6 +323,10 @@ func (a *Assembler) parseLine(tokens []Token) (parsedLine, error) {
 		} else if idx+1 < len(tokens) && strings.EqualFold(tokens[idx+1].Value, "EQU") {
 			pl.label = tokens[idx].Value
 			pl.mnemonic = "EQU"
+			idx += 2
+		} else if idx+1 < len(tokens) && tokens[idx+1].Type == TokenAssign {
+			pl.label = tokens[idx].Value
+			pl.mnemonic = "ASSIGN"
 			idx += 2
 		}
 	}
@@ -305,14 +345,23 @@ func (a *Assembler) parseLine(tokens []Token) (parsedLine, error) {
 		}
 	}
 
-	// Reconstruir operandos separados por vírgula
+	// Reconstruir operandos separados por vírgula -- só no nível zero de
+	// parênteses, pra não quebrar uma chamada de função de múltiplos
+	// argumentos dentro de uma expressão (ex.: "POW(2,3)" como operando
+	// único de DB, não dois operandos "POW(2" e "3)").
 	var currentOp strings.Builder
+	parenDepth := 0
 	for idx < len(tokens) {
-		if tokens[idx].Type == TokenComma {
+		if tokens[idx].Type == TokenComma && parenDepth == 0 {
 			pl.operands = append(pl.operands, strings.TrimSpace(currentOp.String()))
 			currentOp.Reset()
 			idx++
 			continue
+		}
+		if tokens[idx].Type == TokenLParen {
+			parenDepth++
+		} else if tokens[idx].Type == TokenRParen {
+			parenDepth--
 		}
 		if tokens[idx].Type == TokenString {
 			// O lexer já devolve o conteúdo sem as aspas (correto para DB,
@@ -472,29 +521,22 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 		return 1, nil
 	case "LD":
 		return a.estimateLdSize(ops)
-	case "DB", "DEFB", "BYTE":
-		// tokens é a linha inteira, que pode ter um rótulo (+ ':') antes do
-		// mnemônico ("rotulo: DB valor"); tokens[1:] simplesmente pular o
-		// primeiro token não é suficiente nesse caso -- ainda sobra o
-		// próprio token do mnemônico "DB" dentro da fatia, sendo contado
-		// como se fosse mais um operando e inflando o tamanho estimado em
-		// 1 byte (o que desalinha todo rótulo declarado depois no módulo).
-		// Em vez disso, localizamos o token do mnemônico e pulamos ele.
-		start := 0
-		for start < len(tokens) && !strings.EqualFold(tokens[start].Value, mnem) {
-			start++
-		}
-		start++ // pula o próprio mnemônico
+	case "DB", "DEFB", "BYTE", "DT", "DEFT":
+		// Conta por OPERANDO (já separado por vírgula respeitando
+		// profundidade de parênteses em parseLine), não por token bruto --
+		// um operando de expressão como "X*Y" é 3 tokens (IDENT, STAR,
+		// IDENT) mas só 1 byte de dado. parseLine já devolve um literal de
+		// string/caractere entre aspas simples (convenção estabelecida
+		// pra LD/CP não perderem a distinção entre string e símbolo), então
+		// um operando assim conta o número de caracteres reais dentro das
+		// aspas; qualquer outro operando é uma expressão de 1 byte.
 		var total uint16
-		for _, tok := range tokens[start:] {
-			if tok.Type == TokenString {
-				total += uint16(len(tok.Value))
-			} else if tok.Type == TokenNumber || tok.Type == TokenIdentifier {
+		for _, op := range ops {
+			if len(op) >= 2 && op[0] == '\'' && op[len(op)-1] == '\'' {
+				total += uint16(len(op) - 2)
+			} else {
 				total++
 			}
-		}
-		if total == 0 {
-			total = uint16(len(ops))
 		}
 		return total, nil
 	case "DW", "DEFW", "WORD":
@@ -506,7 +548,7 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 			return uint16(count), nil
 		}
 		return 0, nil
-	case "EQU":
+	case "EQU", "ASSIGN":
 		return 0, nil
 	default:
 		return 1, nil
@@ -602,8 +644,25 @@ func (a *Assembler) estimateLdSize(ops []string) (uint16, error) {
 	return 2, nil
 }
 
-func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token, lineNum int) error {
+func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, tokens []Token, lineNum int) error {
 	switch mnem {
+	case "ASSIGN":
+		// "Nome = expressão" -- reavaliada aqui (não só no Pass 1) porque o
+		// valor pode ter mudado desde a última vez que esta variável foi
+		// referenciada; ver comentário em Assemble() sobre por que
+		// a.variables é reconstruída do zero antes do Pass 2.
+		if label == "" || len(ops) == 0 {
+			return fmt.Errorf("linha %d: atribuição de variável malformada", lineNum)
+		}
+		val, ok, err := a.EvalExpr(ops[0])
+		if err != nil {
+			return fmt.Errorf("linha %d: %s = ...: %w", lineNum, label, err)
+		}
+		if !ok {
+			return fmt.Errorf("linha %d: %s = ...: '%s' não é uma expressão numérica válida", lineNum, label, ops[0])
+		}
+		a.variables[label] = val
+		return nil
 	case "NOP":
 		a.emit(0x00)
 	case "HALT":
@@ -868,30 +927,40 @@ func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token,
 		return a.encodeAlu8(mnem, ops)
 	case "LD":
 		return a.encodeLd(ops)
-	case "DB", "DEFB", "BYTE":
-		// Mesmo cuidado do Pass 1 (estimateSize): tokens é a linha inteira,
-		// que pode ter um rótulo (+ ':') antes do mnemônico. tokens[1:]
-		// sozinho ainda deixa o próprio token "DB" na fatia, fazendo-o ser
-		// emitido como se fosse um byte de dado (via parseImm8), gerando
-		// um byte a mais do que o Pass 1 previu.
-		start := 0
-		for start < len(tokens) && !strings.EqualFold(tokens[start].Value, mnem) {
-			start++
-		}
-		start++ // pula o próprio mnemônico
-		for _, tok := range tokens[start:] {
-			if tok.Type == TokenString {
-				for i := 0; i < len(tok.Value); i++ {
-					a.emit(tok.Value[i])
+	case "DB", "DEFB", "BYTE", "DT", "DEFT":
+		// Espelha o Pass 1 (estimateSize): itera por OPERANDO (já separado
+		// por vírgula respeitando parênteses), não por token bruto -- uma
+		// expressão como "X*Y" precisa ser avaliada como UM valor, não
+		// emitida token a token.
+		for _, op := range ops {
+			if len(op) >= 2 && op[0] == '\'' && op[len(op)-1] == '\'' {
+				content := op[1 : len(op)-1]
+				for i := 0; i < len(content); i++ {
+					a.emit(content[i])
 				}
-			} else if tok.Type == TokenNumber {
-				a.emit(uint8(tok.Number))
-			} else if tok.Type == TokenIdentifier {
-				a.emit(a.parseImm8(tok.Value))
+				continue
 			}
+			val, ok, err := a.EvalExpr(op)
+			if err != nil {
+				return fmt.Errorf("linha %d: %s %s: %w", lineNum, mnem, op, err)
+			}
+			if ok {
+				a.emit(uint8(int64(val)))
+				continue
+			}
+			a.emit(a.parseImm8(op))
 		}
 	case "DW", "DEFW", "WORD":
 		for _, op := range ops {
+			val, ok, err := a.EvalExpr(op)
+			if err != nil {
+				return fmt.Errorf("linha %d: %s %s: %w", lineNum, mnem, op, err)
+			}
+			if ok {
+				iv := int64(val)
+				a.emit(uint8(iv&0xFF), uint8((iv>>8)&0xFF))
+				continue
+			}
 			if err := a.emitAddressOrReloc(op); err != nil {
 				return err
 			}
@@ -1170,28 +1239,6 @@ func parseIndexed(op string) (isIX bool, isIY bool, disp int8, ok bool) {
 
 func (a *Assembler) emit(bytes ...uint8) {
 	a.codeBytes = append(a.codeBytes, bytes...)
-}
-
-func (a *Assembler) parseConstant(s string) int64 {
-	s = strings.TrimSpace(s)
-	if val, ok := a.constants[s]; ok {
-		return val
-	}
-	if strings.HasPrefix(s, "$") || strings.HasPrefix(s, "#") {
-		v, _ := parseHex(s[1:])
-		return v
-	}
-	if strings.HasSuffix(strings.ToLower(s), "h") {
-		v, _ := parseHex(s[:len(s)-1])
-		return v
-	}
-	if strings.HasPrefix(strings.ToLower(s), "0x") {
-		v, _ := parseHex(s[2:])
-		return v
-	}
-	var val int64
-	_, _ = fmt.Sscanf(s, "%v", &val)
-	return val
 }
 
 func (a *Assembler) parseImm8(s string) uint8 {

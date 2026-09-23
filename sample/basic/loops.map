@@ -21,8 +21,8 @@ Tamanho do .COM:   792 bytes (0x0318)
 0x0162 [Banco  0] PROC For_Body_4
 0x0192 [Banco  0] PROC For_End_3
 0x01E7 [Banco  0] PROC Append_Opened_11
-0x021D [Banco  0] PROC StrLit_7
-0x0222 [Banco  0] PROC StrLit_1
+0x021D [Banco  0] PROC StrLit_1
+0x0232 [Banco  0] PROC StrLit_7
 0x0237 [Banco  0] PROC FilePath_8
 0x0241 [Banco  0] PROC FileStr_9
 0x024F [Banco  0] PROC FilePath_10

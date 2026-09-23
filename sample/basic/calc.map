@@ -11,19 +11,19 @@ Tamanho do .COM:   920 bytes (0x0398)
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x02B7 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   439 bytes
 [ 1] 0x02B7 - 0x0319 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
-[ 2] 0x0319 - 0x035B | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    66 bytes
-[ 3] 0x035B - 0x0498 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:   317 bytes
+[ 2] 0x0319 - 0x0456 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   317 bytes
+[ 3] 0x0456 - 0x0498 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:    66 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
 0x0106 [Banco  0] PROC Main
-0x0202 [Banco  0] PROC StrLit_4
-0x0208 [Banco  0] PROC StrLit_5
-0x0222 [Banco  0] PROC StrLit_6
-0x0240 [Banco  0] PROC StrLit_7
-0x025F [Banco  0] PROC StrLit_1
-0x0288 [Banco  0] PROC StrLit_2
-0x02B1 [Banco  0] PROC StrLit_3
+0x0202 [Banco  0] PROC StrLit_7
+0x0221 [Banco  0] PROC StrLit_1
+0x024A [Banco  0] PROC StrLit_2
+0x0273 [Banco  0] PROC StrLit_3
+0x0279 [Banco  0] PROC StrLit_4
+0x027F [Banco  0] PROC StrLit_5
+0x0299 [Banco  0] PROC StrLit_6
 0x02B7 [Banco  0] PROC BDOS_Call
 0x02BB [Banco  0] PROC BDOS_PrintChar
 0x02D1 [Banco  0] PROC BDOS_PrintString
@@ -35,20 +35,20 @@ Tamanho do .COM:   920 bytes (0x0398)
 0x0307 [Banco  0] PROC BDOS_FileRead
 0x030D [Banco  0] PROC BDOS_FileWrite
 0x0313 [Banco  0] PROC BDOS_FileSeek
-0x0319 [Banco  0] PROC Mul16
-0x032E [Banco  0] PROC Div16
-0x035B [Banco  0] PROC StrLen
-0x0369 [Banco  0] PROC StrCopy
-0x0379 [Banco  0] PROC StrToUpper
-0x0390 [Banco  0] PROC PrintHex8
-0x039D [Banco  0] PROC PrintNibble
-0x03AE [Banco  0] PROC PrintHex16
-0x03B9 [Banco  0] PROC PrintDec16
-0x03E3 [Banco  0] PROC PrintDecDigit
-0x0401 [Banco  0] PROC PrintDec16ToBuffer
-0x0434 [Banco  0] PROC PrintDecDigitBuf
-0x044D [Banco  0] PROC PDTB_WriteChar
-0x0461 [Banco  0] PROC PDTB_BufPtr
-0x0463 [Banco  0] PROC PDTB_Count
-0x0464 [Banco  0] PROC StrCopyLen
-0x047C [Banco  0] PROC BDOS_PrintLenStr
+0x0319 [Banco  0] PROC StrLen
+0x0327 [Banco  0] PROC StrCopy
+0x0337 [Banco  0] PROC StrToUpper
+0x034E [Banco  0] PROC PrintHex8
+0x035B [Banco  0] PROC PrintNibble
+0x036C [Banco  0] PROC PrintHex16
+0x0377 [Banco  0] PROC PrintDec16
+0x03A1 [Banco  0] PROC PrintDecDigit
+0x03BF [Banco  0] PROC PrintDec16ToBuffer
+0x03F2 [Banco  0] PROC PrintDecDigitBuf
+0x040B [Banco  0] PROC PDTB_WriteChar
+0x041F [Banco  0] PROC PDTB_BufPtr
+0x0421 [Banco  0] PROC PDTB_Count
+0x0422 [Banco  0] PROC StrCopyLen
+0x043A [Banco  0] PROC BDOS_PrintLenStr
+0x0456 [Banco  0] PROC Mul16
+0x046B [Banco  0] PROC Div16

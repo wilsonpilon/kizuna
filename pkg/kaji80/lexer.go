@@ -111,6 +111,85 @@ func (l *Lexer) NextToken() (Token, error) {
 			return Token{Type: TokenMinus, Value: "-", Line: startLine, Col: startCol}, nil
 		}
 
+		if ch == '*' {
+			l.advance()
+			return Token{Type: TokenStar, Value: "*", Line: startLine, Col: startCol}, nil
+		}
+
+		if ch == '/' {
+			l.advance()
+			return Token{Type: TokenSlash, Value: "/", Line: startLine, Col: startCol}, nil
+		}
+
+		if ch == '~' {
+			l.advance()
+			return Token{Type: TokenTilde, Value: "~", Line: startLine, Col: startCol}, nil
+		}
+
+		if ch == '^' {
+			l.advance()
+			return Token{Type: TokenCaret, Value: "^", Line: startLine, Col: startCol}, nil
+		}
+
+		if ch == '<' {
+			l.advance()
+			if l.pos < l.length && l.current() == '<' {
+				l.advance()
+				return Token{Type: TokenShl, Value: "<<", Line: startLine, Col: startCol}, nil
+			}
+			if l.pos < l.length && l.current() == '=' {
+				l.advance()
+				return Token{Type: TokenLtEq, Value: "<=", Line: startLine, Col: startCol}, nil
+			}
+			return Token{Type: TokenLt, Value: "<", Line: startLine, Col: startCol}, nil
+		}
+
+		if ch == '>' {
+			l.advance()
+			if l.pos < l.length && l.current() == '>' {
+				l.advance()
+				return Token{Type: TokenShr, Value: ">>", Line: startLine, Col: startCol}, nil
+			}
+			if l.pos < l.length && l.current() == '=' {
+				l.advance()
+				return Token{Type: TokenGtEq, Value: ">=", Line: startLine, Col: startCol}, nil
+			}
+			return Token{Type: TokenGt, Value: ">", Line: startLine, Col: startCol}, nil
+		}
+
+		if ch == '|' {
+			l.advance()
+			if l.pos < l.length && l.current() == '|' {
+				l.advance()
+				return Token{Type: TokenOrOr, Value: "||", Line: startLine, Col: startCol}, nil
+			}
+			return Token{Type: TokenPipe, Value: "|", Line: startLine, Col: startCol}, nil
+		}
+
+		if ch == '&' {
+			l.advance()
+			if l.pos < l.length && l.current() == '&' {
+				l.advance()
+				return Token{Type: TokenAndAnd, Value: "&&", Line: startLine, Col: startCol}, nil
+			}
+			return Token{Type: TokenAmp, Value: "&", Line: startLine, Col: startCol}, nil
+		}
+
+		if ch == '=' {
+			l.advance()
+			if l.pos < l.length && l.current() == '=' {
+				l.advance()
+				return Token{Type: TokenEqEq, Value: "==", Line: startLine, Col: startCol}, nil
+			}
+			return Token{Type: TokenAssign, Value: "=", Line: startLine, Col: startCol}, nil
+		}
+
+		if ch == '!' && l.pos+1 < l.length && l.src[l.pos+1] == '=' {
+			l.advance()
+			l.advance()
+			return Token{Type: TokenNotEq, Value: "!=", Line: startLine, Col: startCol}, nil
+		}
+
 		// Strings entre aspas simples ou duplas
 		if ch == '"' || ch == '\'' {
 			strVal, err := l.readString(ch)

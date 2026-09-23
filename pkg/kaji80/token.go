@@ -17,6 +17,27 @@ const (
 	TokenRParen     // )
 	TokenPlus       // +
 	TokenMinus      // -
+
+	// Operadores de expressão (avaliador de constantes em tempo de
+	// montagem -- ver expr.go). Não existiam antes porque nada no KAJI80
+	// suportava expressões aritméticas em operandos até esta leva.
+	TokenStar   // *
+	TokenSlash  // /
+	TokenShl    // <<
+	TokenShr    // >>
+	TokenPipe   // |
+	TokenAmp    // &
+	TokenCaret  // ^
+	TokenTilde  // ~
+	TokenOrOr   // ||
+	TokenAndAnd // &&
+	TokenEqEq   // ==
+	TokenNotEq  // !=
+	TokenLt     // <
+	TokenLtEq   // <=
+	TokenGt     // >
+	TokenGtEq   // >=
+	TokenAssign // = (fora de EQU: "Nome = expressão", variável reatribuível)
 )
 
 func (t TokenType) String() string {
@@ -43,6 +64,40 @@ func (t TokenType) String() string {
 		return "PLUS"
 	case TokenMinus:
 		return "MINUS"
+	case TokenStar:
+		return "STAR"
+	case TokenSlash:
+		return "SLASH"
+	case TokenShl:
+		return "SHL"
+	case TokenShr:
+		return "SHR"
+	case TokenPipe:
+		return "PIPE"
+	case TokenAmp:
+		return "AMP"
+	case TokenCaret:
+		return "CARET"
+	case TokenTilde:
+		return "TILDE"
+	case TokenOrOr:
+		return "OROR"
+	case TokenAndAnd:
+		return "ANDAND"
+	case TokenEqEq:
+		return "EQEQ"
+	case TokenNotEq:
+		return "NOTEQ"
+	case TokenLt:
+		return "LT"
+	case TokenLtEq:
+		return "LTEQ"
+	case TokenGt:
+		return "GT"
+	case TokenGtEq:
+		return "GTEQ"
+	case TokenAssign:
+		return "ASSIGN"
 	default:
 		return fmt.Sprintf("TOKEN(%d)", t)
 	}
