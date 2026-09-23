@@ -1,10 +1,13 @@
 # ============================================================
 # KIZUNA sample -- Obifile real (nao ilustrativo -- compila e linka)
-# Constroi main.com combinando KAJI80 (banco 0, dono do Start) e DIGNAC
-# (modulo biblioteca no banco 2, sem PROCEDURE Main), mais um resource
-# embutido e a MSXLIB via biblioteca .hlib ja empacotada. O MUSUBI gera
-# o trampolim de troca de banco automaticamente para a chamada cruzando
-# bancos (Main -> ChartLib.Desenhar).
+# Constroi main.com combinando as 3 linguagens de entrada do KIZUNA:
+# KAJI80 (banco 0, dono do Start), DIGNAC (modulo biblioteca no banco 2,
+# sem PROCEDURE Main) e WIRTH80 (modulo biblioteca -- begin end. vazio --
+# tambem no banco 0, ja que o WIRTH80 ainda nao suporta BANK <n>) -- mais
+# um resource embutido e a MSXLIB via biblioteca .hlib ja empacotada. O
+# MUSUBI gera o trampolim de troca de banco automaticamente pra chamada
+# cruzando bancos (Main -> ChartLib.Desenhar); Main -> GreetLib.Saudacao
+# fica no mesmo banco 0, entao vira um CALL direto, sem trampolim.
 # ============================================================
 
 target: main.com
@@ -27,6 +30,12 @@ modules:
     source: chart_lib.bas
     compiler: dignac
     bank: 2
+
+  # WIRTH80 ainda nao suporta BANK <n> -- todo modulo seu vira banco 0
+  - name: GreetLib
+    source: greet_lib.pas
+    compiler: wirth80
+    bank: 0
 
 link:
   map: main.map

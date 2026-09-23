@@ -198,6 +198,7 @@ New-Item -ItemType Directory -Path $ObiDir -Force | Out-Null
 Copy-Item -Path "$RootDir/sample/obi/Obifile" -Destination "$ObiDir/Obifile"
 Copy-Item -Path "$RootDir/sample/obi/main.asm" -Destination "$ObiDir/main.asm"
 Copy-Item -Path "$RootDir/sample/obi/chart_lib.bas" -Destination "$ObiDir/chart_lib.bas"
+Copy-Item -Path "$RootDir/sample/obi/greet_lib.pas" -Destination "$ObiDir/greet_lib.pas"
 Copy-Item -Path "$RootDir/sample/obi/banner.txt" -Destination "$ObiDir/banner.txt"
 Copy-Item -Path "$RootDir/sample/obi/main.com" -Destination "$ObiDir/main.com"
 Copy-Item -Path "$RootDir/sample/obi/build.ps1" -Destination "$ObiDir/build.ps1"
