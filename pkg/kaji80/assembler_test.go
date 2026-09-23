@@ -1089,6 +1089,108 @@ CHGMOD:
 	}
 }
 
+// TestCallDosWithPredefinedFunc: CALLDOS F_OPEN vira LD C,43h / CALL
+// 0005h -- inteiramente inlined, sem dependência de biblioteca.
+func TestCallDosWithPredefinedFunc(t *testing.T) {
+	src := `
+MODULE CallDosPredef
+BANK 0
+PUBLIC Start
+Start:
+    CALLDOS F_OPEN
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x0E, 0x43, 0xCD, 0x05, 0x00, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestCallDosWithLiteralCode: CALLDOS também aceita um código numérico
+// literal direto, não só um nome pré-definido.
+func TestCallDosWithLiteralCode(t *testing.T) {
+	src := `
+MODULE CallDosLiteral
+BANK 0
+PUBLIC Start
+Start:
+    CALLDOS 02h
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x0E, 0x02, 0xCD, 0x05, 0x00, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestCallBiosWithPredefinedRoutine: CALLBIOS CHGMOD vira LD IX,005Fh /
+// CALL BIOS_Call -- reaproveita a rotina já hardware-testada de
+// lib/src/bios.asm em vez de inlinar a sequência completa, registrando
+// EXTERN BIOS_Call automaticamente.
+func TestCallBiosWithPredefinedRoutine(t *testing.T) {
+	src := `
+MODULE CallBiosPredef
+BANK 0
+PUBLIC Start
+Start:
+    CALLBIOS CHGMOD
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	// LD IX,005Fh (DD 21 5F 00) + CALL BIOS_Call (CD 00 00, placeholder
+	// até a linkagem resolver a relocation) + RET.
+	expected := []byte{0xDD, 0x21, 0x5F, 0x00, 0xCD, 0x00, 0x00, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+	if len(obj.Relocations) != 1 {
+		t.Fatalf("esperada 1 relocation (CALL BIOS_Call), obtida %d", len(obj.Relocations))
+	}
+	symName := obj.Symbols[obj.Relocations[0].SymbolIndex].Name
+	if symName != "BIOS_Call" {
+		t.Fatalf("relocation esperada apontando pro símbolo 'BIOS_Call', apontou pra '%s'", symName)
+	}
+	foundExtern := false
+	for _, sym := range obj.Symbols {
+		if sym.Name == "BIOS_Call" && sym.Class == mob.SymbolExtern {
+			foundExtern = true
+		}
+	}
+	if !foundExtern {
+		t.Fatal("esperado 'BIOS_Call' registrado como EXTERN automaticamente")
+	}
+}
+
+func TestCallBiosWrongArgCountErrors(t *testing.T) {
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nStart:\nCALLBIOS\n    RET\n"
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para CALLBIOS sem operando")
+	}
+}
+
+func TestCallDosWrongArgCountErrors(t *testing.T) {
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nStart:\nCALLDOS\n    RET\n"
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para CALLDOS sem operando")
+	}
+}
+
 // TestIncDecIndirectHL: INC (HL)/DEC (HL) -- instruções Z80 padrão que
 // nunca tinham sido implementadas (achado ao reproduzir o exemplo m_INC16
 // da documentação do asMSX pra TestMacroSimple, não um bug de macro).

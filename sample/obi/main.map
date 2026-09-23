@@ -11,11 +11,11 @@ Tamanho do .COM:   2441 bytes (0x0989)
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x017E | Banco:  0 | Tipo: CODE | Mod: -2 | Tam:   126 bytes
 [ 1] 0x017E - 0x01A4 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:    38 bytes
-[ 2] 0x01A4 - 0x0257 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:   179 bytes
-[ 3] 0x0257 - 0x0726 | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:  1231 bytes
-[ 4] 0x0726 - 0x0788 | Banco:  0 | Tipo: CODE | Mod:  6 | Tam:    98 bytes
-[ 5] 0x0788 - 0x07CA | Banco:  0 | Tipo: CODE | Mod:  7 | Tam:    66 bytes
-[ 6] 0x07CA - 0x0907 | Banco:  0 | Tipo: CODE | Mod:  8 | Tam:   317 bytes
+[ 2] 0x01A4 - 0x0206 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:    98 bytes
+[ 3] 0x0206 - 0x0248 | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:    66 bytes
+[ 4] 0x0248 - 0x0717 | Banco:  0 | Tipo: CODE | Mod:  6 | Tam:  1231 bytes
+[ 5] 0x0717 - 0x0854 | Banco:  0 | Tipo: CODE | Mod:  7 | Tam:   317 bytes
+[ 6] 0x0854 - 0x0907 | Banco:  0 | Tipo: CODE | Mod:  8 | Tam:   179 bytes
 [ 7] 0x0907 - 0x0951 | Banco:  0 | Tipo: DATA | Mod:  3 | Tam:    74 bytes
 [ 8] 0x8000 - 0x8038 | Banco:  1 | Tipo: CODE | Mod:  2 | Tam:    56 bytes
 [ 9] 0x8000 - 0x80C4 | Banco:  2 | Tipo: CODE | Mod:  1 | Tam:   196 bytes
@@ -27,91 +27,91 @@ Tamanho do .COM:   2441 bytes (0x0989)
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x017E [Banco  0] PROC Start
-0x01A4 [Banco  0] PROC BIOS_Call
-0x01B6 [Banco  0] PROC BIOS_CHPUT
-0x01C5 [Banco  0] PROC BIOS_CHGET
-0x01EF [Banco  0] PROC BIOS_CLS
-0x01F6 [Banco  0] PROC BIOS_POSIT
-0x01F7 [Banco  0] PROC BIOS_BEEP
-0x0207 [Banco  0] PROC BIOS_INIT32
-0x020F [Banco  0] PROC BIOS_CHGMOD
-0x0257 [Banco  0] PROC VDP_WriteReg
-0x025D [Banco  0] PROC VDP_WriteReg_Raw
-0x0268 [Banco  0] PROC VDP_SetWriteAddr
-0x0277 [Banco  0] PROC VDP_SetReadAddr
-0x0284 [Banco  0] PROC VDP_FillVRAM
-0x02A0 [Banco  0] PROC VDP_WriteVRAM
-0x02B3 [Banco  0] PROC VDP_ReadVRAM
-0x02C8 [Banco  0] PROC VDP_CopyVRAM
-0x02E6 [Banco  0] PROC VDP_SetColor
-0x02FD [Banco  0] PROC VDP_SetScreen
-0x0300 [Banco  0] PROC VDP_InitScreen2
-0x0305 [Banco  0] PROC VDP_InitScreen0
-0x0309 [Banco  0] PROC VDP_InitScreen1
-0x030F [Banco  0] PROC VDP_InitScreen2_Tables
-0x0390 [Banco  0] PROC VDP_PSet
-0x0396 [Banco  0] PROC VDP_PSet_HW
-0x03D2 [Banco  0] PROC VDP_CommandWait_Raw
-0x03EB [Banco  0] PROC VDP_PSet_Raw
-0x0430 [Banco  0] PROC VDP_PSet_MaskDone
-0x049F [Banco  0] PROC VDP_PSet_ColorArg
-0x04A0 [Banco  0] PROC VDP_BoxFill
-0x0543 [Banco  0] PROC VDP_Line
-0x0617 [Banco  0] PROC VDP_Line_Loop
-0x0660 [Banco  0] PROC VDP_Line_CheckE2DX
-0x068A [Banco  0] PROC VDP_Line_Exit
-0x0691 [Banco  0] PROC VDP_Line_H_End
-0x0692 [Banco  0] PROC VDP_Line_DX
-0x0693 [Banco  0] PROC VDP_Line_SX
-0x0694 [Banco  0] PROC VDP_Line_DY
-0x0696 [Banco  0] PROC VDP_Line_SY
-0x0697 [Banco  0] PROC VDP_Line_Err
-0x0699 [Banco  0] PROC VDP_Line_E2
-0x069B [Banco  0] PROC VDP_Line_CurX
-0x069C [Banco  0] PROC VDP_Line_CurY
-0x069D [Banco  0] PROC VDP_SpriteDefine
-0x06AE [Banco  0] PROC VDP_SpriteSet
-0x06EB [Banco  0] PROC VDP_Sprite_Idx
-0x06EC [Banco  0] PROC VDP_Sprite_X
-0x06ED [Banco  0] PROC VDP_Sprite_Y
-0x06EE [Banco  0] PROC VDP_Sprite_Pat
-0x06EF [Banco  0] PROC VDP_Sprite_Color
-0x06F0 [Banco  0] PROC VDP_SpriteHide
-0x070C [Banco  0] PROC VDP_SpriteHideAll
-0x071F [Banco  0] PROC VDP_SpriteSetSize
-0x0726 [Banco  0] PROC BDOS_Call
-0x072A [Banco  0] PROC BDOS_PrintChar
-0x0740 [Banco  0] PROC BDOS_PrintString
-0x0756 [Banco  0] PROC BDOS_ReadChar
-0x075E [Banco  0] PROC BDOS_Exit
-0x0764 [Banco  0] PROC BDOS_FileOpen
-0x076A [Banco  0] PROC BDOS_FileCreate
-0x0770 [Banco  0] PROC BDOS_FileClose
-0x0776 [Banco  0] PROC BDOS_FileRead
-0x077C [Banco  0] PROC BDOS_FileWrite
-0x0782 [Banco  0] PROC BDOS_FileSeek
-0x0788 [Banco  0] PROC Mul16
-0x079D [Banco  0] PROC Div16
-0x07CA [Banco  0] PROC StrLen
-0x07D8 [Banco  0] PROC StrCopy
-0x07E8 [Banco  0] PROC StrToUpper
-0x07FF [Banco  0] PROC PrintHex8
-0x080C [Banco  0] PROC PrintNibble
-0x081D [Banco  0] PROC PrintHex16
-0x0828 [Banco  0] PROC PrintDec16
-0x0852 [Banco  0] PROC PrintDecDigit
-0x0870 [Banco  0] PROC PrintDec16ToBuffer
-0x08A3 [Banco  0] PROC PrintDecDigitBuf
-0x08BC [Banco  0] PROC PDTB_WriteChar
-0x08D0 [Banco  0] PROC PDTB_BufPtr
-0x08D2 [Banco  0] PROC PDTB_Count
-0x08D3 [Banco  0] PROC StrCopyLen
-0x08EB [Banco  0] PROC BDOS_PrintLenStr
+0x01A4 [Banco  0] PROC BDOS_Call
+0x01A8 [Banco  0] PROC BDOS_PrintChar
+0x01BE [Banco  0] PROC BDOS_PrintString
+0x01D4 [Banco  0] PROC BDOS_ReadChar
+0x01DC [Banco  0] PROC BDOS_Exit
+0x01E2 [Banco  0] PROC BDOS_FileOpen
+0x01E8 [Banco  0] PROC BDOS_FileCreate
+0x01EE [Banco  0] PROC BDOS_FileClose
+0x01F4 [Banco  0] PROC BDOS_FileRead
+0x01FA [Banco  0] PROC BDOS_FileWrite
+0x0200 [Banco  0] PROC BDOS_FileSeek
+0x0206 [Banco  0] PROC Mul16
+0x021B [Banco  0] PROC Div16
+0x0248 [Banco  0] PROC VDP_WriteReg
+0x024E [Banco  0] PROC VDP_WriteReg_Raw
+0x0259 [Banco  0] PROC VDP_SetWriteAddr
+0x0268 [Banco  0] PROC VDP_SetReadAddr
+0x0275 [Banco  0] PROC VDP_FillVRAM
+0x0291 [Banco  0] PROC VDP_WriteVRAM
+0x02A4 [Banco  0] PROC VDP_ReadVRAM
+0x02B9 [Banco  0] PROC VDP_CopyVRAM
+0x02D7 [Banco  0] PROC VDP_SetColor
+0x02EE [Banco  0] PROC VDP_SetScreen
+0x02F1 [Banco  0] PROC VDP_InitScreen2
+0x02F6 [Banco  0] PROC VDP_InitScreen0
+0x02FA [Banco  0] PROC VDP_InitScreen1
+0x0300 [Banco  0] PROC VDP_InitScreen2_Tables
+0x0381 [Banco  0] PROC VDP_PSet
+0x0387 [Banco  0] PROC VDP_PSet_HW
+0x03C3 [Banco  0] PROC VDP_CommandWait_Raw
+0x03DC [Banco  0] PROC VDP_PSet_Raw
+0x0421 [Banco  0] PROC VDP_PSet_MaskDone
+0x0490 [Banco  0] PROC VDP_PSet_ColorArg
+0x0491 [Banco  0] PROC VDP_BoxFill
+0x0534 [Banco  0] PROC VDP_Line
+0x0608 [Banco  0] PROC VDP_Line_Loop
+0x0651 [Banco  0] PROC VDP_Line_CheckE2DX
+0x067B [Banco  0] PROC VDP_Line_Exit
+0x0682 [Banco  0] PROC VDP_Line_H_End
+0x0683 [Banco  0] PROC VDP_Line_DX
+0x0684 [Banco  0] PROC VDP_Line_SX
+0x0685 [Banco  0] PROC VDP_Line_DY
+0x0687 [Banco  0] PROC VDP_Line_SY
+0x0688 [Banco  0] PROC VDP_Line_Err
+0x068A [Banco  0] PROC VDP_Line_E2
+0x068C [Banco  0] PROC VDP_Line_CurX
+0x068D [Banco  0] PROC VDP_Line_CurY
+0x068E [Banco  0] PROC VDP_SpriteDefine
+0x069F [Banco  0] PROC VDP_SpriteSet
+0x06DC [Banco  0] PROC VDP_Sprite_Idx
+0x06DD [Banco  0] PROC VDP_Sprite_X
+0x06DE [Banco  0] PROC VDP_Sprite_Y
+0x06DF [Banco  0] PROC VDP_Sprite_Pat
+0x06E0 [Banco  0] PROC VDP_Sprite_Color
+0x06E1 [Banco  0] PROC VDP_SpriteHide
+0x06FD [Banco  0] PROC VDP_SpriteHideAll
+0x0710 [Banco  0] PROC VDP_SpriteSetSize
+0x0717 [Banco  0] PROC StrLen
+0x0725 [Banco  0] PROC StrCopy
+0x0735 [Banco  0] PROC StrToUpper
+0x074C [Banco  0] PROC PrintHex8
+0x0759 [Banco  0] PROC PrintNibble
+0x076A [Banco  0] PROC PrintHex16
+0x0775 [Banco  0] PROC PrintDec16
+0x079F [Banco  0] PROC PrintDecDigit
+0x07BD [Banco  0] PROC PrintDec16ToBuffer
+0x07F0 [Banco  0] PROC PrintDecDigitBuf
+0x0809 [Banco  0] PROC PDTB_WriteChar
+0x081D [Banco  0] PROC PDTB_BufPtr
+0x081F [Banco  0] PROC PDTB_Count
+0x0820 [Banco  0] PROC StrCopyLen
+0x0838 [Banco  0] PROC BDOS_PrintLenStr
+0x0854 [Banco  0] PROC BIOS_Call
+0x0866 [Banco  0] PROC BIOS_CHPUT
+0x0875 [Banco  0] PROC BIOS_CHGET
+0x089F [Banco  0] PROC BIOS_CLS
+0x08A6 [Banco  0] PROC BIOS_POSIT
+0x08A7 [Banco  0] PROC BIOS_BEEP
+0x08B7 [Banco  0] PROC BIOS_INIT32
+0x08BF [Banco  0] PROC BIOS_CHGMOD
 0x0907 [Banco  0] DATA Res_Banner
 0x8000 [Banco  1] PROC Saudacao
 0x8026 [Banco  1] PROC StrLit_1
 0x8000 [Banco  2] PROC Desenhar
 0x804E [Banco  2] PROC For_Start_1
-0x8066 [Banco  2] PROC For_LT_5
 0x8066 [Banco  2] PROC For_Body_3
+0x8066 [Banco  2] PROC For_LT_5
 0x80BF [Banco  2] PROC For_End_2

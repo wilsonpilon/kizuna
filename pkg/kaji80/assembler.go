@@ -580,6 +580,13 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 		return 0, nil
 	case "EQU", "ASSIGN":
 		return 0, nil
+	case "CALLBIOS":
+		// LD IX,nn (DD 21 nn nn = 4 bytes) + CALL BIOS_Call (CD nn nn = 3
+		// bytes) = 7.
+		return 7, nil
+	case "CALLDOS":
+		// LD C,n (0E nn = 2 bytes) + CALL 0005h (CD 05 00 = 3 bytes) = 5.
+		return 5, nil
 	default:
 		return 1, nil
 	}
@@ -692,6 +699,37 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 			return fmt.Errorf("linha %d: %s = ...: '%s' não é uma expressão numérica válida", lineNum, label, ops[0])
 		}
 		a.variables[label] = val
+		return nil
+	case "CALLBIOS":
+		// LD IX,rotina / CALL BIOS_Call -- reaproveita a rotina já
+		// hardware-testada em lib/src/bios.asm (inter-slot call de
+		// verdade: lê o slot em EXPTBL-1 e faz CALSLT) em vez de inlinar
+		// a sequência completa toda vez (~15 bytes por uso e zero
+		// dependência da MSXLIB, como o asMSX faz) -- escolha registrada
+		// no plano aprovado: menor código gerado em troca de uma
+		// dependência implícita com um símbolo específico da MSXLIB,
+		// "nossa própria sintaxe e recursos" preferindo reaproveitar o
+		// que o KIZUNA já construiu e já provou funcionar.
+		if len(ops) != 1 {
+			return fmt.Errorf("linha %d: CALLBIOS requer 1 operando (a rotina da BIOS a chamar)", lineNum)
+		}
+		a.emit(0xDD, 0x21) // LD IX, nn
+		if err := a.emitAddressOrReloc(ops[0]); err != nil {
+			return fmt.Errorf("linha %d: CALLBIOS %s: %w", lineNum, ops[0], err)
+		}
+		a.externs["BIOS_Call"] = true
+		a.emit(0xCD) // CALL nn
+		return a.emitAddressOrReloc("BIOS_Call")
+	case "CALLDOS":
+		// LD C,código / CALL 0005h -- sempre inlined, igual ao asMSX
+		// (pequeno demais pra valer a pena uma rotina compartilhada, e
+		// BDOS_Call em lib/src/bdos.asm já é só "CALL BDOS_ENTRY / RET",
+		// então inlinar direto poupa até a chamada extra).
+		if len(ops) != 1 {
+			return fmt.Errorf("linha %d: CALLDOS requer 1 operando (o código de função do MSX-DOS)", lineNum)
+		}
+		a.emit(0x0E, a.parseImm8(ops[0])) // LD C, n
+		a.emit(0xCD, 0x05, 0x00)          // CALL 0005h
 		return nil
 	case "NOP":
 		a.emit(0x00)
