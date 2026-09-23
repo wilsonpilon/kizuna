@@ -1280,6 +1280,20 @@ func (a *Assembler) parseImm8(s string) uint8 {
 	if val, ok := a.constants[s]; ok {
 		return uint8(val & 0xFF)
 	}
+	// Rótulo pré-definido (BIOS/BDOS/BIOSVARS) -- ex.: "LD C, F_OPEN" --
+	// só como último recurso, código do usuário (rótulo do arquivo ou
+	// EXTERN explícito) sempre tem prioridade. Trunca pro byte baixo, já
+	// que a maioria dos usos de 8 bits aqui é código de função BDOS
+	// (cabe num byte de verdade); um endereço BIOS de 16 bits usado aqui
+	// por engano só trunca, mesmo comportamento silencioso que qualquer
+	// outra constante grande demais já tinha antes desta leva.
+	if _, isLocal := a.symbols[s]; !isLocal {
+		if _, isExtern := a.externs[s]; !isExtern {
+			if v, ok := lookupPredefined(s); ok {
+				return uint8(v & 0xFF)
+			}
+		}
+	}
 	// Literal de caractere entre aspas simples: 'A', '$', etc. -- sem isso,
 	// caía no Sscanf genérico abaixo, que falha silenciosamente pra essa
 	// sintaxe e devolve 0 (mesma classe de bug já vista com operandos
@@ -1372,6 +1386,20 @@ func (a *Assembler) emitAddressOrReloc(symbolOrAddr string) error {
 
 	if !isValidSymbolName(symbolOrAddr) {
 		return fmt.Errorf("operando de endereço inválido: '%s' não é um número, constante EQU nem nome de símbolo válido", symbolOrAddr)
+	}
+
+	// Rótulo pré-definido (BIOS/BDOS/BIOSVARS) -- só como ÚLTIMO recurso,
+	// depois de checar que o nome não é um rótulo de verdade definido
+	// neste arquivo (a.symbols, já populado pelo Pass 1 nesse ponto) nem
+	// um EXTERN explícito -- código do usuário sempre tem prioridade sobre
+	// o valor pré-definido, nunca o contrário.
+	if _, isLocal := a.symbols[symbolOrAddr]; !isLocal {
+		if _, isExtern := a.externs[symbolOrAddr]; !isExtern {
+			if v, ok := lookupPredefined(symbolOrAddr); ok {
+				a.emit(uint8(v&0xFF), uint8((v>>8)&0xFF))
+				return nil
+			}
+		}
 	}
 
 	// É um símbolo/label (precisa de relocation ABS16 no .MOB)

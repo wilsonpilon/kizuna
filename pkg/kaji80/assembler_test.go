@@ -978,6 +978,117 @@ func TestReptNonLiteralCountErrors(t *testing.T) {
 	}
 }
 
+// TestPredefinedBiosLabelResolvesDirectly: CALL CHGMOD resolve pro
+// endereço da BIOS (005Fh) direto, sem gerar relocation -- valor já
+// hardware-testado em lib/src/bios.asm.
+func TestPredefinedBiosLabelResolvesDirectly(t *testing.T) {
+	src := `
+MODULE PredefBios
+BANK 0
+PUBLIC Start
+Start:
+    CALL CHGMOD
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0xCD, 0x5F, 0x00, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+	if len(obj.Relocations) != 0 {
+		t.Fatalf("esperada 0 relocations (CHGMOD resolve em tempo de montagem), obtida %d", len(obj.Relocations))
+	}
+}
+
+// TestPredefinedBiosVarResolvesDirectly: LD HL,EXPTBL resolve pra
+// variável de sistema (0FCC1h) -- mesmo valor já hardware-testado em
+// lib/src/bios.asm (BIOS_Call lê o slot de EXPTBL-1).
+func TestPredefinedBiosVarResolvesDirectly(t *testing.T) {
+	src := `
+MODULE PredefBiosVar
+BANK 0
+PUBLIC Start
+Start:
+    LD HL, EXPTBL
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x21, 0xC1, 0xFC, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestPredefinedBdosFuncResolvesAs8Bit: LD C,F_OPEN resolve pro código de
+// função do MSX-DOS 2 (43h) -- mesmo valor já hardware-testado em
+// lib/src/bdos.asm (BDOS_FileOpen).
+func TestPredefinedBdosFuncResolvesAs8Bit(t *testing.T) {
+	src := `
+MODULE PredefBdos
+BANK 0
+PUBLIC Start
+Start:
+    LD C, F_OPEN
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x0E, 0x43, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestUserLabelShadowsPredefined: um rótulo de verdade definido no
+// arquivo com o MESMO nome de um pré-definido sempre vence -- código do
+// usuário nunca é silenciosamente substituído pelo valor pré-definido.
+// Rótulo do próprio arquivo (mesmo já sendo local ao módulo) sempre vira
+// uma relocation resolvida na linkagem, não um valor imediato -- por
+// isso a prova aqui é que "CALL CHGMOD" gera uma relocation apontando pro
+// símbolo "CHGMOD" (em vez de embutir 005Fh direto, que seria o
+// comportamento se o pré-definido tivesse vencido).
+func TestUserLabelShadowsPredefined(t *testing.T) {
+	src := `
+MODULE ShadowPredef
+BANK 0
+PUBLIC Start, CHGMOD
+Start:
+    CALL CHGMOD
+    RET
+CHGMOD:
+    NOP
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	// Se o pré-definido tivesse vencido, isto embutiria 5F 00 direto e
+	// NÃO geraria relocation nenhuma.
+	if len(obj.Relocations) != 1 {
+		t.Fatalf("esperada 1 relocation (CALL CHGMOD apontando pro rótulo do usuário), obtida %d -- indica que o pré-definido pode ter vencido", len(obj.Relocations))
+	}
+	symName := obj.Symbols[obj.Relocations[0].SymbolIndex].Name
+	if symName != "CHGMOD" {
+		t.Fatalf("relocation esperada apontando pro símbolo 'CHGMOD', apontou pra '%s'", symName)
+	}
+	if !bytes.Equal(obj.Segments[0].Data[1:3], []byte{0x00, 0x00}) {
+		t.Fatalf("bytes reservados da relocation deveriam ser 00 00 (preenchidos só na linkagem), obtido % X", obj.Segments[0].Data[1:3])
+	}
+}
+
 // TestIncDecIndirectHL: INC (HL)/DEC (HL) -- instruções Z80 padrão que
 // nunca tinham sido implementadas (achado ao reproduzir o exemplo m_INC16
 // da documentação do asMSX pra TestMacroSimple, não um bug de macro).
