@@ -3,6 +3,7 @@ package kaji80
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 )
 
@@ -284,4 +285,213 @@ func resolveLocalLabels(lineTokens [][]Token) error {
 		}
 	}
 	return nil
+}
+
+// =============================================================================
+// MACRO @param, .../ENDM
+//
+// Marcador de parâmetro: "@nome", não "#nome" como no asMSX -- "#" já é o
+// prefixo de literal hexadecimal do KAJI80 (#100 = 256, documentado), e
+// "@nome" já é tokenizado pelo lexer como UM identificador só (isIdentStart/
+// isIdentPart já incluem '@', mesmo padrão usado pro '.' dos rótulos
+// locais), sem precisar de nenhuma mudança no lexer. Mesmo espírito da
+// escolha de MOD em vez de '%' na Fase 1: "nossa própria sintaxe", não uma
+// cópia literal do asMSX.
+//
+// A substituição de parâmetro precisa funcionar mesmo DENTRO de um
+// identificador maior (ex. real da documentação do asMSX, só trocando '#'
+// por '@': ".noreset_@VARIABLE:" chamado com VARNAME vira
+// ".noreset_VARNAME:") -- como '.', letras, dígitos, '_' e '@' são TODOS
+// caracteres válidos de identificador pro lexer, ".noreset_@VARIABLE"
+// chega como UM token só, não vários. Por isso, diferente de REPT/IF/
+// rótulos locais (que operam só reescrevendo Value de tokens inteiros já
+// existentes), a expansão de macro reconstrói cada linha do corpo de volta
+// em texto (depois de substituir @param por dentro do Value de cada
+// token), e relexa esse texto do zero -- garante que um argumento
+// multi-token (ex.: uma expressão "10+20" passada como argumento) também
+// vira tokens corretos de verdade (NUMBER, PLUS, NUMBER), não um Value
+// só com texto misturado.
+// =============================================================================
+
+const maxMacroExpansionDepth = 64
+
+type macroDef struct {
+	params []string // nomes SEM o '@' na frente
+	body   [][]Token
+}
+
+// expandMacros processa "Nome: MACRO @p1, @p2, .../ENDM" (registra, não
+// expande na hora) e expande cada invocação "Nome arg1, arg2, ..."
+// encontrada depois -- exige declarar antes de usar, mesma regra já usada
+// no resto do projeto (DIGNAC/WIRTH80). O corpo de uma macro pode conter
+// outra chamada de macro (expandida recursivamente, com guarda de
+// profundidade contra auto-referência infinita) -- IF/REPT dentro do
+// corpo já funcionam de graça, porque MACRO roda depois deles no pipeline
+// (ver tokenizeLines em assembler.go), então já chegam aqui como texto
+// final.
+func (a *Assembler) expandMacros(lineTokens [][]Token, defs map[string]*macroDef, expCounter *int, depth int) ([][]Token, error) {
+	if depth > maxMacroExpansionDepth {
+		return nil, fmt.Errorf("expansão de macro excedeu %d níveis -- provável auto-referência infinita", maxMacroExpansionDepth)
+	}
+
+	var out [][]Token
+	i := 0
+	for i < len(lineTokens) {
+		line := lineTokens[i]
+		if len(line) == 0 {
+			i++
+			continue
+		}
+
+		// Definição: "Nome: MACRO @p1, @p2, ..."
+		if len(line) >= 3 && line[0].Type == TokenIdentifier && line[1].Type == TokenColon &&
+			line[2].Type == TokenIdentifier && strings.EqualFold(line[2].Value, "MACRO") {
+			var params []string
+			for _, t := range line[3:] {
+				if t.Type == TokenIdentifier && strings.HasPrefix(t.Value, "@") {
+					params = append(params, t.Value[1:])
+				}
+			}
+			endIdx, err := findMatchingEndm(lineTokens, i+1)
+			if err != nil {
+				return nil, fmt.Errorf("linha %d: %w", line[0].Line, err)
+			}
+			defs[strings.ToUpper(line[0].Value)] = &macroDef{params: params, body: lineTokens[i+1 : endIdx]}
+			i = endIdx + 1
+			continue
+		}
+
+		// Chamada: "Nome arg1, arg2, ..."
+		if line[0].Type == TokenIdentifier {
+			if def, ok := defs[strings.ToUpper(line[0].Value)]; ok {
+				pl, err := a.parseLine(line)
+				if err != nil {
+					return nil, err
+				}
+				if len(pl.operands) != len(def.params) {
+					return nil, fmt.Errorf("linha %d: macro '%s' espera %d argumento(s), recebeu %d", line[0].Line, line[0].Value, len(def.params), len(pl.operands))
+				}
+				*expCounter++
+				substituted := substituteMacroParams(def.body, def.params, pl.operands)
+				relexed, err := relexLines(substituted)
+				if err != nil {
+					return nil, fmt.Errorf("linha %d: macro '%s': %w", line[0].Line, line[0].Value, err)
+				}
+				tagged := tagLocalLabelsForExpansion(relexed, *expCounter)
+				expanded, err := a.expandMacros(tagged, defs, expCounter, depth+1)
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, expanded...)
+				i++
+				continue
+			}
+		}
+
+		out = append(out, line)
+		i++
+	}
+	return out, nil
+}
+
+// findMatchingEndm acha o índice do ENDM que fecha a declaração de macro
+// cujo corpo começa em "start". Declarações de MACRO não aninham (só
+// chamadas aninham, tratadas por recursão em expandMacros), então não
+// precisa rastrear profundidade como findMatchingEndr faz pro REPT.
+func findMatchingEndm(lineTokens [][]Token, start int) (int, error) {
+	for j := start; j < len(lineTokens); j++ {
+		if len(lineTokens[j]) == 0 {
+			continue
+		}
+		if lineTokens[j][0].Type == TokenIdentifier && strings.EqualFold(lineTokens[j][0].Value, "ENDM") {
+			return j, nil
+		}
+	}
+	return -1, fmt.Errorf("MACRO sem ENDM correspondente")
+}
+
+// substituteMacroParams devolve uma CÓPIA do corpo com cada "@param"
+// substituído pelo texto do argumento correspondente, em qualquer lugar
+// que apareça dentro do Value de um token (inclusive no meio de um
+// identificador maior). Substitui os parâmetros de nome mais LONGO
+// primeiro, pra um parâmetro cujo nome é prefixo de outro (ex.: @VAR e
+// @VARIABLE declarados juntos) não ser trocado por engano dentro do nome
+// maior antes da vez dele.
+func substituteMacroParams(body [][]Token, params []string, args []string) [][]Token {
+	order := make([]int, len(params))
+	for i := range order {
+		order[i] = i
+	}
+	sort.Slice(order, func(x, y int) bool { return len(params[order[x]]) > len(params[order[y]]) })
+
+	out := make([][]Token, len(body))
+	for li, line := range body {
+		newLine := make([]Token, len(line))
+		for ti, tok := range line {
+			v := tok.Value
+			for _, idx := range order {
+				marker := "@" + params[idx]
+				if strings.Contains(v, marker) {
+					v = strings.ReplaceAll(v, marker, args[idx])
+				}
+			}
+			newTok := tok
+			newTok.Value = v
+			newLine[ti] = newTok
+		}
+		out[li] = newLine
+	}
+	return out
+}
+
+// relexLines reconstrói cada linha (já com os parâmetros substituídos) de
+// volta em texto e relexa do zero -- necessário pra um argumento
+// multi-token (ex.: uma expressão passada como argumento) virar tokens de
+// verdade, não um Value de token só com texto misturado.
+func relexLines(lines [][]Token) ([][]Token, error) {
+	out := make([][]Token, 0, len(lines))
+	for _, line := range lines {
+		text := tokensToText(line)
+		if strings.TrimSpace(text) == "" {
+			continue
+		}
+		lexer := NewLexer(text)
+		var toks []Token
+		for {
+			tok, err := lexer.NextToken()
+			if err != nil {
+				return nil, fmt.Errorf("relexando %q: %w", text, err)
+			}
+			if tok.Type == TokenEOF || tok.Type == TokenNewline {
+				break
+			}
+			toks = append(toks, tok)
+		}
+		if len(toks) > 0 {
+			out = append(out, toks)
+		}
+	}
+	return out, nil
+}
+
+// tokensToText reconstrói o texto-fonte aproximado de uma linha de tokens
+// -- espaçamento exato não importa (o lexer ignora espaço em branco fora
+// de string), só recolocar as aspas de um literal de string/caractere
+// (TokenString já vem sem elas, igual ao resto do assembler já faz em
+// parseLine).
+func tokensToText(line []Token) string {
+	var sb strings.Builder
+	for i, t := range line {
+		if i > 0 {
+			sb.WriteByte(' ')
+		}
+		if t.Type == TokenString {
+			sb.WriteByte('"')
+			sb.WriteString(t.Value)
+			sb.WriteByte('"')
+		} else {
+			sb.WriteString(t.Value)
+		}
+	}
+	return sb.String()
 }

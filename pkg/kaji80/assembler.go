@@ -301,16 +301,22 @@ func (a *Assembler) tokenizeLines(source string) ([]parsedLine, error) {
 
 	// Ordem importa: IF/ELSE/ENDIF primeiro (remove ramos mortos antes de
 	// qualquer outra coisa enxergar essas linhas), REPT depois (duplica
-	// blocos -- se uma macro futura for chamada dentro de um REPT, REPT
-	// precisa duplicar a CHAMADA primeiro, pra cada cópia ganhar seu
-	// próprio ID de expansão quando a macro for expandida em cima do
-	// resultado), rótulos locais por último -- ver preprocessor.go.
+	// blocos -- se uma macro é chamada dentro de um REPT, REPT precisa
+	// duplicar a CHAMADA primeiro, pra cada cópia ganhar seu próprio ID de
+	// expansão quando a macro for expandida em cima do resultado), MACRO
+	// depois (compartilha o mesmo contador de expansão com REPT, pra toda
+	// combinação continuar com ID único), rótulos locais por último --
+	// ver preprocessor.go.
 	lineTokens, err := a.filterConditionals(lineTokens)
 	if err != nil {
 		return nil, err
 	}
 	expCounter := 0
 	lineTokens, err = expandRept(lineTokens, &expCounter)
+	if err != nil {
+		return nil, err
+	}
+	lineTokens, err = a.expandMacros(lineTokens, make(map[string]*macroDef), &expCounter, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -873,6 +879,8 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 		op := strings.ToUpper(ops[0])
 		if r, ok := reg8Map[op]; ok {
 			a.emit(0x04 | (r << 3))
+		} else if op == "(HL)" {
+			a.emit(0x34)
 		} else if p, ok := reg16Map[op]; ok {
 			a.emit(0x03 | (p << 4))
 		} else if op == "IX" {
@@ -889,6 +897,8 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 		op := strings.ToUpper(ops[0])
 		if r, ok := reg8Map[op]; ok {
 			a.emit(0x05 | (r << 3))
+		} else if op == "(HL)" {
+			a.emit(0x35)
 		} else if p, ok := reg16Map[op]; ok {
 			a.emit(0x0B | (p << 4))
 		} else if op == "IX" {

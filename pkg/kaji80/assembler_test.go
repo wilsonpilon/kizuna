@@ -978,6 +978,193 @@ func TestReptNonLiteralCountErrors(t *testing.T) {
 	}
 }
 
+// TestIncDecIndirectHL: INC (HL)/DEC (HL) -- instruções Z80 padrão que
+// nunca tinham sido implementadas (achado ao reproduzir o exemplo m_INC16
+// da documentação do asMSX pra TestMacroSimple, não um bug de macro).
+func TestIncDecIndirectHL(t *testing.T) {
+	src := `
+MODULE IncDecHL
+BANK 0
+PUBLIC Start
+Start:
+    INC (HL)
+    DEC (HL)
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x34, 0x35, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestMacroSimple: exemplo real da documentação do asMSX (m_INC16),
+// trocando '#' por '@' -- compara byte a byte contra a versão escrita à
+// mão.
+func TestMacroSimple(t *testing.T) {
+	src := `
+MODULE MacroSimple
+BANK 0
+PUBLIC Start
+m_INC16: MACRO @VARIABLE
+    PUSH HL
+    LD HL,@VARIABLE
+    INC (HL)
+    POP HL
+ENDM
+Start:
+m_INC16 VARNAME
+    RET
+VARNAME: DB 0
+`
+	srcHand := `
+MODULE MacroSimpleHand
+BANK 0
+PUBLIC Start
+Start:
+    PUSH HL
+    LD HL,VARNAME
+    INC (HL)
+    POP HL
+    RET
+VARNAME: DB 0
+`
+	asmMacro := NewAssembler()
+	objMacro, err := asmMacro.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble (macro) falhou: %v", err)
+	}
+	asmHand := NewAssembler()
+	objHand, err := asmHand.Assemble(srcHand)
+	if err != nil {
+		t.Fatalf("Assemble (à mão) falhou: %v", err)
+	}
+	if !bytes.Equal(objMacro.Segments[0].Data, objHand.Segments[0].Data) {
+		t.Fatalf("Byte mismatch:\nMacro:  % X\nÀ mão:  % X", objMacro.Segments[0].Data, objHand.Segments[0].Data)
+	}
+}
+
+// TestMacroMultiParamRegisterArg: parâmetro usado como REGISTRADOR (não só
+// dado), prova que a substituição é texto genérico, não específica pra
+// posição de operando de dado.
+func TestMacroMultiParamRegisterArg(t *testing.T) {
+	src := `
+MODULE MacroRegArg
+BANK 0
+PUBLIC Start
+m_SETREG: MACRO @REG, @VAL
+    LD @REG, @VAL
+ENDM
+Start:
+m_SETREG A, 5
+m_SETREG B, 10
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x3E, 0x05, 0x06, 0x0A, 0xC9} // LD A,5 / LD B,10 / RET
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestMacroParamAsLocalLabelTag: exemplo real da documentação do asMSX
+// (m_INCVALUE_MAX_RESET), trocando '#' por '@' -- o parâmetro é usado
+// DENTRO de um nome de rótulo local (".noreset_@VARIABLE:"), confirmando
+// que a substituição funciona em texto, não só em tokens inteiros
+// isolados.
+func TestMacroParamAsLocalLabelTag(t *testing.T) {
+	src := `
+MODULE MacroLocalTag
+BANK 0
+PUBLIC Start
+m_INCVALUE_MAX_RESET: MACRO @VARIABLE, @MAX, @RESETVALUE
+    LD A, (@VARIABLE)
+    INC A
+    CP @MAX
+    JR NZ, .noreset_@VARIABLE
+    LD A, @RESETVALUE
+.noreset_@VARIABLE:
+    LD (@VARIABLE), A
+ENDM
+Start:
+m_INCVALUE_MAX_RESET VARNAME, 100, 0
+    RET
+VARNAME: DB 0
+`
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+}
+
+// TestMacroSameArgTwiceNoLocalLabelCollision: a MESMA macro chamada duas
+// vezes com o MESMO argumento não deve colidir no rótulo local (que nesta
+// macro nem depende do parâmetro) -- prova que o ID de expansão por
+// invocação está funcionando, não só a substituição de parâmetro.
+func TestMacroSameArgTwiceNoLocalLabelCollision(t *testing.T) {
+	src := `
+MODULE MacroCollision
+BANK 0
+PUBLIC Start
+m_CHECK: MACRO @VARIABLE
+.loop:
+    NOP
+    JR .loop
+ENDM
+Start:
+m_CHECK X
+m_CHECK X
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{
+		0x00, 0x18, 0xFD,
+		0x00, 0x18, 0xFD,
+		0xC9,
+	}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch (indica colisão de rótulo local entre invocações):\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+func TestMacroWrongArgCountErrors(t *testing.T) {
+	src := `
+MODULE MacroBadArgs
+BANK 0
+PUBLIC Start
+m_TWO: MACRO @A, @B
+    NOP
+ENDM
+Start:
+m_TWO 1
+    RET
+`
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para macro chamada com número errado de argumentos")
+	}
+}
+
+func TestMacroWithoutEndmErrors(t *testing.T) {
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nm_X: MACRO @A\n    NOP\nStart:\n    RET\n"
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para MACRO sem ENDM correspondente")
+	}
+}
+
 // TestDeftAlias: DT/DEFT são aliases de DB pra literais de texto, pedidos
 // explicitamente por Wilson (compatibilidade com outros assemblers Z80).
 func TestDeftAlias(t *testing.T) {
