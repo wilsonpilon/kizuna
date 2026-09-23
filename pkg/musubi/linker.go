@@ -449,8 +449,23 @@ func (l *Linker) linkObjects(objects []*mob.ObjectFile) (*LinkResult, error) {
 					return nil, fmt.Errorf("referência indefinida: símbolo '%s' não encontrado", sym.Name)
 				}
 
-				// Se a chamada for cross-bank e for um procedimento (PROC)
-				if reloc.Type == mob.RelocAbs16 && ps.Bank != resolved.Bank && resolved.Kind == mob.SymbolProc {
+				// Se a chamada for cross-bank e for um procedimento (PROC).
+				// Alvo no Banco 0 (área comum) NUNCA precisa de trampolim,
+				// mesmo chamado de dentro de um banco paginável -- a área
+				// comum está sempre presente na memória, independente do
+				// que estiver mapeado na Página 2 no momento da chamada.
+				// Bug real encontrado 2026-09-23: sem essa exceção, uma
+				// chamada de um banco paginável de volta pro banco comum
+				// (ex: DIGNAC PROCEDURE Desenhar, banco 2, chamando
+				// VDP_PSet, banco 0) gerava um trampolim que lia
+				// Musubi_BankTable[0] -- entrada NUNCA escrita pelo
+				// bootstrap (só popula 1..maxBank, o comentário logo acima
+				// já dizia "desperdício na entrada 0 (banco comum, nunca
+				// paginado)", mas a suposição de que ninguém geraria um
+				// trampolim mirando o banco 0 estava errada) -- resultando
+				// em `OUT (Página2), 0` com um valor de segmento físico
+				// nunca inicializado antes de cada chamada dessas.
+				if reloc.Type == mob.RelocAbs16 && ps.Bank != resolved.Bank && resolved.Bank != 0 && resolved.Kind == mob.SymbolProc {
 					if _, exists := trampolines[resolved.Name]; !exists {
 						// Criar novo trampolim na Área Comum
 						tCode := l.buildTrampolineCode(resolved.Bank, resolved.Address, putP2Addr, getP2Addr, bankTableAddr)

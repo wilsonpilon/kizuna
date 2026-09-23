@@ -325,6 +325,83 @@ func TestIntraBankCallNoTrampoline(t *testing.T) {
 	}
 }
 
+// TestCallBackToBank0NeedsNoTrampoline cobre um bug real: uma rotina num
+// banco paginável (ex: um PROCEDURE do DIGNAC alocado no banco 2, como
+// sample/obi/chart_lib.bas) chamando de volta uma rotina no Banco 0 (área
+// comum, ex: uma rotina da MSXLIB como VDP_PSet). Como o Banco 0 está
+// SEMPRE presente na memória independente do que a Página 2 tem mapeado no
+// momento, essa chamada nunca deveria precisar de trampolim nenhum -- mas
+// antes desta correção, o linker gerava um mesmo assim, e esse trampolim
+// lia Musubi_BankTable[0], uma entrada NUNCA escrita pelo bootstrap
+// (só popula 1..maxBank), resultando num valor de segmento físico não
+// inicializado indo pra Página 2 antes de cada chamada dessas.
+func TestCallBackToBank0NeedsNoTrampoline(t *testing.T) {
+	// Módulo no Banco 0: Start chama PagedFunc (Banco 2, precisa de
+	// trampolim) e também expõe CommonFunc (alvo da chamada de volta)
+	mod0 := mob.NewObjectFile()
+	seg0 := mod0.AddSegment(mob.SegmentCode, 0, []byte{
+		0xCD, 0x00, 0x00, // CALL PagedFunc (offset 0, relocado)
+		0xC9,       // RET (offset 3)
+		0x3E, 0x2A, // CommonFunc: LD A, 42 (offset 4)
+		0xC9, // RET (offset 6)
+	}, 0)
+	mod0.AddSymbol("Start", mob.SymbolPublic, mob.SymbolProc, seg0, 0x0000)
+	mod0.AddSymbol("CommonFunc", mob.SymbolPublic, mob.SymbolProc, seg0, 0x0004)
+	symPaged := mod0.AddSymbol("PagedFunc", mob.SymbolExtern, mob.SymbolProc, 0, 0)
+	mod0.AddRelocation(seg0, 1, symPaged, mob.RelocAbs16)
+
+	// Módulo no Banco 2 (paginável): PagedFunc chama CommonFunc (Banco 0)
+	mod2 := mob.NewObjectFile()
+	seg2 := mod2.AddSegment(mob.SegmentCode, 2, []byte{
+		0xCD, 0x00, 0x00, // CALL CommonFunc (offset 0, relocado)
+		0xC9, // RET (offset 3)
+	}, 0)
+	mod2.AddSymbol("PagedFunc", mob.SymbolPublic, mob.SymbolProc, seg2, 0x0000)
+	symCommon := mod2.AddSymbol("CommonFunc", mob.SymbolExtern, mob.SymbolProc, 0, 0)
+	mod2.AddRelocation(seg2, 1, symCommon, mob.RelocAbs16)
+
+	cfg := LinkerConfig{BaseAddress: 0x0100, EntryPoint: "Start"}
+	linker := NewLinker(cfg)
+	res, err := linker.Link(mod0, mod2)
+	if err != nil {
+		t.Fatalf("Link failed: %v", err)
+	}
+
+	// Só deve existir o trampolim Start->PagedFunc (banco 0 -> banco 2);
+	// NENHUM trampolim para a chamada de volta PagedFunc->CommonFunc
+	// (banco 2 -> banco 0).
+	if len(res.Trampolines) != 1 {
+		t.Fatalf("Esperado exatamente 1 trampolim (só Start->PagedFunc), obteve %d: %v", len(res.Trampolines), res.Trampolines)
+	}
+	if _, ok := res.Trampolines["CommonFunc"]; ok {
+		t.Fatalf("Não deveria existir trampolim pra CommonFunc (Banco 0) -- área comum está sempre presente")
+	}
+
+	commonFuncSym := res.Symbols["CommonFunc"]
+	if commonFuncSym == nil {
+		t.Fatalf("Símbolo CommonFunc não resolvido")
+	}
+
+	// O CALL dentro de PagedFunc (Segmento do Banco 2, offset 1) deve
+	// apontar DIRETO para o endereço real de CommonFunc, não para um
+	// trampolim.
+	var pagedSeg *PlacedSegment
+	for _, seg := range res.Segments {
+		if seg.Bank == 2 {
+			pagedSeg = seg
+			break
+		}
+	}
+	if pagedSeg == nil {
+		t.Fatalf("Segmento do Banco 2 não encontrado no resultado")
+	}
+	callTarget := binary.LittleEndian.Uint16(pagedSeg.Data[1:3])
+	if callTarget != commonFuncSym.Address {
+		t.Errorf("Esperado CALL de PagedFunc apontando direto pra CommonFunc (0x%04X), obteve 0x%04X",
+			commonFuncSym.Address, callTarget)
+	}
+}
+
 func TestUnresolvedSymbolError(t *testing.T) {
 	mod := mob.NewObjectFile()
 	seg := mod.AddSegment(mob.SegmentCode, 0, []byte{0xCD, 0x00, 0x00}, 0)
