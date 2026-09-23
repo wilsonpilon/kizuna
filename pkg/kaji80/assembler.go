@@ -300,9 +300,17 @@ func (a *Assembler) tokenizeLines(source string) ([]parsedLine, error) {
 	}
 
 	// Ordem importa: IF/ELSE/ENDIF primeiro (remove ramos mortos antes de
-	// qualquer outra coisa enxergar essas linhas), rótulos locais por
-	// último -- ver preprocessor.go.
+	// qualquer outra coisa enxergar essas linhas), REPT depois (duplica
+	// blocos -- se uma macro futura for chamada dentro de um REPT, REPT
+	// precisa duplicar a CHAMADA primeiro, pra cada cópia ganhar seu
+	// próprio ID de expansão quando a macro for expandida em cima do
+	// resultado), rótulos locais por último -- ver preprocessor.go.
 	lineTokens, err := a.filterConditionals(lineTokens)
+	if err != nil {
+		return nil, err
+	}
+	expCounter := 0
+	lineTokens, err = expandRept(lineTokens, &expCounter)
 	if err != nil {
 		return nil, err
 	}

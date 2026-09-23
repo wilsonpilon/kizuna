@@ -150,6 +150,109 @@ func (a *Assembler) filterConditionals(lineTokens [][]Token) ([][]Token, error) 
 	return out, nil
 }
 
+// expandRept implementa REPT n / ENDR: duplica o bloco de linhas entre REPT
+// e o ENDR correspondente n vezes. n precisa ser um literal inteiro (mesma
+// restrição do asMSX -- não pode vir de expressão), então REPT não usa o
+// avaliador de expressões da Fase 1 -- só o campo Number, já calculado pelo
+// lexer pra qualquer literal numérico (decimal/hex/binário). Aninhamento
+// permitido: o corpo de um REPT é expandido recursivamente ANTES de cada
+// cópia externa ser duplicada, então cada combinação (iteração externa,
+// iteração interna) recebe seu próprio ID de expansão único, compartilhado
+// via ponteiro entre todas as chamadas recursivas.
+//
+// Uma linha de atribuição de variável (Fase 1, "X=X+1") dentro do bloco
+// não é avaliada aqui -- REPT só duplica texto/tokens; a atribuição de
+// verdade acontece depois, no Pass 1/2 de verdade, na ordem sequencial das
+// cópias já expandidas (é assim que o exemplo canônico do asMSX --
+// "X=0 / REPT 10 / DB X*Y / X=X+1 / ENDR" -- consegue emitir um valor
+// diferente em cada DB).
+func expandRept(lineTokens [][]Token, expCounter *int) ([][]Token, error) {
+	var out [][]Token
+	i := 0
+	for i < len(lineTokens) {
+		line := lineTokens[i]
+		if len(line) == 0 {
+			i++
+			continue
+		}
+		if line[0].Type == TokenIdentifier && strings.EqualFold(line[0].Value, "REPT") {
+			if len(line) < 2 || line[1].Type != TokenNumber {
+				return nil, fmt.Errorf("linha %d: REPT requer um número inteiro literal (ex.: REPT 10) -- não pode vir de uma expressão nesta leva", line[0].Line)
+			}
+			n := line[1].Number
+			if n < 0 {
+				return nil, fmt.Errorf("linha %d: REPT requer um número >= 0", line[0].Line)
+			}
+			endIdx, err := findMatchingEndr(lineTokens, i+1)
+			if err != nil {
+				return nil, fmt.Errorf("linha %d: %w", line[0].Line, err)
+			}
+			rawBody := lineTokens[i+1 : endIdx]
+			for iter := int64(0); iter < n; iter++ {
+				*expCounter++
+				expanded, err := expandRept(rawBody, expCounter)
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, tagLocalLabelsForExpansion(expanded, *expCounter)...)
+			}
+			i = endIdx + 1
+			continue
+		}
+		out = append(out, line)
+		i++
+	}
+	return out, nil
+}
+
+// findMatchingEndr acha o índice do ENDR que fecha o REPT cujo corpo começa
+// em "start", respeitando aninhamento (um REPT dentro do corpo incrementa
+// a profundidade, seu próprio ENDR decrementa).
+func findMatchingEndr(lineTokens [][]Token, start int) (int, error) {
+	depth := 1
+	for j := start; j < len(lineTokens); j++ {
+		if len(lineTokens[j]) == 0 || lineTokens[j][0].Type != TokenIdentifier {
+			continue
+		}
+		switch strings.ToUpper(lineTokens[j][0].Value) {
+		case "REPT":
+			depth++
+		case "ENDR":
+			depth--
+			if depth == 0 {
+				return j, nil
+			}
+		}
+	}
+	return -1, fmt.Errorf("REPT sem ENDR correspondente")
+}
+
+// tagLocalLabelsForExpansion devolve uma CÓPIA de "lines" com um sufixo
+// único (baseado em "tag") acrescentado a toda definição/referência de
+// rótulo local (".nome" -> ".nome__expN") -- preserva o "." na frente, pra
+// resolveLocalLabels continuar reconhecendo e mesclando normalmente pelo
+// rótulo global de verdade, só que agora cada cópia expandida (por REPT
+// nesta leva; por MACRO numa leva futura, reaproveitando esta mesma
+// função) tem um nome de rótulo local funcionalmente distinto, evitando
+// colisão entre cópias. Nunca muta "lines" -- o corpo bruto de um REPT é
+// reusado uma vez por iteração, então mutar em lugar corromperia as
+// iterações seguintes.
+func tagLocalLabelsForExpansion(lines [][]Token, tag int) [][]Token {
+	suffix := fmt.Sprintf("__exp%d", tag)
+	out := make([][]Token, len(lines))
+	for li, line := range lines {
+		newLine := make([]Token, len(line))
+		copy(newLine, line)
+		for i := range newLine {
+			if newLine[i].Type == TokenIdentifier && strings.HasPrefix(newLine[i].Value, ".") {
+				newLine[i].Value = newLine[i].Value + suffix
+			}
+		}
+		out[li] = newLine
+	}
+	return out
+}
+
 // resolveLocalLabels percorre o fluxo de tokens inteiro (já agrupado por
 // linha) e renomeia toda definição/referência de rótulo local (".nome")
 // para "<RótuloGlobalAtual>_nome", em lugar (mutando Value dos tokens).

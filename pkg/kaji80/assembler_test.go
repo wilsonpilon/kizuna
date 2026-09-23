@@ -875,6 +875,109 @@ func TestIfWithoutEndifErrors(t *testing.T) {
 	}
 }
 
+// TestReptSimple: REPT n / ENDR duplica o bloco n vezes.
+func TestReptSimple(t *testing.T) {
+	src := `
+MODULE ReptSimple
+BANK 0
+PUBLIC Start
+Start:
+REPT 4
+    NOP
+ENDR
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x00, 0x00, 0x00, 0x00, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestReptNestedWithVariableMutation: exemplo no espírito do canônico do
+// asMSX (REPT aninhado + variável reatribuível mutada dentro do bloco,
+// referenciada por DB) -- versão 3x3 pra manter o array esperado pequeno.
+func TestReptNestedWithVariableMutation(t *testing.T) {
+	src := `
+MODULE ReptNested
+BANK 0
+PUBLIC Start
+X = 0
+Y = 0
+Start:
+REPT 3
+    REPT 3
+        DB X*Y
+X = X + 1
+    ENDR
+Y = Y + 1
+ENDR
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	// Y=0: X=0,1,2 -> 0,0,0. Y=1: X=3,4,5 -> 3,4,5. Y=2: X=6,7,8 -> 12,14,16.
+	expected := []byte{0, 0, 0, 3, 4, 5, 12, 14, 16, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestReptWithLocalLabelNoCollision: rótulo local dentro de um bloco REPT
+// não deve colidir entre iterações -- cada cópia salta pro seu próprio
+// ".loop", não pro de outra iteração.
+func TestReptWithLocalLabelNoCollision(t *testing.T) {
+	src := `
+MODULE ReptLocalLbl
+BANK 0
+PUBLIC Start
+Start:
+REPT 3
+.loop:
+    NOP
+    JR .loop
+ENDR
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{
+		0x00, 0x18, 0xFD,
+		0x00, 0x18, 0xFD,
+		0x00, 0x18, 0xFD,
+		0xC9,
+	}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+func TestReptWithoutEndrErrors(t *testing.T) {
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nStart:\nREPT 3\n    NOP\n"
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para REPT sem ENDR correspondente")
+	}
+}
+
+func TestReptNonLiteralCountErrors(t *testing.T) {
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nStart:\nREPT (1+1)\n    NOP\nENDR\n    RET\n"
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para REPT com contagem que não é um literal inteiro")
+	}
+}
+
 // TestDeftAlias: DT/DEFT são aliases de DB pra literais de texto, pedidos
 // explicitamente por Wilson (compatibilidade com outros assemblers Z80).
 func TestDeftAlias(t *testing.T) {
