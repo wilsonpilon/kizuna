@@ -6,12 +6,11 @@ Modo de Memória: Monobanco
 Bancos Utilizados: [0]
 Endereço Base:     0x0100
 Ponto de Entrada:  0x0100
-Tamanho do .COM:   1774 bytes (0x06EE)
+Tamanho do .COM:   382 bytes (0x017E)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x026C | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   364 bytes
-[ 1] 0x026C - 0x031F | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:   179 bytes
-[ 2] 0x031F - 0x07EE | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:  1231 bytes
+[ 1] 0x026C - 0x027E | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    18 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
@@ -21,54 +20,3 @@ Tamanho do .COM:   1774 bytes (0x06EE)
 0x01ED [Banco  0] PROC MsgScreen0
 0x0223 [Banco  0] PROC MsgFim
 0x026C [Banco  0] PROC BIOS_Call
-0x027E [Banco  0] PROC BIOS_CHPUT
-0x028D [Banco  0] PROC BIOS_CHGET
-0x02B7 [Banco  0] PROC BIOS_CLS
-0x02BE [Banco  0] PROC BIOS_POSIT
-0x02BF [Banco  0] PROC BIOS_BEEP
-0x02CF [Banco  0] PROC BIOS_INIT32
-0x02D7 [Banco  0] PROC BIOS_CHGMOD
-0x031F [Banco  0] PROC VDP_WriteReg
-0x0325 [Banco  0] PROC VDP_WriteReg_Raw
-0x0330 [Banco  0] PROC VDP_SetWriteAddr
-0x033F [Banco  0] PROC VDP_SetReadAddr
-0x034C [Banco  0] PROC VDP_FillVRAM
-0x0368 [Banco  0] PROC VDP_WriteVRAM
-0x037B [Banco  0] PROC VDP_ReadVRAM
-0x0390 [Banco  0] PROC VDP_CopyVRAM
-0x03AE [Banco  0] PROC VDP_SetColor
-0x03C5 [Banco  0] PROC VDP_SetScreen
-0x03C8 [Banco  0] PROC VDP_InitScreen2
-0x03CD [Banco  0] PROC VDP_InitScreen0
-0x03D1 [Banco  0] PROC VDP_InitScreen1
-0x03D7 [Banco  0] PROC VDP_InitScreen2_Tables
-0x0458 [Banco  0] PROC VDP_PSet
-0x045E [Banco  0] PROC VDP_PSet_HW
-0x049A [Banco  0] PROC VDP_CommandWait_Raw
-0x04B3 [Banco  0] PROC VDP_PSet_Raw
-0x04F8 [Banco  0] PROC VDP_PSet_MaskDone
-0x0567 [Banco  0] PROC VDP_PSet_ColorArg
-0x0568 [Banco  0] PROC VDP_BoxFill
-0x060B [Banco  0] PROC VDP_Line
-0x06DF [Banco  0] PROC VDP_Line_Loop
-0x0728 [Banco  0] PROC VDP_Line_CheckE2DX
-0x0752 [Banco  0] PROC VDP_Line_Exit
-0x0759 [Banco  0] PROC VDP_Line_H_End
-0x075A [Banco  0] PROC VDP_Line_DX
-0x075B [Banco  0] PROC VDP_Line_SX
-0x075C [Banco  0] PROC VDP_Line_DY
-0x075E [Banco  0] PROC VDP_Line_SY
-0x075F [Banco  0] PROC VDP_Line_Err
-0x0761 [Banco  0] PROC VDP_Line_E2
-0x0763 [Banco  0] PROC VDP_Line_CurX
-0x0764 [Banco  0] PROC VDP_Line_CurY
-0x0765 [Banco  0] PROC VDP_SpriteDefine
-0x0776 [Banco  0] PROC VDP_SpriteSet
-0x07B3 [Banco  0] PROC VDP_Sprite_Idx
-0x07B4 [Banco  0] PROC VDP_Sprite_X
-0x07B5 [Banco  0] PROC VDP_Sprite_Y
-0x07B6 [Banco  0] PROC VDP_Sprite_Pat
-0x07B7 [Banco  0] PROC VDP_Sprite_Color
-0x07B8 [Banco  0] PROC VDP_SpriteHide
-0x07D4 [Banco  0] PROC VDP_SpriteHideAll
-0x07E7 [Banco  0] PROC VDP_SpriteSetSize

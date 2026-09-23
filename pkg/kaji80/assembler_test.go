@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/wilsonpilon/kizuna/pkg/mob"
@@ -248,9 +249,9 @@ TestBitOps:
 }
 
 func TestPass1AndPass2Sync(t *testing.T) {
-	data, err := os.ReadFile(filepath.Join("..", "..", "lib", "src", "string.asm"))
+	data, err := os.ReadFile(filepath.Join("..", "..", "lib", "src", "string", "printdec16.asm"))
 	if err != nil {
-		t.Fatalf("Failed to read string.asm: %v", err)
+		t.Fatalf("Failed to read string/printdec16.asm: %v", err)
 	}
 
 	asm := NewAssembler()
@@ -410,25 +411,69 @@ Start:
 	}
 }
 
-// TestMsxlibModulesAssembleConsistently monta todos os fontes da MSXLIB e
-// depende da verificacao interna de consistencia Pass1/Pass2 dentro de
-// Assemble() para pegar qualquer futura dessincronia de tamanho de
-// instrucao antes que ela corrompa silenciosamente algum rotulo.
+// TestMsxlibModulesAssembleConsistently monta todos os fontes da MSXLIB
+// (lib/src/**, um modulo por rotina/familia) e depende da verificacao interna
+// de consistencia Pass1/Pass2 dentro de Assemble() para pegar qualquer futura
+// dessincronia de tamanho de instrucao antes que ela corrompa silenciosamente
+// algum rotulo. Alem disso confere a integridade do conjunto: nenhum simbolo PUBLIC duplicado entre modulos e todo EXTERN
+// resolvido por algum outro modulo da biblioteca -- e o que garante, apos uma
+// divisao/renomeacao de modulos, que o linker nao vai falhar so no programa
+// do usuario.
 func TestMsxlibModulesAssembleConsistently(t *testing.T) {
 	libDir := filepath.Join("..", "..", "lib", "src")
-	files := []string{"bdos.asm", "bios.asm", "vdp.asm", "psg.asm", "string.asm", "math.asm", "float.asm"}
+
+	var files []string
+	err := filepath.WalkDir(libDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(strings.ToLower(path), ".asm") {
+			files = append(files, path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("failed to walk %s: %v", libDir, err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no .asm sources found under %s", libDir)
+	}
+
+	publicOwner := map[string]string{}
+	type externRef struct{ module, symbol string }
+	var externs []externRef
 
 	for _, f := range files {
-		t.Run(f, func(t *testing.T) {
-			data, err := os.ReadFile(filepath.Join(libDir, f))
+		rel, _ := filepath.Rel(libDir, f)
+		t.Run(filepath.ToSlash(rel), func(t *testing.T) {
+			data, err := os.ReadFile(f)
 			if err != nil {
 				t.Fatalf("failed to read %s: %v", f, err)
 			}
 			asm := NewAssembler()
-			if _, err := asm.Assemble(string(data)); err != nil {
-				t.Fatalf("Assemble(%s) failed: %v", f, err)
+			asm.SetBaseDir(filepath.Dir(f))
+			obj, err := asm.Assemble(string(data))
+			if err != nil {
+				t.Fatalf("Assemble(%s) failed: %v", rel, err)
+			}
+			for _, sym := range obj.Symbols {
+				switch sym.Class {
+				case mob.SymbolPublic:
+					if prev, dup := publicOwner[sym.Name]; dup {
+						t.Errorf("PUBLIC %q defined by both %s and %s", sym.Name, prev, rel)
+					}
+					publicOwner[sym.Name] = rel
+				case mob.SymbolExtern:
+					externs = append(externs, externRef{rel, sym.Name})
+				}
 			}
 		})
+	}
+
+	for _, e := range externs {
+		if _, ok := publicOwner[e.symbol]; !ok {
+			t.Errorf("%s: EXTERN %q is not PUBLIC in any MSXLIB module", e.module, e.symbol)
+		}
 	}
 }
 

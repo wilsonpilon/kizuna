@@ -3,6 +3,27 @@
 Todas as mudanças notáveis deste projeto são documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
+## [Não lançado]
+
+### MSXLIB dividida em módulos pequenos (um por rotina/família)
+
+`lib/src/{bdos,bios,vdp,psg,string,math}.asm` deram lugar a 56 módulos em
+`lib/src/<area>/*.asm` (+ `lib/src/float.asm`), com as constantes de
+porta/endereço compartilhadas em `lib/inc/*.inc`. O conjunto de símbolos
+públicos é **idêntico** ao anterior (120), então nenhum programa muda, mas
+o linker agora só traz o que cada programa usa: `predefined.com` 1774→382
+bytes, `music.com` 1895→522, `sprites.com` 1603→642, `libdemo.com` 893→384.
+Todos os samples foram relinkados e comparados no emulador Z80 (saída de
+console + traço de escritas de porta VDP/PSG) contra a versão anterior:
+comportamento idêntico. Também: `BIOS_Call` não arrasta mais o módulo de
+VDP inteiro (havia uma dependência circular bios↔vdp em nível de módulo).
+Base para a expansão da MSXLIB no estilo MSXgl.
+
+### KAJI80: `INCLUDE "arquivo"`
+
+Insere o texto de outro arquivo-fonte (relativo ao arquivo que inclui,
+aninhável, com detecção de inclusão circular). Ver `docs/manual-assembly.md` §12.
+
 ## [4.11.0] - 2026-09-23 - Release Kakuchou (拡張)
 
 ### KAJI80 ganha recursos de macro-assembler ao estilo asMSX, com sintaxe própria do KIZUNA

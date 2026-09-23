@@ -6,75 +6,26 @@ Modo de Memória: Monobanco
 Bancos Utilizados: [0]
 Endereço Base:     0x0100
 Ponto de Entrada:  0x0100
-Tamanho do .COM:   1895 bytes (0x0767)
+Tamanho do .COM:   522 bytes (0x020A)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x01E0 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   224 bytes
-[ 1] 0x01E0 - 0x02E5 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:   261 bytes
-[ 2] 0x02E5 - 0x0398 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   179 bytes
-[ 3] 0x0398 - 0x0867 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:  1231 bytes
+[ 1] 0x01E0 - 0x01FA | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    26 bytes
+[ 2] 0x01FA - 0x0217 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    29 bytes
+[ 3] 0x0217 - 0x02A3 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:   140 bytes
+[ 4] 0x02A3 - 0x02A9 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:     6 bytes
+[ 5] 0x02A9 - 0x02D3 | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:    42 bytes
+[ 6] 0x02D3 - 0x030A | Banco:  0 | Tipo: CODE | Mod:  6 | Tam:    55 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
 0x011D [Banco  0] PROC MsgIntro
 0x016E [Banco  0] PROC MsgDone
 0x01A3 [Banco  0] PROC Tune
-0x01E0 [Banco  0] PROC PSG_Write
-0x01E6 [Banco  0] PROC PSG_Read
-0x01EB [Banco  0] PROC PSG_MuteAll
-0x0208 [Banco  0] PROC PSG_PlayTone
-0x023F [Banco  0] PROC PSG_NoteTable
-0x02B7 [Banco  0] PROC PSG_PlayNoteIndexed
-0x02CB [Banco  0] PROC PSG_PlaySequence
-0x02E5 [Banco  0] PROC BIOS_Call
-0x02F7 [Banco  0] PROC BIOS_CHPUT
-0x0306 [Banco  0] PROC BIOS_CHGET
-0x0330 [Banco  0] PROC BIOS_CLS
-0x0337 [Banco  0] PROC BIOS_POSIT
-0x0338 [Banco  0] PROC BIOS_BEEP
-0x0348 [Banco  0] PROC BIOS_INIT32
-0x0350 [Banco  0] PROC BIOS_CHGMOD
-0x0398 [Banco  0] PROC VDP_WriteReg
-0x039E [Banco  0] PROC VDP_WriteReg_Raw
-0x03A9 [Banco  0] PROC VDP_SetWriteAddr
-0x03B8 [Banco  0] PROC VDP_SetReadAddr
-0x03C5 [Banco  0] PROC VDP_FillVRAM
-0x03E1 [Banco  0] PROC VDP_WriteVRAM
-0x03F4 [Banco  0] PROC VDP_ReadVRAM
-0x0409 [Banco  0] PROC VDP_CopyVRAM
-0x0427 [Banco  0] PROC VDP_SetColor
-0x043E [Banco  0] PROC VDP_SetScreen
-0x0441 [Banco  0] PROC VDP_InitScreen2
-0x0446 [Banco  0] PROC VDP_InitScreen0
-0x044A [Banco  0] PROC VDP_InitScreen1
-0x0450 [Banco  0] PROC VDP_InitScreen2_Tables
-0x04D1 [Banco  0] PROC VDP_PSet
-0x04D7 [Banco  0] PROC VDP_PSet_HW
-0x0513 [Banco  0] PROC VDP_CommandWait_Raw
-0x052C [Banco  0] PROC VDP_PSet_Raw
-0x0571 [Banco  0] PROC VDP_PSet_MaskDone
-0x05E0 [Banco  0] PROC VDP_PSet_ColorArg
-0x05E1 [Banco  0] PROC VDP_BoxFill
-0x0684 [Banco  0] PROC VDP_Line
-0x0758 [Banco  0] PROC VDP_Line_Loop
-0x07A1 [Banco  0] PROC VDP_Line_CheckE2DX
-0x07CB [Banco  0] PROC VDP_Line_Exit
-0x07D2 [Banco  0] PROC VDP_Line_H_End
-0x07D3 [Banco  0] PROC VDP_Line_DX
-0x07D4 [Banco  0] PROC VDP_Line_SX
-0x07D5 [Banco  0] PROC VDP_Line_DY
-0x07D7 [Banco  0] PROC VDP_Line_SY
-0x07D8 [Banco  0] PROC VDP_Line_Err
-0x07DA [Banco  0] PROC VDP_Line_E2
-0x07DC [Banco  0] PROC VDP_Line_CurX
-0x07DD [Banco  0] PROC VDP_Line_CurY
-0x07DE [Banco  0] PROC VDP_SpriteDefine
-0x07EF [Banco  0] PROC VDP_SpriteSet
-0x082C [Banco  0] PROC VDP_Sprite_Idx
-0x082D [Banco  0] PROC VDP_Sprite_X
-0x082E [Banco  0] PROC VDP_Sprite_Y
-0x082F [Banco  0] PROC VDP_Sprite_Pat
-0x0830 [Banco  0] PROC VDP_Sprite_Color
-0x0831 [Banco  0] PROC VDP_SpriteHide
-0x084D [Banco  0] PROC VDP_SpriteHideAll
-0x0860 [Banco  0] PROC VDP_SpriteSetSize
+0x01E0 [Banco  0] PROC PSG_PlaySequence
+0x01FA [Banco  0] PROC PSG_MuteAll
+0x0217 [Banco  0] PROC PSG_NoteTable
+0x028F [Banco  0] PROC PSG_PlayNoteIndexed
+0x02A3 [Banco  0] PROC PSG_Write
+0x02A9 [Banco  0] PROC BIOS_CHGET
+0x02D3 [Banco  0] PROC PSG_PlayTone

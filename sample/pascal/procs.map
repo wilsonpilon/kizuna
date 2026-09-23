@@ -6,13 +6,15 @@ Modo de Memória: Monobanco
 Bancos Utilizados: [0]
 Endereço Base:     0x0100
 Ponto de Entrada:  0x0100
-Tamanho do .COM:   668 bytes (0x029C)
+Tamanho do .COM:   330 bytes (0x014A)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x01BB | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   187 bytes
-[ 1] 0x01BB - 0x021D | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
-[ 2] 0x021D - 0x035A | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   317 bytes
-[ 3] 0x035A - 0x039C | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:    66 bytes
+[ 1] 0x01BB - 0x01D0 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    21 bytes
+[ 2] 0x01D0 - 0x01E6 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    22 bytes
+[ 3] 0x01E6 - 0x022E | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:    72 bytes
+[ 4] 0x022E - 0x0244 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:    22 bytes
+[ 5] 0x0244 - 0x024A | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:     6 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
@@ -21,31 +23,9 @@ Tamanho do .COM:   668 bytes (0x029C)
 0x018E [Banco  0] PROC StrLit_2
 0x01A4 [Banco  0] PROC StrLit_1
 0x01B9 [Banco  0] PROC Var_resultado
-0x01BB [Banco  0] PROC BDOS_Call
-0x01BF [Banco  0] PROC BDOS_PrintChar
-0x01D5 [Banco  0] PROC BDOS_PrintString
-0x01EB [Banco  0] PROC BDOS_ReadChar
-0x01F3 [Banco  0] PROC BDOS_Exit
-0x01F9 [Banco  0] PROC BDOS_FileOpen
-0x01FF [Banco  0] PROC BDOS_FileCreate
-0x0205 [Banco  0] PROC BDOS_FileClose
-0x020B [Banco  0] PROC BDOS_FileRead
-0x0211 [Banco  0] PROC BDOS_FileWrite
-0x0217 [Banco  0] PROC BDOS_FileSeek
-0x021D [Banco  0] PROC StrLen
-0x022B [Banco  0] PROC StrCopy
-0x023B [Banco  0] PROC StrToUpper
-0x0252 [Banco  0] PROC PrintHex8
-0x025F [Banco  0] PROC PrintNibble
-0x0270 [Banco  0] PROC PrintHex16
-0x027B [Banco  0] PROC PrintDec16
-0x02A5 [Banco  0] PROC PrintDecDigit
-0x02C3 [Banco  0] PROC PrintDec16ToBuffer
-0x02F6 [Banco  0] PROC PrintDecDigitBuf
-0x030F [Banco  0] PROC PDTB_WriteChar
-0x0323 [Banco  0] PROC PDTB_BufPtr
-0x0325 [Banco  0] PROC PDTB_Count
-0x0326 [Banco  0] PROC StrCopyLen
-0x033E [Banco  0] PROC BDOS_PrintLenStr
-0x035A [Banco  0] PROC Mul16
-0x036F [Banco  0] PROC Div16
+0x01BB [Banco  0] PROC Mul16
+0x01D0 [Banco  0] PROC BDOS_PrintString
+0x01E6 [Banco  0] PROC PrintDec16
+0x0210 [Banco  0] PROC PrintDecDigit
+0x022E [Banco  0] PROC BDOS_PrintChar
+0x0244 [Banco  0] PROC BDOS_Exit

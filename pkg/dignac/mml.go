@@ -7,7 +7,7 @@ import (
 
 // psgEvent representa um evento de PSG_PlaySequence: canal, índice de nota
 // (0..59 em PSG_NoteTable), volume (0..15) e duração (contador de laço,
-// não milissegundos -- mesma convenção de lib/src/psg.asm).
+// não milissegundos -- mesma convenção de lib/src/psg/*.asm).
 type psgEvent struct {
 	Channel  int
 	NoteIdx  int

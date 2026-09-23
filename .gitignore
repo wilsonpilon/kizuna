@@ -14,3 +14,6 @@
 # Pacotes de distribuição gerados por build.ps1
 distribute/
 *.zip
+
+# MSXLIB: objetos intermediarios
+lib/obj/

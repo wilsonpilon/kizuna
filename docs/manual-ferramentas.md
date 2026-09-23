@@ -16,7 +16,7 @@ fonte.asm  ──KAJI80──►   fonte.mob  ─┐
 fonte.bas  ──DIGNAC──►   fonte.mob  ─┼──MUSUBI (+ .hlib opcionais)──►  programa.com
 fonte.pas  ──WIRTH80──►  fonte.mob  ─┘
 
-     lib/src/*.asm ──KAJI80──► *.mob ──HAKO──► msxlib.hlib
+     lib/src/**/*.asm ──KAJI80──► *.mob ──HAKO──► msxlib.hlib
 ```
 
 Os três compiladores de frontend (`KAJI80`, `DIGNAC`, `WIRTH80`) emitem o
@@ -244,8 +244,19 @@ hako -x math.hlib math_add.mob
 
 ## 6. A biblioteca padrão `MSXLIB` (`lib/msxlib.hlib`)
 
-Construída a partir de `lib/src/*.asm` via `lib/build.ps1`. Símbolos
-exportados por módulo:
+Construída a partir de `lib/src/**/*.asm` via `lib/build.ps1`. **Cada
+arquivo `.asm` é um módulo do `.hlib`** — uma rotina (ou uma família de
+rotinas inseparáveis) por arquivo, organizados em subdiretórios por área
+(`lib/src/vdp/`, `lib/src/psg/`, `lib/src/bdos/`, ...), no mesmo espírito da
+organização por tópico do MSXgl. Como o `MUSUBI` só traz para o `.com` os
+módulos cujos símbolos o programa realmente usa (§6.1), módulos pequenos
+significam executáveis menores: `sample/macroasm/predefined.com` (só usa
+`CALLBIOS`) caiu de 1774 para 382 bytes com essa divisão, porque
+`BIOS_Call` deixou de arrastar a biblioteca de VDP inteira.
+
+A tabela abaixo agrupa por **área** (subdiretório); os nomes públicos das
+rotinas não mudaram em relação à versão monolítica, então nenhum programa
+existente precisa ser alterado:
 
 | Módulo | Símbolos | Descrição |
 | ------- | --------- | ----------- |
@@ -264,6 +275,27 @@ musubi -v -m app.map -o app.com main.mob lib/msxlib.hlib
 
 Só os módulos da `MSXLIB` de fato referenciados (direta ou
 transitivamente) entram no `.com` final.
+
+### 6.1.1. Layout de `lib/` e como acrescentar uma rotina
+
+```
+lib/
+  build.ps1          monta tudo e empacota em msxlib.hlib
+  inc/               constantes compartilhadas (INCLUDE): vdp.inc, psg.inc, bdos.inc, bios.inc
+  src/<area>/*.asm   um módulo por arquivo (MODULE <area>_<nome>)
+  obj/               .mob intermediários (gerado, ignorado pelo git)
+```
+
+Para acrescentar uma rotina: crie `lib/src/<area>/<nome>.asm` com `MODULE`,
+`BANK 0`, `PUBLIC`/`EXTERN` e `INCLUDE "../../inc/<area>.inc"` se precisar
+das constantes de porta/endereço, rode `lib/build.ps1` e pronto — o script
+descobre os arquivos sozinho (busca recursiva). Regras que os testes
+(`TestMsxlibModulesAssembleConsistently`) impõem: nenhum símbolo `PUBLIC`
+duplicado entre módulos, e todo `EXTERN` de um módulo precisa ser `PUBLIC`
+de algum outro módulo da biblioteca. Rótulos auxiliares referenciados de
+outro módulo são promovidos a `PUBLIC` automaticamente pelo KAJI80 — por
+isso rotinas que compartilham dados/rótulos internos (ex.: `VDP_Line` e suas
+células de trabalho) ficam juntas num mesmo módulo.
 
 ### 6.2. Depuração e garantias do KAJI80
 
@@ -417,7 +449,7 @@ recursivamente) chamando cada um na ordem certa.
 
 ### 9.3. Rebuild da MSXLIB
 
-Sempre que `lib/src/*.asm` muda:
+Sempre que algo em `lib/src/` ou `lib/inc/` muda:
 
 ```bash
 pwsh -File lib/build.ps1

@@ -79,7 +79,7 @@ hardware/emulador real na v4.5.3.** Eram **dois bugs independentes**:
    em silêncio, sem erro de montagem.** `CP (IX+8)` virava `CP 0` (opcode
    `FE 00`) em vez do `DD BE 08` correto. As únicas 9 ocorrências dessa forma
    no projeto inteiro estavam todas dentro de `VDP_Line`/`VDP_BoxFill`
-   (`lib/src/vdp.asm`) — o que explica por que o bug só aparecia ali. Com a
+   (`lib/src/vdp/psetraw.asm`) — o que explica por que o bug só aparecia ali. Com a
    comparação de fim de linha e o cálculo de Bresenham recebendo sempre `0`
    em vez do X/Y real, `VDP_Line` desenhava uma escada de parâmetros errados
    em vez de uma linha reta, e o teste de horizontal/vertical pura nunca

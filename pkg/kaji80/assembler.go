@@ -726,7 +726,7 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 		return nil
 	case "CALLBIOS":
 		// LD IX,rotina / CALL BIOS_Call -- reaproveita a rotina já
-		// hardware-testada em lib/src/bios.asm (inter-slot call de
+		// hardware-testada em lib/src/bios/call.asm (inter-slot call de
 		// verdade: lê o slot em EXPTBL-1 e faz CALSLT) em vez de inlinar
 		// a sequência completa toda vez (~15 bytes por uso e zero
 		// dependência da MSXLIB, como o asMSX faz) -- escolha registrada
@@ -747,7 +747,7 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 	case "CALLDOS":
 		// LD C,código / CALL 0005h -- sempre inlined, igual ao asMSX
 		// (pequeno demais pra valer a pena uma rotina compartilhada, e
-		// BDOS_Call em lib/src/bdos.asm já é só "CALL BDOS_ENTRY / RET",
+		// BDOS_Call em lib/src/bdos/call.asm já é só "CALL BDOS_ENTRY / RET",
 		// então inlinar direto poupa até a chamada extra).
 		if len(ops) != 1 {
 			return fmt.Errorf("linha %d: CALLDOS requer 1 operando (o código de função do MSX-DOS)", lineNum)
@@ -1091,7 +1091,7 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 // bytes) que o Pass 2 emitia, então a verificação de consistência interna
 // do Assemble() não detectava a divergência semântica (só detecta diferença
 // de TAMANHO, não de significado). Foi a causa raiz real do bug gráfico de
-// SCREEN 2 em VDP_Line/VDP_BoxFill (lib/src/vdp.asm), que são os únicos
+// SCREEN 2 em VDP_Line/VDP_BoxFill (lib/src/vdp/*.asm), que são os únicos
 // usos dessa forma no projeto inteiro.
 func isIndexedOperand(op string) bool {
 	isIX, isIY, _, ok := parseIndexed(op)

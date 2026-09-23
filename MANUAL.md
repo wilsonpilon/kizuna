@@ -30,7 +30,7 @@ fonte.bas  ──DIGNAC──►  fonte.mob  ─┘
 | **`HAKO`** | `hako -c lib.hlib *.mob` | Bibliotecário/empacotador de objetos `.HLIB`. |
 | **`MOBDUMP`** | `mobdump arq.mob` | Despejo legível de cabeçalhos, segmentos, símbolos e relocações. |
 | **`OBI`** | `obi build [Obifile]` | Orquestrador declarativo de build — o "make" do projeto. |
-| **`MSXLIB`** | `lib/msxlib.hlib` | Biblioteca padrão (BDOS, BIOS, VDP, PSG, String, Math). |
+| **`MSXLIB`** | `lib/msxlib.hlib` | Biblioteca padrão (BDOS, BIOS, VDP, PSG, String, Math, Float), um módulo por rotina em `lib/src/<area>/`. |
 
 ## Início rápido
 

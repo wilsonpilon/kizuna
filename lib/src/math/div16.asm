@@ -1,36 +1,13 @@
 ; =============================================================================
-; KIZUNA MSXLIB - MATH.ASM
-; Rotinas aritméticas de 16 bits para Z80 (Multiplicação e Divisão inteira)
+; KIZUNA MSXLIB - math/div16
+; divisao 16/16
+; (um modulo por rotina/familia -- o linker so traz o que o programa usa)
 ; =============================================================================
 
-MODULE MATH
+MODULE math_div16
 BANK 0
 
-PUBLIC Mul16, Div16
-
-; -----------------------------------------------------------------------------
-; Mul16: Multiplicação inteira não sinalizada de 16 bits
-; Entrada: HL = multiplicando, DE = multiplicador
-; Saída: HL = produto (16 bits mais baixos)
-; -----------------------------------------------------------------------------
-Mul16:
-    PUSH BC
-    PUSH DE
-    LD B, 10h ; 16 iterações
-    LD A, H
-    LD C, L
-    LD HL, 0000h
-Mul16_Loop:
-    ADD HL, HL
-    SLA C
-    RLA
-    JR NC, Mul16_Skip
-    ADD HL, DE
-Mul16_Skip:
-    DJNZ Mul16_Loop
-    POP DE
-    POP BC
-    RET
+PUBLIC Div16
 
 ; -----------------------------------------------------------------------------
 ; Div16: Divisão inteira não sinalizada de 16 bits

@@ -1330,7 +1330,7 @@ func (cg *CodeGenerator) varType(name string) string {
 // diferente de uma atribuição INTEGER/BOOLEAN (LD (dest),HL de 2 bytes fixos
 // via storeVar), uma STRING é um buffer de até 256 bytes (1 de tamanho + até
 // 255 de dados, SPEC.md §7), então a atribuição é uma cópia de buffer via
-// StrCopyLen (MSXLIB, lib/src/string.asm) entre os ENDEREÇOS de origem e
+// StrCopyLen (MSXLIB, lib/src/string/strcopylen.asm) entre os ENDEREÇOS de origem e
 // destino, não um valor de 16 bits.
 //
 // O endereço de destino é calculado e empilhado ANTES do de origem porque

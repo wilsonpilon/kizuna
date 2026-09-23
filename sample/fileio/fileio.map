@@ -6,11 +6,15 @@ Modo de Memória: Monobanco
 Bancos Utilizados: [0]
 Endereço Base:     0x0100
 Ponto de Entrada:  0x0100
-Tamanho do .COM:   528 bytes (0x0210)
+Tamanho do .COM:   460 bytes (0x01CC)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x02AE | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   430 bytes
-[ 1] 0x02AE - 0x0310 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
+[ 1] 0x02AE - 0x02B4 | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:     6 bytes
+[ 2] 0x02B4 - 0x02BA | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:     6 bytes
+[ 3] 0x02BA - 0x02C0 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:     6 bytes
+[ 4] 0x02C0 - 0x02C6 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:     6 bytes
+[ 5] 0x02C6 - 0x02CC | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:     6 bytes
 
 --- TABELA GLOBAL DE SÍMBOLOS ---
 0x0100 [Banco  0] PROC Start
@@ -22,14 +26,8 @@ Tamanho do .COM:   528 bytes (0x0210)
 0x021A [Banco  0] PROC WriteBuf
 0x025C [Banco  0] PROC Handle
 0x025D [Banco  0] PROC ReadBuf
-0x02AE [Banco  0] PROC BDOS_Call
-0x02B2 [Banco  0] PROC BDOS_PrintChar
-0x02C8 [Banco  0] PROC BDOS_PrintString
-0x02DE [Banco  0] PROC BDOS_ReadChar
-0x02E6 [Banco  0] PROC BDOS_Exit
-0x02EC [Banco  0] PROC BDOS_FileOpen
-0x02F2 [Banco  0] PROC BDOS_FileCreate
-0x02F8 [Banco  0] PROC BDOS_FileClose
-0x02FE [Banco  0] PROC BDOS_FileRead
-0x0304 [Banco  0] PROC BDOS_FileWrite
-0x030A [Banco  0] PROC BDOS_FileSeek
+0x02AE [Banco  0] PROC BDOS_FileCreate
+0x02B4 [Banco  0] PROC BDOS_FileWrite
+0x02BA [Banco  0] PROC BDOS_FileClose
+0x02C0 [Banco  0] PROC BDOS_FileOpen
+0x02C6 [Banco  0] PROC BDOS_FileRead
