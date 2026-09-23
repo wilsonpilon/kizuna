@@ -10,9 +10,9 @@ Tamanho do .COM:   2530 bytes (0x09E2)
 
 --- SEGMENTOS ALOCADOS ---
 [ 0] 0x0100 - 0x02BC | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   444 bytes
-[ 1] 0x02BC - 0x031E | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    98 bytes
-[ 2] 0x031E - 0x0423 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   261 bytes
-[ 3] 0x0423 - 0x08F2 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:  1231 bytes
+[ 1] 0x02BC - 0x078B | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:  1231 bytes
+[ 2] 0x078B - 0x0890 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:   261 bytes
+[ 3] 0x0890 - 0x08F2 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:    98 bytes
 [ 4] 0x08F2 - 0x09A5 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:   179 bytes
 [ 5] 0x09A5 - 0x0AE2 | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:   317 bytes
 
@@ -34,68 +34,68 @@ Tamanho do .COM:   2530 bytes (0x09E2)
 0x02B3 [Banco  0] PROC DGN_FileHandle_1
 0x02B4 [Banco  0] PROC DGN_FileNumBuf
 0x02BA [Banco  0] PROC DGN_CRLF
-0x02BC [Banco  0] PROC BDOS_Call
-0x02C0 [Banco  0] PROC BDOS_PrintChar
-0x02D6 [Banco  0] PROC BDOS_PrintString
-0x02EC [Banco  0] PROC BDOS_ReadChar
-0x02F4 [Banco  0] PROC BDOS_Exit
-0x02FA [Banco  0] PROC BDOS_FileOpen
-0x0300 [Banco  0] PROC BDOS_FileCreate
-0x0306 [Banco  0] PROC BDOS_FileClose
-0x030C [Banco  0] PROC BDOS_FileRead
-0x0312 [Banco  0] PROC BDOS_FileWrite
-0x0318 [Banco  0] PROC BDOS_FileSeek
-0x031E [Banco  0] PROC PSG_Write
-0x0324 [Banco  0] PROC PSG_Read
-0x0329 [Banco  0] PROC PSG_MuteAll
-0x0346 [Banco  0] PROC PSG_PlayTone
-0x037D [Banco  0] PROC PSG_NoteTable
-0x03F5 [Banco  0] PROC PSG_PlayNoteIndexed
-0x0409 [Banco  0] PROC PSG_PlaySequence
-0x0423 [Banco  0] PROC VDP_WriteReg
-0x0429 [Banco  0] PROC VDP_WriteReg_Raw
-0x0434 [Banco  0] PROC VDP_SetWriteAddr
-0x0443 [Banco  0] PROC VDP_SetReadAddr
-0x0450 [Banco  0] PROC VDP_FillVRAM
-0x046C [Banco  0] PROC VDP_WriteVRAM
-0x047F [Banco  0] PROC VDP_ReadVRAM
-0x0494 [Banco  0] PROC VDP_CopyVRAM
-0x04B2 [Banco  0] PROC VDP_SetColor
-0x04C9 [Banco  0] PROC VDP_SetScreen
-0x04CC [Banco  0] PROC VDP_InitScreen2
-0x04D1 [Banco  0] PROC VDP_InitScreen0
-0x04D5 [Banco  0] PROC VDP_InitScreen1
-0x04DB [Banco  0] PROC VDP_InitScreen2_Tables
-0x055C [Banco  0] PROC VDP_PSet
-0x0562 [Banco  0] PROC VDP_PSet_HW
-0x059E [Banco  0] PROC VDP_CommandWait_Raw
-0x05B7 [Banco  0] PROC VDP_PSet_Raw
-0x05FC [Banco  0] PROC VDP_PSet_MaskDone
-0x066B [Banco  0] PROC VDP_PSet_ColorArg
-0x066C [Banco  0] PROC VDP_BoxFill
-0x070F [Banco  0] PROC VDP_Line
-0x07E3 [Banco  0] PROC VDP_Line_Loop
-0x082C [Banco  0] PROC VDP_Line_CheckE2DX
-0x0856 [Banco  0] PROC VDP_Line_Exit
-0x085D [Banco  0] PROC VDP_Line_H_End
-0x085E [Banco  0] PROC VDP_Line_DX
-0x085F [Banco  0] PROC VDP_Line_SX
-0x0860 [Banco  0] PROC VDP_Line_DY
-0x0862 [Banco  0] PROC VDP_Line_SY
-0x0863 [Banco  0] PROC VDP_Line_Err
-0x0865 [Banco  0] PROC VDP_Line_E2
-0x0867 [Banco  0] PROC VDP_Line_CurX
-0x0868 [Banco  0] PROC VDP_Line_CurY
-0x0869 [Banco  0] PROC VDP_SpriteDefine
-0x087A [Banco  0] PROC VDP_SpriteSet
-0x08B7 [Banco  0] PROC VDP_Sprite_Idx
-0x08B8 [Banco  0] PROC VDP_Sprite_X
-0x08B9 [Banco  0] PROC VDP_Sprite_Y
-0x08BA [Banco  0] PROC VDP_Sprite_Pat
-0x08BB [Banco  0] PROC VDP_Sprite_Color
-0x08BC [Banco  0] PROC VDP_SpriteHide
-0x08D8 [Banco  0] PROC VDP_SpriteHideAll
-0x08EB [Banco  0] PROC VDP_SpriteSetSize
+0x02BC [Banco  0] PROC VDP_WriteReg
+0x02C2 [Banco  0] PROC VDP_WriteReg_Raw
+0x02CD [Banco  0] PROC VDP_SetWriteAddr
+0x02DC [Banco  0] PROC VDP_SetReadAddr
+0x02E9 [Banco  0] PROC VDP_FillVRAM
+0x0305 [Banco  0] PROC VDP_WriteVRAM
+0x0318 [Banco  0] PROC VDP_ReadVRAM
+0x032D [Banco  0] PROC VDP_CopyVRAM
+0x034B [Banco  0] PROC VDP_SetColor
+0x0362 [Banco  0] PROC VDP_SetScreen
+0x0365 [Banco  0] PROC VDP_InitScreen2
+0x036A [Banco  0] PROC VDP_InitScreen0
+0x036E [Banco  0] PROC VDP_InitScreen1
+0x0374 [Banco  0] PROC VDP_InitScreen2_Tables
+0x03F5 [Banco  0] PROC VDP_PSet
+0x03FB [Banco  0] PROC VDP_PSet_HW
+0x0437 [Banco  0] PROC VDP_CommandWait_Raw
+0x0450 [Banco  0] PROC VDP_PSet_Raw
+0x0495 [Banco  0] PROC VDP_PSet_MaskDone
+0x0504 [Banco  0] PROC VDP_PSet_ColorArg
+0x0505 [Banco  0] PROC VDP_BoxFill
+0x05A8 [Banco  0] PROC VDP_Line
+0x067C [Banco  0] PROC VDP_Line_Loop
+0x06C5 [Banco  0] PROC VDP_Line_CheckE2DX
+0x06EF [Banco  0] PROC VDP_Line_Exit
+0x06F6 [Banco  0] PROC VDP_Line_H_End
+0x06F7 [Banco  0] PROC VDP_Line_DX
+0x06F8 [Banco  0] PROC VDP_Line_SX
+0x06F9 [Banco  0] PROC VDP_Line_DY
+0x06FB [Banco  0] PROC VDP_Line_SY
+0x06FC [Banco  0] PROC VDP_Line_Err
+0x06FE [Banco  0] PROC VDP_Line_E2
+0x0700 [Banco  0] PROC VDP_Line_CurX
+0x0701 [Banco  0] PROC VDP_Line_CurY
+0x0702 [Banco  0] PROC VDP_SpriteDefine
+0x0713 [Banco  0] PROC VDP_SpriteSet
+0x0750 [Banco  0] PROC VDP_Sprite_Idx
+0x0751 [Banco  0] PROC VDP_Sprite_X
+0x0752 [Banco  0] PROC VDP_Sprite_Y
+0x0753 [Banco  0] PROC VDP_Sprite_Pat
+0x0754 [Banco  0] PROC VDP_Sprite_Color
+0x0755 [Banco  0] PROC VDP_SpriteHide
+0x0771 [Banco  0] PROC VDP_SpriteHideAll
+0x0784 [Banco  0] PROC VDP_SpriteSetSize
+0x078B [Banco  0] PROC PSG_Write
+0x0791 [Banco  0] PROC PSG_Read
+0x0796 [Banco  0] PROC PSG_MuteAll
+0x07B3 [Banco  0] PROC PSG_PlayTone
+0x07EA [Banco  0] PROC PSG_NoteTable
+0x0862 [Banco  0] PROC PSG_PlayNoteIndexed
+0x0876 [Banco  0] PROC PSG_PlaySequence
+0x0890 [Banco  0] PROC BDOS_Call
+0x0894 [Banco  0] PROC BDOS_PrintChar
+0x08AA [Banco  0] PROC BDOS_PrintString
+0x08C0 [Banco  0] PROC BDOS_ReadChar
+0x08C8 [Banco  0] PROC BDOS_Exit
+0x08CE [Banco  0] PROC BDOS_FileOpen
+0x08D4 [Banco  0] PROC BDOS_FileCreate
+0x08DA [Banco  0] PROC BDOS_FileClose
+0x08E0 [Banco  0] PROC BDOS_FileRead
+0x08E6 [Banco  0] PROC BDOS_FileWrite
+0x08EC [Banco  0] PROC BDOS_FileSeek
 0x08F2 [Banco  0] PROC BIOS_Call
 0x0904 [Banco  0] PROC BIOS_CHPUT
 0x0913 [Banco  0] PROC BIOS_CHGET

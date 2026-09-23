@@ -3,6 +3,8 @@ package kaji80
 import (
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -57,6 +59,17 @@ type Assembler struct {
 	symbols    map[string]uint16 // label -> offset no segmento
 	codeBytes  []byte
 	relocs     []tempReloc
+
+	baseDir     string            // diretório base pra resolver caminhos de INCBIN
+	incbinCache map[string][]byte // evita reler o mesmo arquivo entre Pass 1/2
+}
+
+// SetBaseDir define o diretório usado pra resolver caminhos relativos de
+// INCBIN (ex.: "sprites.bin" ao lado do .asm) -- o chamador (cmd/kaji80)
+// passa o diretório do arquivo-fonte. Se nunca chamado, caminhos relativos
+// de INCBIN são resolvidos a partir do diretório de trabalho do processo.
+func (a *Assembler) SetBaseDir(dir string) {
+	a.baseDir = dir
 }
 
 type tempReloc struct {
@@ -587,6 +600,12 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 	case "CALLDOS":
 		// LD C,n (0E nn = 2 bytes) + CALL 0005h (CD 05 00 = 3 bytes) = 5.
 		return 5, nil
+	case "INCBIN":
+		data, err := a.resolveIncbinBytes(ops)
+		if err != nil {
+			return 0, err
+		}
+		return uint16(len(data)), nil
 	default:
 		return 1, nil
 	}
@@ -730,6 +749,13 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 		}
 		a.emit(0x0E, a.parseImm8(ops[0])) // LD C, n
 		a.emit(0xCD, 0x05, 0x00)          // CALL 0005h
+		return nil
+	case "INCBIN":
+		data, err := a.resolveIncbinBytes(ops)
+		if err != nil {
+			return err
+		}
+		a.emit(data...)
 		return nil
 	case "NOP":
 		a.emit(0x00)
@@ -1496,4 +1522,101 @@ func parseHex(s string) (int64, error) {
 		return 0, fmt.Errorf("hex inválido")
 	}
 	return val, nil
+}
+
+// =============================================================================
+// INCBIN "arquivo", SKIP=x, SIZE=y
+//
+// Sintaxe: caminho do arquivo entre aspas (mesma convenção de string do
+// resto do assembler), seguido opcionalmente de "SKIP=n" e/ou "SIZE=n"
+// separados por vírgula, em qualquer ordem. Usa "=" (já suportado desde a
+// Fase 1, pra "Nome = expressão") em vez de "SKIP X"/"SIZE Y" com espaço
+// -- parseLine concatena tokens sem espaço entre eles ao reconstruir um
+// operando, então "SKIP 10" viraria o texto "SKIP10" (ambíguo de separar
+// de volta); "SKIP=10" tokeniza como IDENT+ASSIGN+NUMBER e reconstrói sem
+// ambiguidade nenhuma.
+// =============================================================================
+
+// parseIncbinOperands extrai o caminho do arquivo e os parâmetros
+// opcionais SKIP=/SIZE= dos operandos já separados por vírgula.
+func parseIncbinOperands(ops []string) (path string, skip int, size int, hasSize bool, err error) {
+	if len(ops) == 0 {
+		return "", 0, 0, false, fmt.Errorf("INCBIN requer o caminho de um arquivo entre aspas, ex.: INCBIN \"sprites.bin\"")
+	}
+	raw := ops[0]
+	if len(raw) < 2 || raw[0] != '\'' || raw[len(raw)-1] != '\'' {
+		return "", 0, 0, false, fmt.Errorf("INCBIN requer o caminho do arquivo entre aspas, ex.: INCBIN \"sprites.bin\"")
+	}
+	path = raw[1 : len(raw)-1]
+
+	for _, op := range ops[1:] {
+		upper := strings.ToUpper(op)
+		switch {
+		case strings.HasPrefix(upper, "SKIP="):
+			v, convErr := strconv.Atoi(op[len("SKIP="):])
+			if convErr != nil {
+				return "", 0, 0, false, fmt.Errorf("INCBIN: SKIP inválido: %q", op)
+			}
+			skip = v
+		case strings.HasPrefix(upper, "SIZE="):
+			v, convErr := strconv.Atoi(op[len("SIZE="):])
+			if convErr != nil {
+				return "", 0, 0, false, fmt.Errorf("INCBIN: SIZE inválido: %q", op)
+			}
+			size = v
+			hasSize = true
+		default:
+			return "", 0, 0, false, fmt.Errorf("INCBIN: operando desconhecido %q (esperado SKIP=n ou SIZE=n)", op)
+		}
+	}
+	return path, skip, size, hasSize, nil
+}
+
+// readIncbinFile lê (e põe em cache, chaveado pelo caminho já resolvido)
+// o conteúdo bruto de um arquivo pra INCBIN -- o mesmo arquivo pode ser
+// lido até 3 vezes pela mesma linha (Pass 1, checagem de consistência do
+// Pass 2, e o Pass 2 de verdade), o cache garante que todas enxergam
+// exatamente os mesmos bytes, mesmo que o arquivo mude no disco no meio
+// do processo (situação de borda, mas o cache resolve de graça).
+func (a *Assembler) readIncbinFile(path string) ([]byte, error) {
+	resolved := path
+	if !filepath.IsAbs(resolved) && a.baseDir != "" {
+		resolved = filepath.Join(a.baseDir, path)
+	}
+	if a.incbinCache == nil {
+		a.incbinCache = make(map[string][]byte)
+	}
+	if data, ok := a.incbinCache[resolved]; ok {
+		return data, nil
+	}
+	data, err := os.ReadFile(resolved)
+	if err != nil {
+		return nil, fmt.Errorf("INCBIN: erro ao ler arquivo '%s': %w", path, err)
+	}
+	a.incbinCache[resolved] = data
+	return data, nil
+}
+
+// resolveIncbinBytes devolve o slice de bytes final (já com SKIP/SIZE
+// aplicados) pra uma linha INCBIN.
+func (a *Assembler) resolveIncbinBytes(ops []string) ([]byte, error) {
+	path, skip, size, hasSize, err := parseIncbinOperands(ops)
+	if err != nil {
+		return nil, err
+	}
+	data, err := a.readIncbinFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if skip < 0 || skip > len(data) {
+		return nil, fmt.Errorf("INCBIN \"%s\": SKIP=%d além do tamanho do arquivo (%d bytes)", path, skip, len(data))
+	}
+	data = data[skip:]
+	if hasSize {
+		if size < 0 || size > len(data) {
+			return nil, fmt.Errorf("INCBIN \"%s\": SIZE=%d além do que resta do arquivo depois do SKIP (%d bytes disponíveis)", path, size, len(data))
+		}
+		data = data[:size]
+	}
+	return data, nil
 }

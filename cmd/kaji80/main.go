@@ -106,6 +106,7 @@ func main() {
 	}
 
 	asm := kaji80.NewAssembler()
+	asm.SetBaseDir(filepath.Dir(inPath))
 	obj, err := asm.Assemble(string(content))
 	if err != nil {
 		if logDest := getLogDest(); logDest != "" {

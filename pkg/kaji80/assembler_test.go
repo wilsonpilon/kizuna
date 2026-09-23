@@ -1089,6 +1089,137 @@ CHGMOD:
 	}
 }
 
+// TestIncbinWholeFile: INCBIN "arquivo" sem SKIP/SIZE inclui o arquivo
+// inteiro.
+func TestIncbinWholeFile(t *testing.T) {
+	dir := t.TempDir()
+	data := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
+	if err := os.WriteFile(filepath.Join(dir, "sprite.bin"), data, 0644); err != nil {
+		t.Fatalf("erro ao criar arquivo de teste: %v", err)
+	}
+	src := `
+MODULE IncbinWhole
+BANK 0
+PUBLIC Start
+Start:
+    INCBIN "sprite.bin"
+    RET
+`
+	asm := NewAssembler()
+	asm.SetBaseDir(dir)
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := append(append([]byte{}, data...), 0xC9)
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestIncbinSkipAndSize: INCBIN com SKIP e SIZE inclui só a fatia pedida.
+func TestIncbinSkipAndSize(t *testing.T) {
+	dir := t.TempDir()
+	data := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77}
+	if err := os.WriteFile(filepath.Join(dir, "sprite.bin"), data, 0644); err != nil {
+		t.Fatalf("erro ao criar arquivo de teste: %v", err)
+	}
+	src := `
+MODULE IncbinSkipSize
+BANK 0
+PUBLIC Start
+Start:
+    INCBIN "sprite.bin", SKIP=2, SIZE=3
+    RET
+`
+	asm := NewAssembler()
+	asm.SetBaseDir(dir)
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x22, 0x33, 0x44, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestIncbinSkipOnly / TestIncbinSizeOnly: SKIP e SIZE funcionam
+// independentemente um do outro.
+func TestIncbinSkipOnly(t *testing.T) {
+	dir := t.TempDir()
+	data := []byte{0xAA, 0xBB, 0xCC, 0xDD}
+	if err := os.WriteFile(filepath.Join(dir, "d.bin"), data, 0644); err != nil {
+		t.Fatalf("erro ao criar arquivo de teste: %v", err)
+	}
+	src := "MODULE IncbinSkipOnly\nBANK 0\nPUBLIC Start\nStart:\n    INCBIN \"d.bin\", SKIP=1\n    RET\n"
+	asm := NewAssembler()
+	asm.SetBaseDir(dir)
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0xBB, 0xCC, 0xDD, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+func TestIncbinSizeOnly(t *testing.T) {
+	dir := t.TempDir()
+	data := []byte{0xAA, 0xBB, 0xCC, 0xDD}
+	if err := os.WriteFile(filepath.Join(dir, "d.bin"), data, 0644); err != nil {
+		t.Fatalf("erro ao criar arquivo de teste: %v", err)
+	}
+	src := "MODULE IncbinSizeOnly\nBANK 0\nPUBLIC Start\nStart:\n    INCBIN \"d.bin\", SIZE=2\n    RET\n"
+	asm := NewAssembler()
+	asm.SetBaseDir(dir)
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0xAA, 0xBB, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+func TestIncbinSkipBeyondFileErrors(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "d.bin"), []byte{0x01, 0x02}, 0644); err != nil {
+		t.Fatalf("erro ao criar arquivo de teste: %v", err)
+	}
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nStart:\n    INCBIN \"d.bin\", SKIP=99\n    RET\n"
+	asm := NewAssembler()
+	asm.SetBaseDir(dir)
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para SKIP além do tamanho do arquivo")
+	}
+}
+
+func TestIncbinSizeBeyondRemainingErrors(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "d.bin"), []byte{0x01, 0x02}, 0644); err != nil {
+		t.Fatalf("erro ao criar arquivo de teste: %v", err)
+	}
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nStart:\n    INCBIN \"d.bin\", SIZE=99\n    RET\n"
+	asm := NewAssembler()
+	asm.SetBaseDir(dir)
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para SIZE além do que resta do arquivo")
+	}
+}
+
+func TestIncbinMissingFileErrors(t *testing.T) {
+	dir := t.TempDir()
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nStart:\n    INCBIN \"naoexiste.bin\"\n    RET\n"
+	asm := NewAssembler()
+	asm.SetBaseDir(dir)
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para arquivo inexistente")
+	}
+}
+
 // TestCallDosWithPredefinedFunc: CALLDOS F_OPEN vira LD C,43h / CALL
 // 0005h -- inteiramente inlined, sem dependência de biblioteca.
 func TestCallDosWithPredefinedFunc(t *testing.T) {
