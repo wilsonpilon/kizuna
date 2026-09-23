@@ -598,6 +598,125 @@ Alvo:
 	}
 }
 
+// TestLocalLabelMatchesHandWrittenMangledName: ".loop:" dentro de "Start:"
+// deve virar exatamente "Start_loop" -- compara byte a byte contra a
+// versão escrita à mão com o nome já mesclado, que é o comportamento
+// esperado documentado no plano.
+func TestLocalLabelMatchesHandWrittenMangledName(t *testing.T) {
+	srcLocal := `
+MODULE LocalLbl
+BANK 0
+PUBLIC Start
+Start:
+.loop:
+    NOP
+    JR .loop
+    RET
+`
+	srcMangled := `
+MODULE LocalLblMangled
+BANK 0
+PUBLIC Start
+Start:
+Start_loop:
+    NOP
+    JR Start_loop
+    RET
+`
+	asmLocal := NewAssembler()
+	objLocal, err := asmLocal.Assemble(srcLocal)
+	if err != nil {
+		t.Fatalf("Assemble (rótulo local) falhou: %v", err)
+	}
+	asmMangled := NewAssembler()
+	objMangled, err := asmMangled.Assemble(srcMangled)
+	if err != nil {
+		t.Fatalf("Assemble (nome já mesclado à mão) falhou: %v", err)
+	}
+	if !bytes.Equal(objLocal.Segments[0].Data, objMangled.Segments[0].Data) {
+		t.Fatalf("Byte mismatch:\nRótulo local:   % X\nNome mesclado:  % X", objLocal.Segments[0].Data, objMangled.Segments[0].Data)
+	}
+}
+
+// TestLocalLabelNoCollisionAcrossScopes: o mesmo nome ".loop" em duas
+// funções diferentes não deve colidir -- cada uma resolve dentro do seu
+// próprio escopo (Function1_loop / Function2_loop).
+func TestLocalLabelNoCollisionAcrossScopes(t *testing.T) {
+	src := `
+MODULE TwoScopes
+BANK 0
+PUBLIC Function1, Function2
+Function1:
+.loop:
+    NOP
+    JR .loop
+Function2:
+.loop:
+    NOP
+    JR .loop
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	// NOP(1) + JR -3(2) repetido duas vezes (cada bloco salta pro seu
+	// próprio .loop, não pro do outro escopo) + RET.
+	expected := []byte{0x00, 0x18, 0xFD, 0x00, 0x18, 0xFD, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestLocalLabelBeforeAnyGlobalErrors: um rótulo local usado antes de
+// qualquer rótulo global no arquivo é um erro de compilação claro, não um
+// símbolo fantasma silencioso.
+func TestLocalLabelBeforeAnyGlobalErrors(t *testing.T) {
+	src := `
+MODULE BadLocal
+BANK 0
+.loop:
+    NOP
+`
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro de montagem para rótulo local antes de qualquer rótulo global, mas montou com sucesso")
+	}
+}
+
+// TestLocalLabelPreservesCase: o mangle preserva maiúsculas/minúsculas
+// exatamente como escrito, sem forçar minúsculo.
+func TestLocalLabelPreservesCase(t *testing.T) {
+	src := `
+MODULE CaseLocal
+BANK 0
+PUBLIC Rotina
+Rotina:
+.Loop:
+    NOP
+    JR .Loop
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	// JR local resolve em tempo de montagem (REL8, não gera relocation) --
+	// se a definição ".Loop:" e a referência "JR .Loop" não tivessem
+	// mesclado pro MESMO nome com o MESMO case ("Rotina_Loop" nos dois),
+	// o alvo não seria encontrado como rótulo local e o assembler geraria
+	// uma relocation em vez de resolver o deslocamento relativo aqui.
+	expected := []byte{0x00, 0x18, 0xFD, 0xC9} // NOP, JR -3, RET
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch (indica que o case não foi preservado igual entre definição e referência):\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+	if len(obj.Relocations) != 0 {
+		t.Fatalf("esperada 0 relocations (JR local deveria resolver em tempo de montagem), obtida %d", len(obj.Relocations))
+	}
+}
+
 // TestDeftAlias: DT/DEFT são aliases de DB pra literais de texto, pedidos
 // explicitamente por Wilson (compatibilidade com outros assemblers Z80).
 func TestDeftAlias(t *testing.T) {

@@ -276,7 +276,7 @@ func (a *Assembler) Assemble(source string) (*mob.ObjectFile, error) {
 // tokenizeLines agrupa os tokens em linhas lógicas de código
 func (a *Assembler) tokenizeLines(source string) ([]parsedLine, error) {
 	lexer := NewLexer(source)
-	var lines []parsedLine
+	var lineTokens [][]Token
 	var currentTokens []Token
 
 	for {
@@ -287,11 +287,7 @@ func (a *Assembler) tokenizeLines(source string) ([]parsedLine, error) {
 
 		if tok.Type == TokenNewline || tok.Type == TokenEOF {
 			if len(currentTokens) > 0 {
-				parsed, err := a.parseLine(currentTokens)
-				if err != nil {
-					return nil, err
-				}
-				lines = append(lines, parsed)
+				lineTokens = append(lineTokens, currentTokens)
 				currentTokens = nil
 			}
 			if tok.Type == TokenEOF {
@@ -301,6 +297,22 @@ func (a *Assembler) tokenizeLines(source string) ([]parsedLine, error) {
 		}
 
 		currentTokens = append(currentTokens, tok)
+	}
+
+	// Rótulos locais (.nome) precisam ver o arquivo inteiro já dividido em
+	// linhas, mas ANTES de parseLine agrupar em operandos -- ver
+	// preprocessor.go.
+	if err := resolveLocalLabels(lineTokens); err != nil {
+		return nil, err
+	}
+
+	var lines []parsedLine
+	for _, lt := range lineTokens {
+		parsed, err := a.parseLine(lt)
+		if err != nil {
+			return nil, err
+		}
+		lines = append(lines, parsed)
 	}
 
 	return lines, nil
