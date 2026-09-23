@@ -52,6 +52,7 @@ dele se aplica aos segmentos declarados a partir daquele ponto).
 | `CALLBIOS`                    | `CALLBIOS <rotina>`               | Chama uma rotina da BIOS principal via inter-slot — ver §11.                                                      |
 | `CALLDOS`                     | `CALLDOS <código>`                | Chama uma função do MSX-DOS/MSX-DOS2 — ver §11.                                                                   |
 | `INCBIN`                      | `INCBIN "arquivo"[, SKIP=x][, SIZE=y]` | Injeta o conteúdo bruto de um arquivo binário — ver §12.                                                     |
+| `INCLUDE`                     | `INCLUDE "arquivo.inc"`            | Insere o texto de outro arquivo-fonte (constantes/macros compartilhadas) — ver §12.                                |
 | `ENDMOD` / `END`              | `ENDMOD`                          | Finaliza a declaração do módulo (opcional).                                                                       |
 
 ## 4. Sintaxe e literais
@@ -336,7 +337,7 @@ CALLBIOS CHGMOD        ; LD IX,CHGMOD / CALL BIOS_Call (7 bytes)
   (precisa linkar contra `msxlib.hlib`). Aceita uma rotina pré-definida
   (§10) ou qualquer símbolo/expressão que resolva pra um endereço.
 
-## 12. `INCBIN` — incluir um arquivo binário
+## 12. `INCBIN` e `INCLUDE` — incluir arquivos
 
 ```asm
 Sprites:
@@ -357,6 +358,29 @@ na reconstrução de operando do KAJI80.
 O caminho é resolvido relativo ao diretório do próprio arquivo-fonte
 (`.asm`), não ao diretório de onde você roda `kaji80` — um caminho
 absoluto também funciona.
+
+### `INCLUDE` — incluir outro arquivo-fonte
+
+```asm
+INCLUDE "vdp.inc"          ; constantes VDP_DATA, VDP_CMD, ...
+INCLUDE "../inc/psg.inc"   ; caminho relativo ao arquivo que contém o INCLUDE
+```
+
+Substitui a linha pelo **texto** do arquivo indicado, antes de qualquer
+outra etapa (IF/REPT/MACRO/rótulos locais já enxergam o texto incluído).
+Serve pra compartilhar `EQU`, macros e variáveis entre vários módulos sem
+copiar e colar — é assim que a MSXLIB divide as constantes de VDP/PSG/BDOS
+entre dezenas de módulos pequenos. Regras:
+
+- O caminho é relativo ao diretório do arquivo que contém o `INCLUDE`
+  (includes aninhados resolvem em relação ao incluidor, não ao arquivo
+  principal); caminho absoluto também funciona.
+- Aceita aspas duplas ou simples e um comentário `;` no fim da linha.
+- Inclusão circular é erro ("include circular"), e há um limite de
+  profundidade de 16 níveis.
+- Arquivo inexistente é erro de montagem, nunca silencioso.
+- Limitação: depois da expansão, o "linha N" das mensagens de erro conta
+  as linhas do texto já expandido.
 
 ## 13. Conjunto de instruções Z80 suportadas
 

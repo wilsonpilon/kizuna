@@ -1560,3 +1560,65 @@ Start:
 	}
 }
 
+
+// INCLUDE "arquivo": substitui a linha pelo conteúdo do arquivo (texto bruto,
+// antes do lexer), relativo ao diretório de quem inclui.
+func TestIncludeBasicConstants(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "regs.inc"), []byte("VDP_PORT EQU 99h\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	src := "MODULE Inc1\nBANK 0\nPUBLIC Start\n    INCLUDE \"regs.inc\"\nStart:\n    LD A, VDP_PORT\n    RET\n"
+	asm := NewAssembler()
+	asm.SetBaseDir(dir)
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x3E, 0x99, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Got % X, expected % X", obj.Segments[0].Data, expected)
+	}
+}
+
+func TestIncludeNestedRelativeToIncluder(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "inc")
+	if err := os.MkdirAll(sub, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// a.inc (em inc/) inclui b.inc que está ao lado dele, não do arquivo raiz.
+	os.WriteFile(filepath.Join(sub, "a.inc"), []byte("INCLUDE \"b.inc\"\nA_VAL EQU B_VAL+1\n"), 0644)
+	os.WriteFile(filepath.Join(sub, "b.inc"), []byte("B_VAL EQU 10\n"), 0644)
+	src := "MODULE Inc2\nBANK 0\nPUBLIC Start\nINCLUDE \"inc/a.inc\"\nStart:\n    LD A, A_VAL\n    RET\n"
+	asm := NewAssembler()
+	asm.SetBaseDir(dir)
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	if !bytes.Equal(obj.Segments[0].Data, []byte{0x3E, 11, 0xC9}) {
+		t.Fatalf("Got % X", obj.Segments[0].Data)
+	}
+}
+
+func TestIncludeCircularErrors(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "a.inc"), []byte("INCLUDE \"b.inc\"\n"), 0644)
+	os.WriteFile(filepath.Join(dir, "b.inc"), []byte("INCLUDE \"a.inc\"\n"), 0644)
+	src := "MODULE Inc3\nBANK 0\nPUBLIC Start\nINCLUDE \"a.inc\"\nStart:\n    RET\n"
+	asm := NewAssembler()
+	asm.SetBaseDir(dir)
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para INCLUDE circular")
+	}
+}
+
+func TestIncludeMissingFileErrors(t *testing.T) {
+	src := "MODULE Inc4\nBANK 0\nPUBLIC Start\nINCLUDE \"naoexiste.inc\"\nStart:\n    RET\n"
+	asm := NewAssembler()
+	asm.SetBaseDir(t.TempDir())
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para INCLUDE de arquivo inexistente")
+	}
+}

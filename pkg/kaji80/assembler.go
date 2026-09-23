@@ -288,6 +288,11 @@ func (a *Assembler) Assemble(source string) (*mob.ObjectFile, error) {
 
 // tokenizeLines agrupa os tokens em linhas lógicas de código
 func (a *Assembler) tokenizeLines(source string) ([]parsedLine, error) {
+	// INCLUDE é o primeiro passo, em texto bruto, antes do lexer.
+	source, err := expandIncludes(source, a.baseDir, nil)
+	if err != nil {
+		return nil, err
+	}
 	lexer := NewLexer(source)
 	var lineTokens [][]Token
 	var currentTokens []Token
@@ -320,7 +325,7 @@ func (a *Assembler) tokenizeLines(source string) ([]parsedLine, error) {
 	// depois (compartilha o mesmo contador de expansão com REPT, pra toda
 	// combinação continuar com ID único), rótulos locais por último --
 	// ver preprocessor.go.
-	lineTokens, err := a.filterConditionals(lineTokens)
+	lineTokens, err = a.filterConditionals(lineTokens)
 	if err != nil {
 		return nil, err
 	}

@@ -3,9 +3,98 @@ package kaji80
 import (
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 )
+
+// =============================================================================
+// INCLUDE "arquivo"
+//
+// Passo em TEXTO BRUTO, antes do lexer: uma linha "INCLUDE \"x.inc\"" é
+// substituída pelo conteúdo do arquivo (recursivamente). Existe pra
+// compartilhar constantes (EQU) e macros entre módulos sem repetir tudo em
+// cada arquivo -- essencial pra uma biblioteca com dezenas/centenas de
+// módulos pequenos (um por rotina) que precisam dos mesmos endereços de
+// porta/registrador.
+//
+// O caminho é resolvido relativo ao diretório do arquivo que contém o
+// INCLUDE (o arquivo-fonte de nível mais alto usa Assembler.SetBaseDir).
+// Inclusão circular e aninhamento excessivo são erro claro.
+//
+// Limitação conhecida: depois da expansão, "linha N" numa mensagem de erro
+// passa a contar linhas do texto JÁ expandido, não do arquivo original --
+// só afeta arquivos que usam INCLUDE.
+// =============================================================================
+
+const maxIncludeDepth = 16
+
+// parseIncludeLine reconhece uma linha de INCLUDE e devolve o caminho.
+func parseIncludeLine(line string) (string, bool) {
+	t := strings.TrimSpace(line)
+	if len(t) < 9 || !strings.EqualFold(t[:7], "INCLUDE") || (t[7] != ' ' && t[7] != '\t') {
+		return "", false
+	}
+	rest := strings.TrimSpace(t[7:])
+	if len(rest) < 2 || (rest[0] != '"' && rest[0] != '\'') {
+		return "", false
+	}
+	q := rest[0]
+	end := strings.IndexByte(rest[1:], q)
+	if end < 0 {
+		return "", false
+	}
+	tail := strings.TrimSpace(rest[end+2:])
+	if tail != "" && tail[0] != ';' {
+		return "", false
+	}
+	return rest[1 : 1+end], true
+}
+
+func expandIncludes(source, baseDir string, stack []string) (string, error) {
+	if len(stack) > maxIncludeDepth {
+		return "", fmt.Errorf("INCLUDE aninhado além de %d níveis -- provável inclusão circular", maxIncludeDepth)
+	}
+	if !strings.Contains(strings.ToUpper(source), "INCLUDE") {
+		return source, nil
+	}
+	lines := strings.Split(source, "\n")
+	var out strings.Builder
+	for i, line := range lines {
+		path, ok := parseIncludeLine(line)
+		if !ok {
+			out.WriteString(line)
+		} else {
+			resolved := path
+			if !filepath.IsAbs(resolved) {
+				resolved = filepath.Join(baseDir, path)
+			}
+			abs, err := filepath.Abs(resolved)
+			if err != nil {
+				abs = resolved
+			}
+			for _, s := range stack {
+				if s == abs {
+					return "", fmt.Errorf("INCLUDE circular: '%s' já está sendo incluído", path)
+				}
+			}
+			data, err := os.ReadFile(resolved)
+			if err != nil {
+				return "", fmt.Errorf("INCLUDE: erro ao ler '%s': %w", path, err)
+			}
+			sub, err := expandIncludes(string(data), filepath.Dir(resolved), append(stack, abs))
+			if err != nil {
+				return "", err
+			}
+			out.WriteString(strings.TrimRight(sub, "\r\n"))
+		}
+		if i < len(lines)-1 {
+			out.WriteByte('\n')
+		}
+	}
+	return out.String(), nil
+}
 
 // =============================================================================
 // KIZUNA KAJI80 - Pré-processador (rótulos locais nesta leva; IF/REPT/MACRO
