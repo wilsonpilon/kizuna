@@ -299,9 +299,13 @@ func (a *Assembler) tokenizeLines(source string) ([]parsedLine, error) {
 		currentTokens = append(currentTokens, tok)
 	}
 
-	// Rótulos locais (.nome) precisam ver o arquivo inteiro já dividido em
-	// linhas, mas ANTES de parseLine agrupar em operandos -- ver
-	// preprocessor.go.
+	// Ordem importa: IF/ELSE/ENDIF primeiro (remove ramos mortos antes de
+	// qualquer outra coisa enxergar essas linhas), rótulos locais por
+	// último -- ver preprocessor.go.
+	lineTokens, err := a.filterConditionals(lineTokens)
+	if err != nil {
+		return nil, err
+	}
 	if err := resolveLocalLabels(lineTokens); err != nil {
 		return nil, err
 	}

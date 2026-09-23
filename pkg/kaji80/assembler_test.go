@@ -717,6 +717,164 @@ Rotina:
 	}
 }
 
+// TestIfTrueKeepsCode: condição não-zero mantém o bloco IF, sem ELSE.
+func TestIfTrueKeepsCode(t *testing.T) {
+	src := `
+MODULE IfTrue
+BANK 0
+PUBLIC Start
+Start:
+IF 1
+    NOP
+ENDIF
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x00, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestIfFalseElseBranch: condição zero descarta o bloco IF e mantém o ELSE.
+func TestIfFalseElseBranch(t *testing.T) {
+	src := `
+MODULE IfElse
+BANK 0
+PUBLIC Start
+Start:
+IF 0
+    NOP
+    NOP
+ELSE
+    HALT
+ENDIF
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x76, 0xC9} // HALT, RET
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestIfReferencesEarlierConstant: exemplo canônico -- "FORMATO=1 / IF
+// FORMATO==1 ..." -- condição IF referenciando uma variável definida mais
+// acima no mesmo arquivo precisa enxergar o valor certo mesmo rodando
+// antes do Pass 1 de verdade.
+func TestIfReferencesEarlierConstant(t *testing.T) {
+	src := `
+MODULE IfConst
+BANK 0
+PUBLIC Start
+FORMATO = 1
+Start:
+IF FORMATO==1
+    NOP
+ELSE
+    HALT
+ENDIF
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x00, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestIfNested: aninhamento de IF dentro de IF, sem limite artificial.
+func TestIfNested(t *testing.T) {
+	src := `
+MODULE IfNested
+BANK 0
+PUBLIC Start
+Start:
+IF 1
+    IF 0
+        HALT
+    ELSE
+        NOP
+    ENDIF
+ENDIF
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed: %v", err)
+	}
+	expected := []byte{0x00, 0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestIfDeadBranchSkipsEvaluation: um IF aninhado dentro de um ramo já
+// morto não deve tentar avaliar a condição (que pode referenciar algo
+// nunca definido) -- só precisa casar corretamente com seu ENDIF.
+func TestIfDeadBranchSkipsEvaluation(t *testing.T) {
+	src := `
+MODULE IfDeadBranch
+BANK 0
+PUBLIC Start
+Start:
+IF 0
+    IF NuncaDefinido
+        HALT
+    ENDIF
+ENDIF
+    RET
+`
+	asm := NewAssembler()
+	obj, err := asm.Assemble(src)
+	if err != nil {
+		t.Fatalf("Assemble failed (não deveria tentar avaliar condição em ramo morto): %v", err)
+	}
+	expected := []byte{0xC9}
+	if !bytes.Equal(obj.Segments[0].Data, expected) {
+		t.Fatalf("Byte mismatch:\nGot:      % X\nExpected: % X", obj.Segments[0].Data, expected)
+	}
+}
+
+// TestIfElseWithoutIfErrors / TestEndifWithoutIfErrors / TestIfWithoutEndifErrors:
+// erros de estrutura claros, não montagem silenciosamente errada.
+func TestIfElseWithoutIfErrors(t *testing.T) {
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nStart:\nELSE\n    RET\n"
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para ELSE sem IF correspondente")
+	}
+}
+
+func TestEndifWithoutIfErrors(t *testing.T) {
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nStart:\nENDIF\n    RET\n"
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para ENDIF sem IF correspondente")
+	}
+}
+
+func TestIfWithoutEndifErrors(t *testing.T) {
+	src := "MODULE Bad\nBANK 0\nPUBLIC Start\nStart:\nIF 1\n    RET\n"
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro para IF sem ENDIF correspondente")
+	}
+}
+
 // TestDeftAlias: DT/DEFT são aliases de DB pra literais de texto, pedidos
 // explicitamente por Wilson (compatibilidade com outros assemblers Z80).
 func TestDeftAlias(t *testing.T) {
