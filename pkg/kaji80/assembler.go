@@ -690,14 +690,14 @@ func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token,
 	case "CALL":
 		if len(ops) == 1 {
 			a.emit(0xCD)
-			a.emitAddressOrReloc(ops[0])
+			return a.emitAddressOrReloc(ops[0])
 		} else if len(ops) == 2 {
 			cc, ok := condMap[strings.ToUpper(ops[0])]
 			if !ok {
 				return fmt.Errorf("condição inválida para CALL: %s", ops[0])
 			}
 			a.emit(0xC4 | (cc << 3))
-			a.emitAddressOrReloc(ops[1])
+			return a.emitAddressOrReloc(ops[1])
 		}
 	case "JP":
 		if len(ops) == 1 {
@@ -710,7 +710,7 @@ func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token,
 				a.emit(0xFD, 0xE9)
 			} else {
 				a.emit(0xC3)
-				a.emitAddressOrReloc(ops[0])
+				return a.emitAddressOrReloc(ops[0])
 			}
 		} else if len(ops) == 2 {
 			cc, ok := condMap[strings.ToUpper(ops[0])]
@@ -718,24 +718,24 @@ func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token,
 				return fmt.Errorf("condição inválida para JP: %s", ops[0])
 			}
 			a.emit(0xC2 | (cc << 3))
-			a.emitAddressOrReloc(ops[1])
+			return a.emitAddressOrReloc(ops[1])
 		}
 	case "JR":
 		if len(ops) == 1 {
 			a.emit(0x18)
-			a.emitRelativeOrReloc(ops[0])
+			return a.emitRelativeOrReloc(ops[0])
 		} else if len(ops) == 2 {
 			cc, ok := condMap[strings.ToUpper(ops[0])]
 			if !ok || cc > 3 { // Apenas NZ(0), Z(1), NC(2), C(3)
 				return fmt.Errorf("condição inválida para JR: %s", ops[0])
 			}
 			a.emit(0x20 | (cc << 3))
-			a.emitRelativeOrReloc(ops[1])
+			return a.emitRelativeOrReloc(ops[1])
 		}
 	case "DJNZ":
 		if len(ops) == 1 {
 			a.emit(0x10)
-			a.emitRelativeOrReloc(ops[0])
+			return a.emitRelativeOrReloc(ops[0])
 		}
 	case "PUSH":
 		if len(ops) != 1 {
@@ -892,7 +892,9 @@ func (a *Assembler) encodeInstruction(mnem string, ops []string, tokens []Token,
 		}
 	case "DW", "DEFW", "WORD":
 		for _, op := range ops {
-			a.emitAddressOrReloc(op)
+			if err := a.emitAddressOrReloc(op); err != nil {
+				return err
+			}
 		}
 	case "DS", "DEFS", "BLKB":
 		var count int
@@ -942,6 +944,14 @@ func (a *Assembler) encodeAlu8(mnem string, ops []string) error {
 			prefix = 0xFD
 		}
 		a.emit(prefix, 0x86|(opCode<<3), uint8(disp))
+	} else if strings.HasPrefix(target, "(") && strings.HasSuffix(target, ")") {
+		// Forma de memória não reconhecida (nem (HL) nem (IX+d)/(IY+d)) --
+		// sem este check, caía no fallback de imediato abaixo, que não tem
+		// como reportar erro e silenciosamente virava "ADD/CP/etc A, 0"
+		// (mesma classe de bug já achada 2x nesta sessão: Label+N e
+		// "LD B,(nn)"). Ex.: "CP (Algum_Endereco)" -- não existe forma ALU
+		// indireta pra endereço absoluto no Z80, só via (HL)/(IX+d)/(IY+d).
+		return fmt.Errorf("forma de %s não suportada: %s -- ALU indireto só existe via (HL) ou (IX+d)/(IY+d), nunca endereço absoluto", mnem, target)
 	} else {
 		// Imediato de 8 bits
 		val := a.parseImm8(target)
@@ -1022,8 +1032,7 @@ func (a *Assembler) encodeLd(ops []string) error {
 		if dst == "A" && strings.HasPrefix(src, "(") && strings.HasSuffix(src, ")") {
 			addr := strings.Trim(ops[1], "()")
 			a.emit(0x3A)
-			a.emitAddressOrReloc(addr)
-			return nil
+			return a.emitAddressOrReloc(addr)
 		}
 		// O Z80 de verdade só tem endereçamento absoluto de 16 bits pra UM
 		// registrador de 8 bits através de A ("LD A,(nn)", opcode 0x3A) --
@@ -1067,43 +1076,37 @@ func (a *Assembler) encodeLd(ops []string) error {
 	if strings.HasPrefix(dst, "(") && strings.HasSuffix(dst, ")") && src == "A" {
 		addr := strings.Trim(ops[0], "()")
 		a.emit(0x32)
-		a.emitAddressOrReloc(addr)
-		return nil
+		return a.emitAddressOrReloc(addr)
 	}
 
 	// LD HL, (nn)
 	if dst == "HL" && strings.HasPrefix(src, "(") && strings.HasSuffix(src, ")") {
 		addr := strings.Trim(ops[1], "()")
 		a.emit(0x2A)
-		a.emitAddressOrReloc(addr)
-		return nil
+		return a.emitAddressOrReloc(addr)
 	}
 
 	// LD (nn), HL
 	if strings.HasPrefix(dst, "(") && strings.HasSuffix(dst, ")") && src == "HL" {
 		addr := strings.Trim(ops[0], "()")
 		a.emit(0x22)
-		a.emitAddressOrReloc(addr)
-		return nil
+		return a.emitAddressOrReloc(addr)
 	}
 
 	// LD rr, nn
 	if p, okP := reg16Map[dst]; okP {
 		a.emit(0x01 | (p << 4))
-		a.emitAddressOrReloc(ops[1])
-		return nil
+		return a.emitAddressOrReloc(ops[1])
 	}
 
 	// LD IX, nn / LD IY, nn
 	if dst == "IX" {
 		a.emit(0xDD, 0x21)
-		a.emitAddressOrReloc(ops[1])
-		return nil
+		return a.emitAddressOrReloc(ops[1])
 	}
 	if dst == "IY" {
 		a.emit(0xFD, 0x21)
-		a.emitAddressOrReloc(ops[1])
-		return nil
+		return a.emitAddressOrReloc(ops[1])
 	}
 
 	return fmt.Errorf("forma de LD não suportada: LD %s, %s", ops[0], ops[1])
@@ -1219,7 +1222,37 @@ func (a *Assembler) parseImm8(s string) uint8 {
 	return uint8(val)
 }
 
-func (a *Assembler) emitAddressOrReloc(symbolOrAddr string) {
+// isValidSymbolName reporta se s tem a forma de um identificador de verdade
+// (letra ou '_' seguido de letras/dígitos/'_') -- usado como último filtro
+// antes de emitAddressOrReloc/emitRelativeOrReloc tratarem algo como um
+// símbolo a resolver por relocation. Sem isso, QUALQUER string que não
+// batesse com constante EQU nem número literal virava um "símbolo" válido
+// em silêncio, mesmo coisas como "(Float_DestAddr)" (operando de memória
+// mal-formado) ou "Float_UnpA+1" (aritmética de label, que o KAJI80 não
+// suporta) -- gerando relocations fantasma que só falhavam (ou pior,
+// resolviam por acidente) na hora da linkagem, bem longe da linha real do
+// bug. Dois bugs reais desta classe já foram achados e corrigidos em
+// pontos individuais (Label+N em lib/src/float.asm, "LD B,(nn)" em
+// Float_Cmp32) antes desta validação central existir.
+func isValidSymbolName(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i, r := range s {
+		isLetter := (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') || r == '_'
+		isDigit := r >= '0' && r <= '9'
+		if i == 0 {
+			if !isLetter {
+				return false
+			}
+		} else if !isLetter && !isDigit {
+			return false
+		}
+	}
+	return true
+}
+
+func (a *Assembler) emitAddressOrReloc(symbolOrAddr string) error {
 	currOffset := uint16(len(a.codeBytes))
 	symbolOrAddr = strings.TrimSpace(symbolOrAddr)
 
@@ -1228,7 +1261,7 @@ func (a *Assembler) emitAddressOrReloc(symbolOrAddr string) {
 		lo := uint8(cVal & 0xFF)
 		hi := uint8((cVal >> 8) & 0xFF)
 		a.emit(lo, hi)
-		return
+		return nil
 	}
 
 	// Se for número literal (ex: 0x1234, 100, $C000)
@@ -1253,7 +1286,11 @@ func (a *Assembler) emitAddressOrReloc(symbolOrAddr string) {
 		lo := uint8(numVal & 0xFF)
 		hi := uint8((numVal >> 8) & 0xFF)
 		a.emit(lo, hi)
-		return
+		return nil
+	}
+
+	if !isValidSymbolName(symbolOrAddr) {
+		return fmt.Errorf("operando de endereço inválido: '%s' não é um número, constante EQU nem nome de símbolo válido", symbolOrAddr)
 	}
 
 	// É um símbolo/label (precisa de relocation ABS16 no .MOB)
@@ -1265,9 +1302,10 @@ func (a *Assembler) emitAddressOrReloc(symbolOrAddr string) {
 
 	// Espaço reservado para o endereço de 16 bits
 	a.emit(0x00, 0x00)
+	return nil
 }
 
-func (a *Assembler) emitRelativeOrReloc(symbolOrTarget string) {
+func (a *Assembler) emitRelativeOrReloc(symbolOrTarget string) error {
 	currOffset := uint16(len(a.codeBytes))
 	symbolOrTarget = strings.TrimSpace(symbolOrTarget)
 
@@ -1284,10 +1322,14 @@ func (a *Assembler) emitRelativeOrReloc(symbolOrTarget string) {
 				relocType:  mob.RelocRel8,
 			})
 			a.emit(0x00)
-			return
+			return nil
 		}
 		a.emit(uint8(int8(disp)))
-		return
+		return nil
+	}
+
+	if !isValidSymbolName(symbolOrTarget) {
+		return fmt.Errorf("alvo de salto inválido: '%s' não é um nome de símbolo válido", symbolOrTarget)
 	}
 
 	// Símbolo não resolvido no mesmo escopo local -> Relocation REL8
@@ -1297,6 +1339,7 @@ func (a *Assembler) emitRelativeOrReloc(symbolOrTarget string) {
 		relocType:  mob.RelocRel8,
 	})
 	a.emit(0x00)
+	return nil
 }
 
 func parseHex(s string) (int64, error) {

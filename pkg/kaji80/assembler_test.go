@@ -364,6 +364,52 @@ Start:
 	}
 }
 
+// TestMalformedAddressOperandRejected: auditoria feita depois do bug real de
+// "LD B,(nn)" (achado em lib/src/float.asm, testado em hardware) -- qualquer
+// operando de endereço que não seja número/constante EQU/nome de símbolo
+// válido (ex.: um operando de memória mal-formado como "(Algo)" acabando
+// onde um símbolo era esperado) agora é um erro de compilação claro em
+// CALL/JP/LD rr,nn, não um "símbolo" fantasma silenciosamente aceito que só
+// falharia (ou pior, resolveria por acidente) na hora da linkagem.
+func TestMalformedAddressOperandRejected(t *testing.T) {
+	cases := []string{
+		"    CALL (Algo)\n",
+		"    JP (Algo)\n",
+		"    LD DE, (Algo)\n",
+		"    LD BC, (Algo)\n",
+	}
+	for _, instr := range cases {
+		src := "MODULE BadAddr\nBANK 0\nPUBLIC Start\nAlgo: DB 00h\nStart:\n" + instr
+		asm := NewAssembler()
+		if _, err := asm.Assemble(src); err == nil {
+			t.Errorf("esperado erro de montagem para %q, mas montou com sucesso", instr)
+		}
+	}
+}
+
+// TestAluIndirectAbsoluteAddressRejected: mesma classe de bug do teste
+// acima, mas no lado das operações ALU de 8 bits (ADD/ADC/SUB/SBC/AND/XOR/
+// OR/CP) -- o Z80 só tem forma indireta via (HL) ou (IX+d)/(IY+d), nunca
+// endereço absoluto. Sem a checagem, caía no fallback de imediato
+// (parseImm8, sem como reportar erro) e virava "CP 0" em silêncio -- mesma
+// causa raiz do bug gráfico de SCREEN 2 já documentado para o caso
+// (IX+d)/(IY+d); este teste cobre o caso de endereço absoluto puro.
+func TestAluIndirectAbsoluteAddressRejected(t *testing.T) {
+	src := `
+MODULE BadAlu
+BANK 0
+PUBLIC Start
+Algo: DB 00h
+Start:
+    CP (Algo)
+    RET
+`
+	asm := NewAssembler()
+	if _, err := asm.Assemble(src); err == nil {
+		t.Fatal("esperado erro de montagem para 'CP (Algo)', mas montou com sucesso")
+	}
+}
+
 // TestMsxlibModulesAssembleConsistently monta todos os fontes da MSXLIB e
 // depende da verificacao interna de consistencia Pass1/Pass2 dentro de
 // Assemble() para pegar qualquer futura dessincronia de tamanho de
