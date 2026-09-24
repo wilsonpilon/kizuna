@@ -3,6 +3,7 @@ package obi
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/wilsonpilon/kizuna/pkg/z80sim"
@@ -309,9 +310,11 @@ func TestBuild_APIKey(t *testing.T) {
 		t.Errorf("com api: console = %q, quer %q", got, "42")
 	}
 
-	cfg.API = nil // sem descritor: PrintDec16/Diff viram chamadas de pilha
-	if got := run(); got == "42" {
-		t.Errorf("sem api: o resultado nao deveria coincidir com 42 (mesmo caminho de codigo?)")
+	// sem descritor, chamar rotina de registradores como se fosse procedure e
+	// um ERRO de compilacao (antes ligava e calculava errado em silencio)
+	cfg.API = nil
+	if _, err := Build(cfg, dir, BuildOptions{}); err == nil || !strings.Contains(err.Error(), "nao e PROCEDURE") && !strings.Contains(err.Error(), "não é PROCEDURE") {
+		t.Errorf("sem api: esperava erro claro de chamada nao declarada, veio: %v", err)
 	}
 
 	// caminho de api inexistente e erro alto, nunca silencioso

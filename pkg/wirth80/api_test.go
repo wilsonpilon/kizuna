@@ -191,3 +191,15 @@ func TestSampleAPIDemoPascal(t *testing.T) {
 		t.Error("BIOS_CLS deveria ter feito CALSLT (CHGMOD/INITXT)")
 	}
 }
+
+// Sem descritores, chamar uma rotina da MSXLIB (convencao de registradores) e
+// erro claro -- nunca uma chamada de pilha que liga e calcula errado.
+func TestAPIMissingDescriptorIsAnError(t *testing.T) {
+	src := "program E;\nbegin\n    PrintDec16(Mul16(6, 7));\nend.\n"
+	for _, set := range []*api.Set{nil, api.NewSet()} {
+		_, _, err := compilePascal(t, src, set)
+		if err == nil || !strings.Contains(err.Error(), "procedure/function") || !strings.Contains(err.Error(), "-api") {
+			t.Errorf("erro = %v, quer mensagem sobre chamada nao declarada com dica de -api", err)
+		}
+	}
+}

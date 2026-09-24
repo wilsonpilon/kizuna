@@ -218,3 +218,15 @@ func TestSampleAPIDemoBasic(t *testing.T) {
 		}
 	}
 }
+
+// Sem descritores, chamar uma rotina da MSXLIB (convencao de registradores) e
+// erro claro -- nunca uma chamada de pilha que liga e calcula errado.
+func TestAPIMissingDescriptorIsAnError(t *testing.T) {
+	src := "MODULE E\nBANK 0\nPUBLIC Main\nPROCEDURE Main()\n    PrintDec16(Mul16(6, 7))\nEND PROCEDURE\nEND MODULE\n"
+	for _, set := range []*api.Set{nil, api.NewSet()} {
+		_, _, err := compileBasic(t, src, set)
+		if err == nil || !strings.Contains(err.Error(), "PROCEDURE") || !strings.Contains(err.Error(), "-api") {
+			t.Errorf("erro = %v, quer mensagem sobre chamada nao declarada com dica de -api", err)
+		}
+	}
+}

@@ -73,6 +73,26 @@ func (cg *CodeGenerator) apiRoutine(name string) (*api.Routine, bool) {
 	return cg.api.Lookup(api.LangPascal, name)
 }
 
+// checkCallTarget recusa a chamada a um nome que não é procedure/function do
+// programa, não foi declarado EXTERN e não é rotina descrita num .api. Antes,
+// isso compilava "com sucesso" como chamada de PILHA e o linker resolvia o
+// símbolo pelo nome -- esquecer o -api transformava Mul16(6, 7) num programa
+// que ligava e calculava errado em silêncio (a rotina espera registradores).
+func (cg *CodeGenerator) checkCallTarget(name string) error {
+	for _, proc := range cg.prog.Procs {
+		if strings.EqualFold(proc.Name, name) {
+			return nil
+		}
+	}
+	for _, ext := range cg.prog.Externs {
+		if strings.EqualFold(ext, name) {
+			return nil
+		}
+	}
+	return fmt.Errorf("chamada a '%s', que não é procedure/function deste programa, nem EXTERN, nem rotina descrita num .api "+
+		"(para rotinas da MSXLIB use -api <lib/api>; sem -api o compilador procura ../lib/api ao lado do executável)", name)
+}
+
 // emitAPICall gera a chamada por registradores e registra o EXTERN.
 func (cg *CodeGenerator) emitAPICall(sb *strings.Builder, rt *api.Routine, args []Expr, asExpr bool) error {
 	err := rt.EmitCall(sb, len(args), func(i int) error {
@@ -423,6 +443,9 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 		if rt, ok := cg.apiRoutine(s.Name); ok {
 			return cg.emitAPICall(sb, rt, s.Args, false)
 		}
+		if err := cg.checkCallTarget(s.Name); err != nil {
+			return err
+		}
 		// Chamada de procedure como comando: empilha argumentos
 		// esquerda→direita, CALL, limpa a pilha (convenção do chamador).
 		for _, arg := range s.Args {
@@ -628,6 +651,9 @@ func (cg *CodeGenerator) generateExpr(sb *strings.Builder, expr Expr) error {
 	case *CallExpr:
 		if rt, ok := cg.apiRoutine(e.Name); ok {
 			return cg.emitAPICall(sb, rt, e.Args, true)
+		}
+		if err := cg.checkCallTarget(e.Name); err != nil {
+			return err
 		}
 		// Chamada de function como expressão: empilha argumentos, CALL,
 		// limpa a pilha SEM perder o valor de retorno que o CALL deixou em
