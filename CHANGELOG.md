@@ -5,6 +5,22 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Não lançado]
 
+### MSXLIB Fase 2c — motor de comandos do V9938/V9958 (`lib/src/vdp`, 19 rotinas novas)
+
+`VDP_CmdRun` (bloco de 15 bytes -> R#32..R#46 por escrita indireta), `VDP_CmdWait/Busy/Stop`,
+ponto/leitura de ponto (`VDP_HwPlot/HwPoint`, com operação lógica), retângulo cheio
+(`HwFillRect`, `HwFillRectFast` por bytes, `HwBoxFill` entre cantos em qualquer ordem), contorno
+(`HwBox`), linha (`HwLine`, calcula lado maior/menor e sentidos), cópia (`HwCopyRect`,
+`HwMoveRect`, `HwCopyLines`), busca de borda (`HwSearch`) e transferência com a CPU
+(`HwLoadRect`/`HwLoadFast`/`HwReadRect`, com o protocolo de TR do S#2). Retângulos e linhas
+recebem ponteiros para palavras em RAM (x, y, ...): mais parâmetros do que cabem em registradores.
+O simulador ganhou o **motor de comandos** (`pkg/z80sim/vdpcmd.go`: os 13 comandos, as 5 operações
+lógicas + variantes T, SCREEN 5 a 8, DIX/DIY, protocolo TR/CE, S#7/S#8/S#9) e as rotinas são
+conferidas pixel a pixel contra imagens de referência em Go nos 4 modos (mutações verificadas).
+`sample/vdpcmd/` é um programa de teste para hardware/openMSX. **Não verificado em hardware:**
+que o LINE desenha NX+1 pontos (NX = lado maior), que é o que o modelo e `VDP_HwLine` assumem; o
+sample tem marcas brancas nas pontas justamente para conferir isso a olho.
+
 ### MSXLIB Fase 2b — tabelas, sprites, piscar, rolagem (`lib/src/vdp`, ~45 rotinas novas)
 
 - **Endereços das tabelas** de VRAM (nomes, padrões, cores, atributos e padrões de sprite) com

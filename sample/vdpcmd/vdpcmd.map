@@ -1,0 +1,102 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
+===============================================================================
+
+Modo de Memória: Monobanco
+Bancos Utilizados: [0]
+Endereço Base:     0x0100
+Ponto de Entrada:  0x0100
+Tamanho do .COM:   2031 bytes (0x07EF)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x0362 | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   610 bytes
+[ 1] 0x0362 - 0x03AA | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    72 bytes
+[ 2] 0x03AA - 0x03C9 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    31 bytes
+[ 3] 0x03C9 - 0x0415 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:    76 bytes
+[ 4] 0x0415 - 0x04E5 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:   208 bytes
+[ 5] 0x04E5 - 0x04FE | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:    25 bytes
+[ 6] 0x04FE - 0x056C | Banco:  0 | Tipo: CODE | Mod:  6 | Tam:   110 bytes
+[ 7] 0x056C - 0x057B | Banco:  0 | Tipo: CODE | Mod:  7 | Tam:    15 bytes
+[ 8] 0x057B - 0x069B | Banco:  0 | Tipo: CODE | Mod:  8 | Tam:   288 bytes
+[ 9] 0x069B - 0x06E4 | Banco:  0 | Tipo: CODE | Mod:  9 | Tam:    73 bytes
+[10] 0x06E4 - 0x0765 | Banco:  0 | Tipo: CODE | Mod: 10 | Tam:   129 bytes
+[11] 0x0765 - 0x07EA | Banco:  0 | Tipo: CODE | Mod: 11 | Tam:   133 bytes
+[12] 0x07EA - 0x0814 | Banco:  0 | Tipo: CODE | Mod: 12 | Tam:    42 bytes
+[13] 0x0814 - 0x082E | Banco:  0 | Tipo: CODE | Mod: 13 | Tam:    26 bytes
+[14] 0x082E - 0x084A | Banco:  0 | Tipo: CODE | Mod: 14 | Tam:    28 bytes
+[15] 0x084A - 0x085B | Banco:  0 | Tipo: CODE | Mod: 15 | Tam:    17 bytes
+[16] 0x085B - 0x086D | Banco:  0 | Tipo: CODE | Mod: 16 | Tam:    18 bytes
+[17] 0x086D - 0x0881 | Banco:  0 | Tipo: CODE | Mod: 17 | Tam:    20 bytes
+[18] 0x0881 - 0x088E | Banco:  0 | Tipo: CODE | Mod: 18 | Tam:    13 bytes
+[19] 0x088E - 0x08EF | Banco:  0 | Tipo: CODE | Mod: 19 | Tam:    97 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x0100 [Banco  0] PROC Start
+0x01DF [Banco  0] PROC Result
+0x01E0 [Banco  0] PROC MsgIntro
+0x023D [Banco  0] PROC MsgOk
+0x0266 [Banco  0] PROC MsgFail
+0x0296 [Banco  0] PROC RectAll
+0x029E [Banco  0] PROC BoxFrame
+0x02A6 [Banco  0] PROC DiagA
+0x02AE [Banco  0] PROC DiagB
+0x02B6 [Banco  0] PROC LineH
+0x02BE [Banco  0] PROC LineV
+0x02C6 [Banco  0] PROC BoxBlue
+0x02CE [Banco  0] PROC CopyBlock
+0x02DA [Banco  0] PROC RectGrad
+0x02E2 [Banco  0] PROC Pixels
+0x0322 [Banco  0] PROC ReadBuf
+0x0362 [Banco  0] PROC BIOS_CHGMOD
+0x03AA [Banco  0] PROC VDP_CmdWait
+0x03B5 [Banco  0] PROC VDP_CmdBusy
+0x03BD [Banco  0] PROC VDP_CmdStop
+0x03C9 [Banco  0] PROC VDP_HwPlot
+0x03EF [Banco  0] PROC VDP_HwPoint
+0x0415 [Banco  0] PROC VDP_HwLoadRect
+0x0420 [Banco  0] PROC VDP_HwLoadFast
+0x0481 [Banco  0] PROC VDP_HwReadRect
+0x04E5 [Banco  0] PROC VDP_ReadStatus
+0x04FE [Banco  0] PROC VDP_HwCopyRect
+0x0520 [Banco  0] PROC VDP_HwMoveRect
+0x053F [Banco  0] PROC VDP_HwCopyLines
+0x056C [Banco  0] PROC VDP_Cmd_SX
+0x056E [Banco  0] PROC VDP_Cmd_SY
+0x0570 [Banco  0] PROC VDP_Cmd_DX
+0x0572 [Banco  0] PROC VDP_Cmd_DY
+0x0574 [Banco  0] PROC VDP_Cmd_NX
+0x0576 [Banco  0] PROC VDP_Cmd_NY
+0x0578 [Banco  0] PROC VDP_Cmd_CLR
+0x0579 [Banco  0] PROC VDP_Cmd_ARG
+0x057A [Banco  0] PROC VDP_Cmd_CMD
+0x057B [Banco  0] PROC VDP_HwBox
+0x0627 [Banco  0] PROC VDP_HwBoxFill
+0x0689 [Banco  0] PROC VDP_HwBox_X1
+0x068B [Banco  0] PROC VDP_HwBox_Y1
+0x068D [Banco  0] PROC VDP_HwBox_X2
+0x068F [Banco  0] PROC VDP_HwBox_Y2
+0x0691 [Banco  0] PROC VDP_HwBox_LX1
+0x0693 [Banco  0] PROC VDP_HwBox_LY1
+0x0695 [Banco  0] PROC VDP_HwBox_LX2
+0x0697 [Banco  0] PROC VDP_HwBox_LY2
+0x0699 [Banco  0] PROC VDP_HwBox_Color
+0x069A [Banco  0] PROC VDP_HwBox_Op
+0x069B [Banco  0] PROC VDP_HwFillRect
+0x06C1 [Banco  0] PROC VDP_HwFillRectFast
+0x06E4 [Banco  0] PROC VDP_InitScreen2_Tables
+0x0765 [Banco  0] PROC VDP_HwLine
+0x07E2 [Banco  0] PROC VDP_HwLine_X1
+0x07E4 [Banco  0] PROC VDP_HwLine_Y1
+0x07E6 [Banco  0] PROC VDP_HwLine_X2
+0x07E8 [Banco  0] PROC VDP_HwLine_Y2
+0x07EA [Banco  0] PROC BIOS_CHGET
+0x0814 [Banco  0] PROC VDP_CmdRun
+0x082E [Banco  0] PROC VDP_FillVRAM
+0x084A [Banco  0] PROC VDP_WriteReg
+0x0850 [Banco  0] PROC VDP_WriteReg_Raw
+0x085B [Banco  0] PROC BIOS_Call
+0x086D [Banco  0] PROC VDP_SetReg
+0x0881 [Banco  0] PROC VDP_HwSpan
+0x088E [Banco  0] PROC VDP_Shadow
+0x08CE [Banco  0] PROC VDP_Mode
+0x08CF [Banco  0] PROC VDP_PalShadow

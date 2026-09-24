@@ -77,6 +77,11 @@ VDP_SetGrayScale = VDP_GrayScale
 VDP_EnableTransparency = VDP_Transparency
 VDP_EnableHBlank = VDP_HBlankInt
 VDP_EnableMask = VDP_LeftMask
+# Fase 2c (motor de comandos)
+VDP_CommandWait = VDP_CmdWait
+BoxFill = VDP_HwBoxFill
+BoxLine = VDP_HwBox
+Line = VDP_HwLine
 
 # --- Strings e texto ---------------------------------------------------------
 # (Print_Draw* do MSXgl escrevem na VRAM em qualquer modo; as nossas PrintHex*/

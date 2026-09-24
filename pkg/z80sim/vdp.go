@@ -29,6 +29,11 @@ type VDP struct {
 	S0Reads     int
 	VBlankEvery int
 
+	// Commands conta os comandos do motor aceitos (modo bitmap); xfer é a
+	// transferência com a CPU em andamento (vdpcmd.go).
+	Commands int
+	xfer     *cmdXfer
+
 	// RegWrites registra, em ordem, cada escrita de registrador (número, valor).
 	RegWrites [][2]byte
 }
@@ -51,6 +56,9 @@ func (v *VDP) writeReg(n, val byte) {
 	}
 	v.Reg[n] = val
 	v.RegWrites = append(v.RegWrites, [2]byte{n, val})
+	if n == 44 {
+		v.xferWrite(val)
+	}
 	if n == 46 {
 		v.runCommand()
 	}
@@ -109,6 +117,9 @@ func (v *VDP) Read99() byte {
 	sel := v.Reg[15] & 0x0F
 	if sel > 9 {
 		return 0
+	}
+	if sel == 7 {
+		return v.xferRead()
 	}
 	if sel == 0 {
 		v.S0Reads++

@@ -185,9 +185,8 @@ Cada fase é um marco: commit, CHANGELOG, testes, `sample/` para hardware.
 - **Fase 2 — VDP e texto**: modos MSX1/2/2+, registradores com cópia sombra, VRAM
   (incluindo 128K), paleta, tabelas, sprites, motor de comandos V9938/V9958, `Print`/
   `Locate`, formatação. Marco visível: hello world gráfico em SCREEN 1/2/5.
-  Andamento: **2a e 2b feitas** (registradores/sombra, VRAM 128K, paleta, `VDP_SetMode`, tabelas,
-  sprites modo 1/2, piscar, rolagem; testadas no simulador com modelo do V9938). Faltam 2c (motor de
-  comandos), 2d (`Print` em VRAM com a fonte da ROM).
+  Andamento: **2a, 2b e 2c feitas** (registradores/sombra, VRAM 128K, paleta, `VDP_SetMode`, tabelas,
+  sprites modo 1/2, piscar, rolagem; testadas no simulador com modelo do V9938). Falta 2d (`Print` em VRAM com a fonte da ROM).
 - **Fase 3 — Draw, Tile, Scroll**: linha/caixa/círculo/preenchimento/`Paint`/mini-`DRAW`;
   bancos de tiles e mapas; scroll de hardware. Lembrete: o motor de comandos do V9938
   **não funciona em SCREEN 2**, só em SCREEN 5–8 — os testes de hardware são em SCREEN 5+.

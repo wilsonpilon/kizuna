@@ -13,8 +13,8 @@
 | Memória | 28 | 18 | 0 | 10 | 0 |
 | Matemática | 29 | 27 | 0 | 0 | 2 |
 | Strings e texto | 118 | 46 | 2 | 0 | 70 |
-| VDP | 174 | 50 | 0 | 0 | 124 |
-| Draw | 41 | 0 | 0 | 0 | 41 |
+| VDP | 174 | 51 | 0 | 0 | 123 |
+| Draw | 41 | 3 | 0 | 0 | 38 |
 | Tile | 14 | 0 | 0 | 0 | 14 |
 | Scroll | 7 | 0 | 0 | 0 | 7 |
 | Teclado | 24 | 1 | 0 | 0 | 23 |
@@ -30,7 +30,7 @@
 | Clock | 30 | 0 | 0 | 0 | 30 |
 | V9990 | 185 | 0 | 0 | 0 | 185 |
 | Fora da lista (por enquanto) | 323 | 0 | 0 | 0 | 323 |
-| **Total** | **1501** | **149** | **2** | **10** | **1340** |
+| **Total** | **1501** | **153** | **2** | **10** | **1336** |
 
 ## Memória
 
@@ -287,7 +287,7 @@
 | `VDP_CommandReadLoop` | MSXgl | vdp.h | pendente |  |
 | `VDP_CommandSetupR32` | MSXgl | vdp.h | pendente |  |
 | `VDP_CommandSetupR36` | MSXgl | vdp.h | pendente |  |
-| `VDP_CommandWait` | MSXgl | vdp.h | pendente |  |
+| `VDP_CommandWait` | MSXgl | vdp.h | feito | VDP_CmdWait |
 | `VDP_CommandWriteLoop` | MSXgl | vdp.h | pendente |  |
 | `VDP_DisableSprite` | MSXgl | vdp.h | pendente |  |
 | `VDP_DisableSpritesFrom` | MSXgl | vdp.h | feito | VDP_SpriteDisableFrom |
@@ -405,8 +405,8 @@
 
 | Função (guia) | Origem | Cabeçalho | Estado | Nossa rotina / motivo |
 | --- | --- | --- | --- | --- |
-| `BoxFill` | Fusion-C | vdp_graph2.h | pendente |  |
-| `BoxLine` | Fusion-C | vdp_graph2.h | pendente |  |
+| `BoxFill` | Fusion-C | vdp_graph2.h | feito | VDP_HwBoxFill |
+| `BoxLine` | Fusion-C | vdp_graph2.h | feito | VDP_HwBox |
 | `Circle` | Fusion-C | vdp_circle.h | pendente |  |
 | `CircleFilled` | Fusion-C | vdp_circle.h | pendente |  |
 | `Clear1px` | Fusion-C | vdp_graph1.h | pendente |  |
@@ -415,7 +415,7 @@
 | `Get1px` | Fusion-C | vdp_graph1.h | pendente |  |
 | `Get8px` | Fusion-C | vdp_graph1.h | pendente |  |
 | `GetCol8px` | Fusion-C | vdp_graph1.h | pendente |  |
-| `Line` | Fusion-C | vdp_graph2.h | pendente |  |
+| `Line` | Fusion-C | vdp_graph2.h | feito | VDP_HwLine |
 | `Paint` | Fusion-C | vdp_graph2.h | pendente |  |
 | `PgetXY` | Fusion-C | vdp_graph2.h | pendente |  |
 | `Point` | Fusion-C | vdp_graph2.h | pendente |  |

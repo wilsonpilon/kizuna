@@ -90,3 +90,24 @@ proc VDP_SetHScrollFine(dots: byte in A)
 proc VDP_SetAdjustRaw(r18: byte in A)
 proc VDP_SetHBlankLine(line: byte in A)
 func VDP_GetVersion(): byte out A                 ; 0 = V9938, 2 = V9958
+
+; --- Fase 2c: motor de comandos do V9938/V9958 (so SCREEN 5 a 8) ---
+; retangulos/linhas recebem um ponteiro para 8 ou 12 bytes de palavras (x, y, ...) em RAM
+proc VDP_CmdWait()
+func VDP_CmdBusy(): byte out A                    ; 1 = comando em andamento
+proc VDP_CmdStop()
+proc VDP_CmdRun(block: ptr in HL)                 ; 15 bytes = R#32..R#46
+proc VDP_HwPlot(x: word in BC, y: word in DE, color: byte in A, op: byte in H)
+func VDP_HwPoint(x: word in BC, y: word in DE): byte out A
+proc VDP_HwFillRect(rect: ptr in HL, color: byte in A, op: byte in B)    ; x, y, largura, altura
+proc VDP_HwFillRectFast(rect: ptr in HL, color: byte in A)               ; por bytes (HMMV)
+proc VDP_HwBoxFill(corners: ptr in HL, color: byte in A, op: byte in B)  ; x1, y1, x2, y2
+proc VDP_HwBox(corners: ptr in HL, color: byte in A, op: byte in B)      ; contorno
+proc VDP_HwLine(points: ptr in HL, color: byte in A, op: byte in B)      ; x1, y1, x2, y2
+proc VDP_HwCopyRect(block: ptr in HL, dir: byte in A, op: byte in B)     ; sx, sy, dx, dy, larg, alt
+proc VDP_HwMoveRect(block: ptr in HL, dir: byte in A)                    ; por bytes (HMMM)
+proc VDP_HwCopyLines(block: ptr in HL, dir: byte in A)                   ; sy, dx, dy, linhas
+proc VDP_HwLoadRect(rect: ptr in HL, data: ptr in DE, count: word in BC, op: byte in A)
+proc VDP_HwLoadFast(rect: ptr in HL, data: ptr in DE, count: word in BC)
+proc VDP_HwReadRect(rect: ptr in HL, dest: ptr in DE, count: word in BC)
+; VDP_HwSearch devolve X em HL e "achou" no carry -- so em Assembly
