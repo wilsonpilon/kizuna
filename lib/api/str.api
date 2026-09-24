@@ -1,0 +1,28 @@
+; Strings no formato tamanho+dados, as STRING do BASIC/Pascal: 1 byte de tamanho
+; (0..255) seguido dos caracteres, sem terminador (lib/src/str). Um buffer de destino
+; precisa ter 256 bytes no pior caso.
+
+func STR_Len(s: ptr in HL): byte out A
+proc STR_Copy(src: ptr in HL, dst: ptr in DE)
+proc STR_Cat(src: ptr in HL, dst: ptr in DE)                   ; anexa src ao fim de dst (trunca em 255)
+func STR_Compare(a: ptr in HL, b: ptr in DE): byte out A       ; 0 iguais, 1 se a > b, 255 (-1) se a < b
+proc STR_ToUpper(s: ptr in HL)                                 ; no lugar
+proc STR_ToLower(s: ptr in HL)
+
+; --- recortes no estilo do MS-BASIC ------------------------------------------------------
+proc STR_Left(src: ptr in HL, n: byte in A, dst: ptr in DE)                    ; LEFT$
+proc STR_Right(src: ptr in HL, n: byte in A, dst: ptr in DE)                   ; RIGHT$
+proc STR_Mid(src: ptr in HL, start: byte in A, count: byte in B, dst: ptr in DE) ; MID$ (a 1a posicao e 1)
+func STR_InStr(haystack: ptr in HL, needle: ptr in DE): byte out A             ; INSTR: 0 = nao achou
+proc STR_Chr(c: byte in A, dst: ptr in DE)                                     ; CHR$
+proc STR_Repeat(dst: ptr in DE, c: byte in A, n: byte in B)                    ; STRING$
+
+; --- conversao de/para outros formatos -------------------------------------------------------
+proc STR_FromC(src: ptr in HL, dst: ptr in DE)                  ; de string terminada em zero (trunca em 255)
+func STR_ToC(src: ptr in HL, dst: ptr in DE): word out DE        ; para string terminada em zero
+proc STR_FromU16(v: word in HL, dst: ptr in DE)                 ; STR$ sem sinal
+proc STR_FromI16(v: word in HL, dst: ptr in DE)                 ; STR$ com sinal
+proc STR_Hex8(v: byte in A, dst: ptr in DE)                     ; HEX$ de 2 digitos
+proc STR_Hex16(v: word in HL, dst: ptr in DE)                   ; HEX$ de 4 digitos
+func STR_Val(s: ptr in HL): word out HL                         ; VAL (decimal com sinal; 0 se nao ha numero)
+func STR_HexVal(s: ptr in HL): word out HL                      ; VAL("&H..."): hexadecimal

@@ -45,6 +45,10 @@ type Machine struct {
 	// OnCALSLT, se não-nil, roda em cada CALL 001Ch antes do RET simulado --
 	// para o teste devolver valores em registradores, por exemplo.
 	OnCALSLT func(m *Machine)
+	// Input é a fila de teclas que o BDOS entrega: funções 01h/08h (uma tecla,
+	// 0 se a fila está vazia), 0Bh (A = FFh se há tecla) e 0Ah (leitura de linha
+	// até o ENTER). Sem eco no Console além do da função 01h.
+	Input []byte
 	// BDOSCalls registra o número de função (registrador C) de cada CALL 0005h.
 	BDOSCalls []uint8
 
@@ -140,6 +144,18 @@ func (m *Machine) run(maxSteps int, stopAt *uint16) error {
 			case 0x00:
 				m.terminated = true
 				return nil
+			case 0x01, 0x08:
+				cpu.A = m.nextKey()
+				if cpu.C == 0x01 && cpu.A != 0 {
+					m.Console = append(m.Console, cpu.A)
+				}
+			case 0x0B:
+				cpu.A = 0
+				if len(m.Input) > 0 {
+					cpu.A = 0xFF
+				}
+			case 0x0A:
+				m.readLine(cpu.DE())
 			case 0x02:
 				m.Console = append(m.Console, cpu.E)
 			case 0x09:
@@ -160,6 +176,37 @@ func (m *Machine) run(maxSteps int, stopAt *uint16) error {
 		cpu.DoOpcode()
 	}
 	return ErrStepBudget
+}
+
+func (m *Machine) nextKey() byte {
+	if len(m.Input) == 0 {
+		return 0
+	}
+	k := m.Input[0]
+	m.Input = m.Input[1:]
+	return k
+}
+
+// readLine implementa a função 0Ah: buffer = [máximo][tamanho][dados...].
+// Consome a fila até um CR ou LF (e o LF que segue um CR).
+func (m *Machine) readLine(buf uint16) {
+	max := int(m.Mem[buf])
+	n := 0
+	for len(m.Input) > 0 {
+		c := m.Input[0]
+		m.Input = m.Input[1:]
+		if c == '\r' || c == '\n' {
+			if c == '\r' && len(m.Input) > 0 && m.Input[0] == '\n' {
+				m.Input = m.Input[1:]
+			}
+			break
+		}
+		if n < max {
+			m.Mem[int(buf)+2+n] = c
+			n++
+		}
+	}
+	m.Mem[buf+1] = byte(n)
 }
 
 func (m *Machine) ret() {

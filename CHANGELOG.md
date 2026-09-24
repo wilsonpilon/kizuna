@@ -30,6 +30,21 @@ checagens independentes (blocos ladrilham a região, conteúdo dos blocos vivos 
 `lib/api/mem.api`. Itens do guia deixados de fora de propósito (alocador estático, `Mutex_*`) estão
 em `docs/cobertura.map` com o motivo.
 
+### MSXLIB Fase 1 — texto: `char`, `cstr`, `str`, `num`, `console` (~85 rotinas novas)
+
+- **`CHAR_*`**: 12 predicados de classe (dígito, letra, espaço…) + maiúscula/minúscula, valor e caractere de dígito hexadecimal.
+- **`CSTR_*`** (terminadas em zero, como C/Fusion-C) e **`STR_*`** (tamanho + dados, o formato das `STRING` do BASIC/Pascal):
+  cópia, concatenação (com limite), comparação (com e sem maiúsculas), busca de caractere/substring, `Reverse`,
+  `Trim`, e no formato do MS-BASIC `Left`/`Right`/`Mid`/`InStr`/`Chr`/`Repeat`/`Val`, com conversão entre os dois formatos.
+- **`NUM_*`**: número ⇄ texto (decimal com e sem sinal, largura fixa, hexadecimal, binário; leitura com sinal, espaços,
+  prefixos `0x`/`&H`/`$` e detecção de estouro).
+- **`CON_*`** (pasta `console`; `con` é nome reservado no Windows): console de texto (`PrintCStr`, `PrintLine`, `PrintI16`, `Cls`, `Locate` por `ESC Y`, `ReadLine`, `ReadKey`, `KeyPressed`);
+  o simulador ganhou a fila de teclado do BDOS (`01h`, `08h`, `0Ah`, `0Bh`).
+- Tudo testado no simulador contra referências em Go (256 valores para `CHAR_*`; os 65536 valores para as conversões de
+  número; amostras com bordas para as strings), incluindo a preservação de registradores e leitura com limite de fim de
+  texto que **não pode espiar o byte seguinte da memória**. Descritores em `lib/api/{char,cstr,str,num,console}.api`.
+- Cobertura de texto do guia: 46 de 118 itens feitos (`docs/cobertura.md`); `String_Format` (estilo printf) está planejado.
+
 ### KAJI80: símbolo terminado em `h` era lido como número hexadecimal
 
 Um operando de endereço cujo nome **terminava em `h` e começava com letras hexadecimais**

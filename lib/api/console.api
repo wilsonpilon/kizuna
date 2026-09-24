@@ -1,0 +1,14 @@
+; Console de texto do MSX-DOS (lib/src/console). Para escrever numeros sem sinal use PrintDec16
+; (string.api) e para texto tamanho+dados use BDOS_PrintLenStr.
+; (A area se chama "console" e nao "con": CON e nome de dispositivo reservado no Windows e
+; nao pode ser nome de arquivo nem de pasta.)
+
+proc CON_PrintCStr(s: ptr in HL)                       ; string terminada em zero, sem mudar de linha
+proc CON_PrintLine(s: ptr in HL)                       ; string terminada em zero + fim de linha
+proc CON_NewLine()
+proc CON_PrintI16(v: word in HL)                       ; inteiro com sinal
+proc CON_Cls()                                         ; limpa a tela de texto
+proc CON_Locate(col: byte in A, row: byte in B)        ; posiciona o cursor (0,0 = canto superior esquerdo)
+func CON_ReadLine(buf: ptr in DE, max: byte in A): word out HL   ; le uma linha; devolve string tamanho+dados dentro do buffer (max + 2 bytes)
+func CON_ReadKey(): byte out A                         ; espera uma tecla, sem eco
+func CON_KeyPressed(): byte out A                      ; 1 se ha tecla esperando, senao 0

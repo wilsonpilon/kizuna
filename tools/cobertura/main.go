@@ -53,7 +53,7 @@ type item struct {
 	area   string
 }
 
-var declRe = regexp.MustCompile(`^\s*(?:extern\s+)?(?:static\s+)?(?:inline\s+)?(?:const\s+)?(?:unsigned\s+|signed\s+)?(?:void|char|int|short|long|float|double|bool|Bool|boolean|byte|uint|u8|u16|u32|i8|i16|i32|f32|FCB|TIME|DATE|Palette|MOUSE_DATA|[A-Z][A-Za-z0-9_]*)\s*\*?\s*\**\s*([A-Za-z_][A-Za-z0-9_]*)\s*\([^;{]*\)\s*(?:__[A-Z]+(?:\([^)]*\))?\s*)*(?:;|\{)`)
+var declRe = regexp.MustCompile(`^\s*(?:extern\s+)?(?:static\s+)?(?:inline\s+)?(?:const\s+)?(?:unsigned\s+|signed\s+)?(?:void|char|int|short|long|float|double|bool|Bool|boolean|byte|uint|u8|u16|u32|i8|i16|i32|f32|FCB|TIME|DATE|Palette|MOUSE_DATA|[A-Z][A-Za-z0-9_]*)\s*\*?\s*\**\s*([A-Za-z_][A-Za-z0-9_]*)\s*\([^;{]*\)\s*(?:__[A-Z]+(?:\([^)]*\))?\s*)*(?:;|\{|$)`)
 
 func main() {
 	check := flag.Bool("check", false, "só valida o mapa")

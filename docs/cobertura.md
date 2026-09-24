@@ -12,25 +12,25 @@
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Memória | 28 | 18 | 0 | 10 | 0 |
 | Matemática | 29 | 27 | 0 | 0 | 2 |
-| Strings e texto | 103 | 8 | 0 | 0 | 95 |
-| VDP | 173 | 6 | 0 | 0 | 167 |
+| Strings e texto | 118 | 46 | 2 | 0 | 70 |
+| VDP | 174 | 6 | 0 | 0 | 168 |
 | Draw | 41 | 0 | 0 | 0 | 41 |
 | Tile | 14 | 0 | 0 | 0 | 14 |
 | Scroll | 7 | 0 | 0 | 0 | 7 |
-| Teclado | 23 | 0 | 0 | 0 | 23 |
-| Joystick e mouse | 15 | 0 | 0 | 0 | 15 |
+| Teclado | 24 | 1 | 0 | 0 | 23 |
+| Joystick e mouse | 17 | 0 | 0 | 0 | 17 |
 | PSG | 28 | 5 | 0 | 0 | 23 |
-| Play (players) | 166 | 0 | 0 | 0 | 166 |
+| Play (players) | 172 | 0 | 0 | 0 | 172 |
 | MSX-Music | 7 | 0 | 0 | 0 | 7 |
 | MSX-Audio | 6 | 0 | 0 | 0 | 6 |
 | SCC | 11 | 0 | 0 | 0 | 11 |
-| BIOS | 90 | 0 | 0 | 0 | 90 |
+| BIOS | 95 | 0 | 0 | 0 | 95 |
 | DOS | 105 | 0 | 0 | 0 | 105 |
-| System | 86 | 2 | 0 | 0 | 84 |
+| System | 87 | 2 | 0 | 0 | 85 |
 | Clock | 30 | 0 | 0 | 0 | 30 |
-| V9990 | 179 | 0 | 0 | 0 | 179 |
-| Fora da lista (por enquanto) | 322 | 0 | 0 | 0 | 322 |
-| **Total** | **1463** | **66** | **0** | **10** | **1387** |
+| V9990 | 185 | 0 | 0 | 0 | 185 |
+| Fora da lista (por enquanto) | 323 | 0 | 0 | 0 | 323 |
+| **Total** | **1501** | **105** | **2** | **10** | **1384** |
 
 ## Memória
 
@@ -104,54 +104,57 @@
 | Função (guia) | Origem | Cabeçalho | Estado | Nossa rotina / motivo |
 | --- | --- | --- | --- | --- |
 | `Beep` | Fusion-C | msx_fusion.h | feito | BIOS_BEEP |
-| `CharToLower` | Fusion-C | msx_fusion.h | pendente |  |
-| `CharToUpper` | Fusion-C | msx_fusion.h | pendente |  |
+| `CharToLower` | Fusion-C | msx_fusion.h | feito | CHAR_ToLower |
+| `CharToUpper` | Fusion-C | msx_fusion.h | feito | CHAR_ToUpper |
 | `Cls` | Fusion-C | msx_fusion.h | feito | BIOS_CLS |
 | `Getche` | Fusion-C | msx_fusion.h | feito | BDOS_ReadChar |
 | `InputChar` | Fusion-C | msx_fusion.h | pendente |  |
-| `InputString` | Fusion-C | msx_fusion.h | pendente |  |
+| `InputString` | Fusion-C | msx_fusion.h | feito | CON_ReadLine |
 | `IntSwap` | Fusion-C | msx_fusion.h | pendente |  |
 | `IntToFloat` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsAlpha` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsAlphaNum` | Fusion-C | msx_fusion.h | pendente |  |
+| `IsAlpha` | Fusion-C | msx_fusion.h | feito | CHAR_IsAlpha |
+| `IsAlphaNum` | Fusion-C | msx_fusion.h | feito | CHAR_IsAlNum |
 | `IsAscii` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsCntrl` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsDigit` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsGraph` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsHexDigit` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsLower` | Fusion-C | msx_fusion.h | pendente |  |
+| `IsCntrl` | Fusion-C | msx_fusion.h | feito | CHAR_IsControl |
+| `IsDigit` | Fusion-C | msx_fusion.h | feito | CHAR_IsDigit |
+| `IsGraph` | Fusion-C | msx_fusion.h | feito | CHAR_IsGraph |
+| `IsHexDigit` | Fusion-C | msx_fusion.h | feito | CHAR_IsHexDigit |
+| `IsLower` | Fusion-C | msx_fusion.h | feito | CHAR_IsLower |
 | `IsPositive` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsPrintable` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsPunctuation` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsSpace` | Fusion-C | msx_fusion.h | pendente |  |
-| `IsUpper` | Fusion-C | msx_fusion.h | pendente |  |
+| `IsPrintable` | Fusion-C | msx_fusion.h | feito | CHAR_IsPrint |
+| `IsPunctuation` | Fusion-C | msx_fusion.h | feito | CHAR_IsPunct |
+| `IsSpace` | Fusion-C | msx_fusion.h | feito | CHAR_IsSpace |
+| `IsUpper` | Fusion-C | msx_fusion.h | feito | CHAR_IsUpper |
 | `Itoa` | Fusion-C | msx_fusion.h | pendente |  |
-| `Locate` | Fusion-C | msx_fusion.h | pendente |  |
-| `NStrCompare` | Fusion-C | msx_fusion.h | pendente |  |
-| `NStrConcat` | Fusion-C | msx_fusion.h | pendente |  |
-| `NStrCopy` | Fusion-C | msx_fusion.h | pendente |  |
-| `Print` | Fusion-C | msx_fusion.h | pendente |  |
+| `Locate` | Fusion-C | msx_fusion.h | feito | CON_Locate |
+| `NStrCompare` | Fusion-C | msx_fusion.h | feito | CSTR_CompareN |
+| `NStrConcat` | Fusion-C | msx_fusion.h | feito | CSTR_CatN |
+| `NStrCopy` | Fusion-C | msx_fusion.h | feito | CSTR_CopyN |
+| `Print` | Fusion-C | msx_fusion.h | feito | CON_PrintCStr |
 | `PrintChar` | Fusion-C | msx_fusion.h | feito | BDOS_PrintChar |
-| `PrintDec` | Fusion-C | msx_fusion.h | pendente |  |
+| `PrintDec` | Fusion-C | msx_fusion.h | feito | CON_PrintI16 |
 | `PrintFNumber` | Fusion-C | msx_fusion.h | pendente |  |
 | `PrintHex` | Fusion-C | msx_fusion.h | feito | PrintHex16 |
 | `PrintNumber` | Fusion-C | msx_fusion.h | feito | PrintDec16 |
-| `PrintString` | Fusion-C | msx_fusion.h | pendente |  |
-| `PutCharHex` | Fusion-C | msx_fusion.h | pendente |  |
-| `StrChr` | Fusion-C | msx_fusion.h | pendente |  |
-| `StrCompare` | Fusion-C | msx_fusion.h | pendente |  |
-| `StrConcat` | Fusion-C | msx_fusion.h | pendente |  |
-| `StrCopy` | Fusion-C | msx_fusion.h | feito | StrCopy |
-| `StrLeftTrim` | Fusion-C | msx_fusion.h | pendente |  |
-| `StrLen` | Fusion-C | msx_fusion.h | feito | StrLen |
-| `StrPosChr` | Fusion-C | msx_fusion.h | pendente |  |
-| `StrPosStr` | Fusion-C | msx_fusion.h | pendente |  |
-| `StrReplaceChar` | Fusion-C | msx_fusion.h | pendente |  |
-| `StrReverse` | Fusion-C | msx_fusion.h | pendente |  |
-| `StrRightTrim` | Fusion-C | msx_fusion.h | pendente |  |
+| `PrintString` | Fusion-C | msx_fusion.h | feito | CON_PrintCStr |
+| `PutCharHex` | Fusion-C | msx_fusion.h | feito | PrintHex8 |
+| `StrChr` | Fusion-C | msx_fusion.h | feito | CSTR_FindChar |
+| `StrCompare` | Fusion-C | msx_fusion.h | feito | CSTR_Compare |
+| `StrConcat` | Fusion-C | msx_fusion.h | feito | CSTR_Cat |
+| `StrCopy` | Fusion-C | msx_fusion.h | feito | CSTR_Copy |
+| `StrLeftTrim` | Fusion-C | msx_fusion.h | feito | CSTR_TrimLeft |
+| `StrLen` | Fusion-C | msx_fusion.h | feito | CSTR_Len |
+| `StrPosChr` | Fusion-C | msx_fusion.h | feito | CSTR_FindLastChar |
+| `StrPosStr` | Fusion-C | msx_fusion.h | feito | CSTR_FindStr |
+| `StrReplaceChar` | Fusion-C | msx_fusion.h | feito | CSTR_ReplaceChar |
+| `StrReverse` | Fusion-C | msx_fusion.h | feito | CSTR_Reverse |
+| `StrRightTrim` | Fusion-C | msx_fusion.h | feito | CSTR_TrimRight |
 | `StrSearch` | Fusion-C | msx_fusion.h | pendente |  |
 | `bchput` | Fusion-C | msx_fusion.h | pendente |  |
 | `num2Dec16` | Fusion-C | msx_fusion.h | pendente |  |
+| `Char_IsAlpha` | MSXgl | string.h | feito | CHAR_IsAlpha |
+| `Char_IsAlphaNum` | MSXgl | string.h | feito | CHAR_IsAlNum |
+| `Char_IsNum` | MSXgl | string.h | feito | CHAR_IsDigit |
 | `Print_Backspace` | MSXgl | print.h | pendente |  |
 | `Print_Clear` | MSXgl | print.h | pendente |  |
 | `Print_DrawBin8` | MSXgl | print.h | pendente |  |
@@ -161,6 +164,7 @@
 | `Print_DrawCharAt` | MSXgl | print.h | pendente |  |
 | `Print_DrawCharX` | MSXgl | print.h | pendente |  |
 | `Print_DrawCharXAt` | MSXgl | print.h | pendente |  |
+| `Print_DrawCharYAt` | MSXgl | print.h | pendente |  |
 | `Print_DrawFormat` | MSXgl | print.h | pendente |  |
 | `Print_DrawHex16` | MSXgl | print.h | pendente |  |
 | `Print_DrawHex16At` | MSXgl | print.h | pendente |  |
@@ -172,7 +176,10 @@
 | `Print_DrawLineH` | MSXgl | print.h | pendente |  |
 | `Print_DrawLineV` | MSXgl | print.h | pendente |  |
 | `Print_DrawText` | MSXgl | print.h | pendente |  |
+| `Print_DrawTextAlign` | MSXgl | print.h | pendente |  |
+| `Print_DrawTextAlignAt` | MSXgl | print.h | pendente |  |
 | `Print_DrawTextAt` | MSXgl | print.h | pendente |  |
+| `Print_DrawTextAtV` | MSXgl | print.h | pendente |  |
 | `Print_DrawTextOutline` | MSXgl | print.h | pendente |  |
 | `Print_DrawTextShadow` | MSXgl | print.h | pendente |  |
 | `Print_EnableOutline` | MSXgl | print.h | pendente |  |
@@ -182,15 +189,20 @@
 | `Print_GetSpriteID` | MSXgl | print.h | pendente |  |
 | `Print_GetSpritePattern` | MSXgl | print.h | pendente |  |
 | `Print_Initialize` | MSXgl | print.h | pendente |  |
+| `Print_Return` | MSXgl | print.h | pendente |  |
+| `Print_SelectTextFont` | MSXgl | print.h | pendente |  |
 | `Print_SetBitmapFont` | MSXgl | print.h | pendente |  |
+| `Print_SetCharSize` | MSXgl | print.h | pendente |  |
 | `Print_SetColor` | MSXgl | print.h | pendente |  |
 | `Print_SetColorShade` | MSXgl | print.h | pendente |  |
 | `Print_SetDirection` | MSXgl | print.h | pendente |  |
 | `Print_SetFont` | MSXgl | print.h | pendente |  |
 | `Print_SetFontData` | MSXgl | print.h | pendente |  |
+| `Print_SetFontEx` | MSXgl | print.h | pendente |  |
 | `Print_SetMode` | MSXgl | print.h | pendente |  |
 | `Print_SetOutline` | MSXgl | print.h | pendente |  |
 | `Print_SetPatternOffset` | MSXgl | print.h | pendente |  |
+| `Print_SetPosition` | MSXgl | print.h | pendente |  |
 | `Print_SetPositionX` | MSXgl | print.h | pendente |  |
 | `Print_SetPositionY` | MSXgl | print.h | pendente |  |
 | `Print_SetShadow` | MSXgl | print.h | pendente |  |
@@ -200,12 +212,15 @@
 | `Print_SetTextFont` | MSXgl | print.h | pendente |  |
 | `Print_SetVRAMFont` | MSXgl | print.h | pendente |  |
 | `Print_Space` | MSXgl | print.h | pendente |  |
-| `String_Format` | MSXgl | string.h | pendente |  |
-| `String_FormatVA` | MSXgl | string.h | pendente |  |
+| `Print_Tab` | MSXgl | print.h | pendente |  |
+| `String_Copy` | MSXgl | string.h | feito | CSTR_Copy |
+| `String_Format` | MSXgl | string.h | planejado | CSTR_Format |
+| `String_FormatVA` | MSXgl | string.h | planejado | CSTR_Format |
 | `String_FromUInt16` | MSXgl | string.h | pendente |  |
-| `String_FromUInt16ZT` | MSXgl | string.h | pendente |  |
+| `String_FromUInt16ZT` | MSXgl | string.h | feito | NUM_U16ToDecW |
 | `String_FromUInt8` | MSXgl | string.h | pendente |  |
-| `String_FromUInt8ZT` | MSXgl | string.h | pendente |  |
+| `String_FromUInt8ZT` | MSXgl | string.h | feito | NUM_U16ToDecW |
+| `String_Length` | MSXgl | string.h | feito | CSTR_Len |
 
 ## VDP
 
@@ -303,6 +318,7 @@
 | `VDP_HideAllSprites` | MSXgl | vdp.h | feito | VDP_SpriteHideAll |
 | `VDP_HideSprite` | MSXgl | vdp.h | feito | VDP_SpriteHide |
 | `VDP_Initialize` | MSXgl | vdp.h | pendente |  |
+| `VDP_IsBitmapMode` | MSXgl | vdp.h | pendente |  |
 | `VDP_IsPatternMode` | MSXgl | vdp.h | pendente |  |
 | `VDP_LoadBankColor_GM2` | MSXgl | vdp.h | pendente |  |
 | `VDP_LoadBankPattern_GM2` | MSXgl | vdp.h | pendente |  |
@@ -474,13 +490,14 @@
 | `KeySound` | Fusion-C | msx_fusion.h | pendente |  |
 | `KeyboardRead` | Fusion-C | msx_fusion.h | pendente |  |
 | `KillKeyBuffer` | Fusion-C | msx_fusion.h | pendente |  |
-| `WaitKey` | Fusion-C | msx_fusion.h | pendente |  |
+| `WaitKey` | Fusion-C | msx_fusion.h | feito | CON_ReadKey |
 | `IPM_GetInputState` | MSXgl | input_manager.h | pendente |  |
 | `IPM_GetInputTimer` | MSXgl | input_manager.h | pendente |  |
 | `IPM_GetStatus` | MSXgl | input_manager.h | pendente |  |
 | `IPM_GetStickDirection` | MSXgl | input_manager.h | pendente |  |
 | `IPM_Initialize` | MSXgl | input_manager.h | pendente |  |
 | `IPM_RegisterEvent` | MSXgl | input_manager.h | pendente |  |
+| `IPM_SetTimer` | MSXgl | input_manager.h | pendente |  |
 | `IPM_Update` | MSXgl | input_manager.h | pendente |  |
 | `Input_Detect` | MSXgl | input.h | pendente |  |
 | `Keyboard_IsKeyPressed` | MSXgl | keyboard.h | pendente |  |
@@ -499,7 +516,9 @@
 | `MouseReadTo` | Fusion-C | msx_fusion.h | pendente |  |
 | `TriggerRead` | Fusion-C | msx_fusion.h | pendente |  |
 | `Joystick_GetDirection` | MSXgl | joystick.h | pendente |  |
+| `Joystick_GetDirectionChange` | MSXgl | joystick.h | pendente |  |
 | `Joystick_IsButtonPressed` | MSXgl | joystick.h | pendente |  |
+| `Joystick_IsButtonPushed` | MSXgl | joystick.h | pendente |  |
 | `Joystick_Read` | MSXgl | joystick.h | pendente |  |
 | `Joystick_Update` | MSXgl | joystick.h | pendente |  |
 | `Mouse_GetAdjustedOffsetX` | MSXgl | mouse.h | pendente |  |
@@ -557,9 +576,12 @@
 | `PT3Play` | Fusion-C | pt3replayer.h | pendente |  |
 | `PT3Rout` | Fusion-C | pt3replayer.h | pendente |  |
 | `PlayFX` | Fusion-C | ayfx_player.h | pendente |  |
+| `Reg7Patch` | Fusion-C | ayfx_player.h | pendente |  |
 | `TestFX` | Fusion-C | ayfx_player.h | pendente |  |
 | `UninstallReplayer` | Fusion-C | pt3replayer.h | pendente |  |
 | `UpdateFX` | Fusion-C | ayfx_player.h | pendente |  |
+| `playsnd` | Fusion-C | ayfx_player.h | pendente |  |
+| `setnoises` | Fusion-C | ayfx_player.h | pendente |  |
 | `AKG_InitSFX` | MSXgl | arkos/akg_player.h | pendente |  |
 | `AKG_IsPlaying` | MSXgl | arkos/akg_player.h | pendente |  |
 | `AKG_Play` | MSXgl | arkos/akg_player.h | pendente |  |
@@ -623,6 +645,7 @@
 | `NDP_IsInitialized` | MSXgl | ndp/ndp_player.h | pendente |  |
 | `NDP_IsPlaying` | MSXgl | ndp/ndp_player.h | pendente |  |
 | `NDP_IsStopped` | MSXgl | ndp/ndp_player.h | pendente |  |
+| `NDP_MuteChannel` | MSXgl | ndp/ndp_player.h | pendente |  |
 | `NDP_MuteChannelA` | MSXgl | ndp/ndp_player.h | pendente |  |
 | `NDP_MuteChannelB` | MSXgl | ndp/ndp_player.h | pendente |  |
 | `NDP_MuteChannelC` | MSXgl | ndp/ndp_player.h | pendente |  |
@@ -651,6 +674,7 @@
 | `PT3_Init` | MSXgl | pt3/pt3_player.h | pendente |  |
 | `PT3_InitSong` | MSXgl | pt3/pt3_player.h | pendente |  |
 | `PT3_IsPlaying` | MSXgl | pt3/pt3_player.h | pendente |  |
+| `PT3_Mute` | MSXgl | pt3/pt3_player.h | pendente |  |
 | `PT3_Pause` | MSXgl | pt3/pt3_player.h | pendente |  |
 | `PT3_Play` | MSXgl | pt3/pt3_player.h | pendente |  |
 | `PT3_ResetFinishCB` | MSXgl | pt3/pt3_player.h | pendente |  |
@@ -693,6 +717,7 @@
 | `VGM_Stop` | MSXgl | vgm/vgm_player.h | pendente |  |
 | `WYZ_Decode` | MSXgl | wyz/wyz_player.h | pendente |  |
 | `WYZ_InitPlayer` | MSXgl | wyz/wyz_player2.h | pendente |  |
+| `WYZ_Initialize` | MSXgl | wyz/wyz_player2.h | pendente |  |
 | `WYZ_IsFinished` | MSXgl | wyz/wyz_player.h | pendente |  |
 | `WYZ_Pause` | MSXgl | wyz/wyz_player.h | pendente |  |
 | `WYZ_Play` | MSXgl | wyz/wyz_player2.h | pendente |  |
@@ -759,7 +784,9 @@
 | --- | --- | --- | --- | --- |
 | `BIOS_ApplyBorder` | MSXgl | bios.h | pendente |  |
 | `BIOS_ApplyColor` | MSXgl | bios.h | pendente |  |
+| `BIOS_BackupHook` | MSXgl | bios_hook.h | pendente |  |
 | `BIOS_Beep` | MSXgl | bios.h | pendente |  |
+| `BIOS_ClearHook` | MSXgl | bios_hook.h | pendente |  |
 | `BIOS_ClearScreen` | MSXgl | bios.h | pendente |  |
 | `BIOS_ClearSprites` | MSXgl | bios.h | pendente |  |
 | `BIOS_CopyFromVRAM` | MSXgl | bios.h | pendente |  |
@@ -817,6 +844,7 @@
 | `BIOS_PrinterSendChar` | MSXgl | bios.h | pendente |  |
 | `BIOS_PrinterSendString` | MSXgl | bios.h | pendente |  |
 | `BIOS_ReadPSG` | MSXgl | bios.h | pendente |  |
+| `BIOS_ReadVDP` | MSXgl | bios.h | pendente |  |
 | `BIOS_ReadVRAM` | MSXgl | bios.h | pendente |  |
 | `BIOS_Reboot` | MSXgl | bios.h | pendente |  |
 | `BIOS_Set1BitSound` | MSXgl | bios.h | pendente |  |
@@ -825,6 +853,8 @@
 | `BIOS_SetCPUMode` | MSXgl | bios.h | pendente |  |
 | `BIOS_SetColor` | MSXgl | bios.h | pendente |  |
 | `BIOS_SetHookCallback` | MSXgl | bios_hook.h | pendente |  |
+| `BIOS_SetHookDirectCallback` | MSXgl | bios_hook.h | pendente |  |
+| `BIOS_SetHookInterSlotCallback` | MSXgl | bios_hook.h | pendente |  |
 | `BIOS_SetKeyClick` | MSXgl | bios.h | pendente |  |
 | `BIOS_SetScreen0` | MSXgl | bios.h | pendente |  |
 | `BIOS_SetScreen1` | MSXgl | bios.h | pendente |  |
@@ -1003,6 +1033,7 @@
 | `Suspend` | Fusion-C | msx_fusion.h | pendente |  |
 | `Write` | Fusion-C | io.h | pendente |  |
 | `_REGs` | Fusion-C | msx_fusion.h | pendente |  |
+| `_seek` | Fusion-C | io.h | pendente |  |
 | `_size` | Fusion-C | io.h | pendente |  |
 | `_tell` | Fusion-C | io.h | pendente |  |
 | `Basic_GetByte` | MSXgl | basic_usr.h | pendente |  |
@@ -1249,16 +1280,22 @@
 | `V9_SetSpriteDisableP1` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpriteDisableP2` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpriteEnable` | MSXgl | v9990.h | pendente |  |
+| `V9_SetSpriteEnableP1` | MSXgl | v9990.h | pendente |  |
+| `V9_SetSpriteEnableP2` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpriteInfoP1` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpriteInfoP2` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpriteP1` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpriteP2` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpritePaletteOffset` | MSXgl | v9990.h | pendente |  |
+| `V9_SetSpritePaletteP1` | MSXgl | v9990.h | pendente |  |
+| `V9_SetSpritePaletteP2` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpritePatternAddr` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpritePatternP1` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpritePatternP2` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpritePositionP1` | MSXgl | v9990.h | pendente |  |
 | `V9_SetSpritePositionP2` | MSXgl | v9990.h | pendente |  |
+| `V9_SetSpritePriorityP1` | MSXgl | v9990.h | pendente |  |
+| `V9_SetSpritePriorityP2` | MSXgl | v9990.h | pendente |  |
 | `V9_SetVBlankInterrupt` | MSXgl | v9990.h | pendente |  |
 | `V9_SetWriteAddress` | MSXgl | v9990.h | pendente |  |
 | `V9_TileAddrP1A` | MSXgl | v9990.h | pendente |  |
@@ -1414,6 +1451,7 @@
 | `Menu_SetInputCallback` | MSXgl | game/menu.h | pendente |  |
 | `Menu_SetScreenWidth` | MSXgl | game/menu.h | pendente |  |
 | `Menu_Update` | MSXgl | game/menu.h | pendente |  |
+| `NTap_Check` | MSXgl | device/ninjatap.h | pendente |  |
 | `NTap_CheckDM` | MSXgl | device/ninjatap.h | pendente |  |
 | `NTap_CheckMGL` | MSXgl | device/ninjatap.h | pendente |  |
 | `NTap_CheckST` | MSXgl | device/ninjatap.h | pendente |  |

@@ -1,0 +1,20 @@
+; Caracteres (lib/src/char). Todas recebem e devolvem o caractere/codigo em A.
+; Os predicados devolvem 1 (sim) ou 0 (nao).
+
+func CHAR_IsDigit(c: byte in A): byte out A                ; '0'..'9'
+func CHAR_IsAlpha(c: byte in A): byte out A                ; letras A-Z e a-z
+func CHAR_IsAlNum(c: byte in A): byte out A                ; letra ou digito
+func CHAR_IsUpper(c: byte in A): byte out A
+func CHAR_IsLower(c: byte in A): byte out A
+func CHAR_IsHexDigit(c: byte in A): byte out A
+func CHAR_IsSpace(c: byte in A): byte out A                ; espaco, TAB, LF, VT, FF, CR
+func CHAR_IsControl(c: byte in A): byte out A              ; 00h..1Fh e 7Fh
+func CHAR_IsAscii(c: byte in A): byte out A                ; < 128
+func CHAR_IsPrint(c: byte in A): byte out A                ; 20h..7Eh
+func CHAR_IsGraph(c: byte in A): byte out A                ; 21h..7Eh
+func CHAR_IsPunct(c: byte in A): byte out A
+
+func CHAR_ToUpper(c: byte in A): byte out A
+func CHAR_ToLower(c: byte in A): byte out A
+func CHAR_DigitValue(c: byte in A): byte out A             ; 0..15, ou 255 se nao for digito hexadecimal
+func CHAR_HexChar(v: byte in A): byte out A                ; 0..15 -> '0'..'9','A'..'F'

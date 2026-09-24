@@ -147,6 +147,11 @@ dialeto oferece **tudo o que o guia (MSXgl/Fusion-C) oferece**, na sua sintaxe:
    `FORCLR/BAKCLR/BDRCLR`; `SCREEN` reinicializa a tela);
 4. ligar o `COLOR` que já existe no lexer, criar `SOUND` etc.
 
+5. **`STRING` como valor de primeira classe** no DIGNAC (hoje só atribuição e `PRINT`; o compilador recusa
+   `a$` como argumento de chamada): passar `STRING` e literais de string como argumento (`ptr`), devolver `STRING`
+   de função e escrever `LEFT$`/`MID$`/`INSTR`/`VAL`/`UCASE$` como expressões — as rotinas `STR_*` já existem e
+   operam no formato das `STRING` do DIGNAC (tamanho + dados); falta o compilador ligar uma coisa à outra.
+
 Depois, no WIRTH80: `uses` + `unit` no `.api` (escopo dos nomes), estado das units
 (`TextColor`, `SetColor`, `GotoXY`) e mais tipos (`array`, `record`, `real`).
 

@@ -1,0 +1,23 @@
+; Strings terminadas em zero, como as de C (lib/src/cstr). Ponteiros sao enderecos.
+; Quem escreve no destino garante que ele tem espaco (comprimento + 1 bytes).
+
+func CSTR_Len(s: ptr in HL): word out HL
+func CSTR_Copy(src: ptr in HL, dst: ptr in DE): word out DE                  ; devolve o fim do destino
+func CSTR_CopyN(src: ptr in HL, dst: ptr in DE, max: word in BC): word out DE ; ate max caracteres, sempre termina com zero
+func CSTR_Cat(src: ptr in HL, dst: ptr in DE): word out DE                   ; anexa src ao fim de dst
+func CSTR_CatN(src: ptr in HL, dst: ptr in DE, max: word in BC): word out DE
+
+func CSTR_Compare(a: ptr in HL, b: ptr in DE): byte out A                    ; 0 iguais, 1 se a > b, 255 (-1) se a < b
+func CSTR_CompareN(a: ptr in HL, b: ptr in DE, max: word in BC): byte out A
+func CSTR_CompareNoCase(a: ptr in HL, b: ptr in DE): byte out A
+
+func CSTR_FindChar(s: ptr in HL, c: byte in A): word out HL                  ; endereco da 1a ocorrencia, ou 0
+func CSTR_FindLastChar(s: ptr in HL, c: byte in A): word out HL
+func CSTR_FindStr(haystack: ptr in HL, needle: ptr in DE): word out HL       ; como strstr
+
+proc CSTR_ToUpper(s: ptr in HL)                                              ; no lugar
+proc CSTR_ToLower(s: ptr in HL)
+proc CSTR_Reverse(s: ptr in HL)
+proc CSTR_TrimLeft(s: ptr in HL)
+proc CSTR_TrimRight(s: ptr in HL)
+proc CSTR_ReplaceChar(s: ptr in HL, from: byte in D, to: byte in E)

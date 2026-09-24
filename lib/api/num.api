@@ -1,0 +1,14 @@
+; Conversoes numero <-> texto terminado em zero (lib/src/num). Cada conversao para
+; texto devolve em DE o endereco do terminador (para encadear).
+
+func NUM_U16ToCStr(v: word in HL, dst: ptr in DE): word out DE       ; decimal sem sinal (6 bytes)
+func NUM_I16ToCStr(v: word in HL, dst: ptr in DE): word out DE       ; decimal com sinal (7 bytes)
+func NUM_U16ToDecW(v: word in HL, dst: ptr in DE, width: byte in B, pad: byte in A): word out DE ; largura fixa, alinhado a direita
+func NUM_U8ToHex(v: byte in A, dst: ptr in DE): word out DE          ; 2 digitos
+func NUM_U16ToHex(v: word in HL, dst: ptr in DE): word out DE        ; 4 digitos
+func NUM_U8ToBin(v: byte in A, dst: ptr in DE): word out DE          ; 8 digitos
+func NUM_U16ToBin(v: word in HL, dst: ptr in DE): word out DE        ; 16 digitos
+
+func NUM_CStrToU16(s: ptr in HL): word out HL                        ; decimal sem sinal; 0 se nao ha numero
+func NUM_CStrToI16(s: ptr in HL): word out HL                        ; decimal com sinal
+func NUM_CStrToHex16(s: ptr in HL): word out HL                      ; hexadecimal (0x, &H ou $ opcionais)
