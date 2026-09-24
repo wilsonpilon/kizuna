@@ -11,7 +11,8 @@
 ;   4. um retangulo cheio azul e uma copia dele ao lado
 ;   5. um quadradinho 8x8 de degrade (16 cores) no canto inferior direito
 ; Ao sair da SCREEN 5, o texto diz se a leitura de volta da VRAM bateu com o que
-; foi escrito. Confirme no relatorio 1. e 2. e 3. (sao os pontos nao verificados).
+; foi escrito. Resultado do teste feito por Wilson em 2026-09-24: OK (a linha tem
+; NX+1 pontos; leitura de volta bateu).
 ; ==============================================================================
 
 MODULE VDPCMDDEMO

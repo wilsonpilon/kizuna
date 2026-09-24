@@ -11,6 +11,10 @@ package z80sim
 // o chip quer o próximo byte (escrita em R#44) ou tem um pixel pronto em S#7
 // (leitura); CE fica em 1 até o último byte.
 //
+// O LINE desenha NX+1 pontos (NX = lado maior): confirmado no teste real de
+// sample/vdpcmd em 2026-09-24. O resto do motor segue a folha de dados e ainda
+// não foi conferido em hardware.
+//
 // Os registradores de coordenada (R#32-R#43) NÃO são atualizados ao fim do
 // comando (o chip deixa DY/SY/NY avançados); rotinas que dependam disso não
 // são verificáveis aqui.

@@ -17,9 +17,12 @@ recebem ponteiros para palavras em RAM (x, y, ...): mais parâmetros do que cabe
 O simulador ganhou o **motor de comandos** (`pkg/z80sim/vdpcmd.go`: os 13 comandos, as 5 operações
 lógicas + variantes T, SCREEN 5 a 8, DIX/DIY, protocolo TR/CE, S#7/S#8/S#9) e as rotinas são
 conferidas pixel a pixel contra imagens de referência em Go nos 4 modos (mutações verificadas).
-`sample/vdpcmd/` é um programa de teste para hardware/openMSX. **Não verificado em hardware:**
-que o LINE desenha NX+1 pontos (NX = lado maior), que é o que o modelo e `VDP_HwLine` assumem; o
-sample tem marcas brancas nas pontas justamente para conferir isso a olho.
+`sample/vdpcmd/` é um programa de teste para hardware/openMSX, **rodado por Wilson em 2026-09-24:
+OK**. Isso confirma o que ele exercita (`HwFillRect`, `HwBox`, `HwLine` — o LINE desenha NX+1
+pontos, NX = lado maior, como o modelo e `VDP_HwLine` assumem —, `HwPlot`, `HwBoxFill`,
+`HwCopyRect`, `HwLoadRect` e `HwReadRect`). **Ainda só no simulador:** `HwFillRectFast`,
+`HwMoveRect`, `HwCopyLines`, `HwLoadFast`, `HwSearch`, `HwPoint`, `CmdStop`, as operações lógicas
+além de IMP, e tudo da 2a e da 2b.
 
 ### MSXLIB Fase 2b — tabelas, sprites, piscar, rolagem (`lib/src/vdp`, ~45 rotinas novas)
 

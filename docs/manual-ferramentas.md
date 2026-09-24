@@ -262,7 +262,7 @@ existente precisa ser alterado:
 | ------- | --------- | ----------- |
 | **`bdos`** | `BDOS_Call`, `BDOS_PrintChar`, `BDOS_PrintString`, `BDOS_ReadChar`, `BDOS_Exit`, `BDOS_FileOpen`, `BDOS_FileCreate`, `BDOS_FileClose`, `BDOS_FileRead`, `BDOS_FileWrite`, `BDOS_FileSeek` | Kernel MSX-DOS (BDOS 0x0005), I/O de arquivo por handle (MSX-DOS 2, funções 43h-4Ah). |
 | **`bios`** | `BIOS_Call`, `BIOS_CHPUT`, `BIOS_CHGET`, `BIOS_CLS`, `BIOS_POSIT`, `BIOS_BEEP`, `BIOS_INIT32`, `BIOS_CHGMOD` | Chamadas inter-slot seguras à Main-ROM BIOS via `CALSLT`, preservando o estado do MSX-DOS. |
-| **`vdp`** | `VDP_WriteReg`, `VDP_WriteReg_Raw`, `VDP_SetWriteAddr`, `VDP_SetReadAddr`, `VDP_FillVRAM`, `VDP_WriteVRAM`, `VDP_ReadVRAM`, `VDP_CopyVRAM`, `VDP_SetColor`, `VDP_SetScreen`, `VDP_InitScreen0/1/2`, `VDP_InitScreen2_Tables`, `VDP_PSet`, `VDP_PSet_Raw`, `VDP_PSet_HW`, `VDP_CommandWait_Raw`, `VDP_Line`, `VDP_BoxFill`, `VDP_SpriteDefine`, `VDP_SpriteSet`, `VDP_SpriteHide`, `VDP_SpriteHideAll`, `VDP_SpriteSetSize`, e da Fase 2a: `VDP_SetReg/GetReg/UpdateReg` (cópia sombra), `VDP_ReadStatus`, `VDP_WaitVBlank/WaitFrames`, `VDP_DisplayOn/Off`, `VDP_SetMode`, `VDP_VramSetWrite/SetRead/Put/Get/WriteStream/ReadStream/FillStream` (17 bits), `VDP_VPoke/VPeek`, `VDP_ClearVRAM`, `VDP_SetPaletteEntry/Block`, `VDP_SetDefaultPalette/SetMSX1Palette`, e da Fase 2b: `VDP_Set/Get{Name,Pattern,Color,SpriteAttr,SpritePattern}Table`, `VDP_SpriteSetPos/SetAll/SetColor/SetLineColors/DisableFrom/PatternLoad` (modos 1 e 2), `VDP_BlinkFill/Line/Cell`, `VDP_SetVerticalOffset`, `VDP_GetVersion`, e da Fase 2c (motor de comandos, SCREEN 5-8): `VDP_CmdRun/Wait/Busy/Stop`, `VDP_HwPlot/HwPoint`, `VDP_HwFillRect/FillRectFast/BoxFill/Box/Line`, `VDP_HwCopyRect/MoveRect/CopyLines`, `VDP_HwSearch`, `VDP_HwLoadRect/LoadFast/ReadRect` e mais | V9938/TMS9918: VRAM, paleta, SCREEN 0/1/2, linhas/caixas, sprites (Sprite Mode 1, 8x8/16x16). |
+| **`vdp`** | `VDP_WriteReg`, `VDP_WriteReg_Raw`, `VDP_SetWriteAddr`, `VDP_SetReadAddr`, `VDP_FillVRAM`, `VDP_WriteVRAM`, `VDP_ReadVRAM`, `VDP_CopyVRAM`, `VDP_SetColor`, `VDP_SetScreen`, `VDP_InitScreen0/1/2`, `VDP_InitScreen2_Tables`, `VDP_PSet`, `VDP_PSet_Raw`, `VDP_PSet_HW`, `VDP_CommandWait_Raw`, `VDP_Line`, `VDP_BoxFill`, `VDP_SpriteDefine`, `VDP_SpriteSet`, `VDP_SpriteHide`, `VDP_SpriteHideAll`, `VDP_SpriteSetSize`, e da Fase 2a: `VDP_SetReg/GetReg/UpdateReg` (cópia sombra), `VDP_ReadStatus`, `VDP_WaitVBlank/WaitFrames`, `VDP_DisplayOn/Off`, `VDP_SetMode`, `VDP_VramSetWrite/SetRead/Put/Get/WriteStream/ReadStream/FillStream` (17 bits), `VDP_VPoke/VPeek`, `VDP_ClearVRAM`, `VDP_SetPaletteEntry/Block`, `VDP_SetDefaultPalette/SetMSX1Palette`, e da Fase 2b: `VDP_Set/Get{Name,Pattern,Color,SpriteAttr,SpritePattern}Table`, `VDP_SpriteSetPos/SetAll/SetColor/SetLineColors/DisableFrom/PatternLoad` (modos 1 e 2), `VDP_BlinkFill/Line/Cell`, `VDP_SetVerticalOffset`, `VDP_GetVersion`, e da Fase 2c (motor de comandos, SCREEN 5-8): `VDP_CmdRun/Wait/Busy/Stop`, `VDP_HwPlot/HwPoint`, `VDP_HwFillRect/FillRectFast/BoxFill/Box/Line`, `VDP_HwCopyRect/MoveRect/CopyLines`, `VDP_HwSearch`, `VDP_HwLoadRect/LoadFast/ReadRect` e mais | TMS9918/V9938/V9958: registradores com cópia sombra, VRAM de 128 KB, paleta, modos SCREEN 0-8, tabelas, sprites modo 1 e 2, piscar, rolagem e o motor de comandos (linhas, caixas, cópias, transferências). Ver §6.1.2. |
 | **`psg`** | `PSG_Write`, `PSG_Read`, `PSG_MuteAll`, `PSG_PlayTone`, `PSG_PlayNoteIndexed`, `PSG_PlaySequence` | AY-3-8910/YM2149: registradores, notas por nome/oitava, sequências de melodia. |
 | **`string`** | `StrLen`, `StrCopy`, `StrToUpper`, `PrintHex8`, `PrintHex16`, `PrintDec16`, `PrintDec16ToBuffer`, `StrCopyLen`, `BDOS_PrintLenStr` | Texto terminado em `\0` (rotinas clássicas) e no formato "short string" 1-byte-tamanho+dados (`StrCopyLen`/`BDOS_PrintLenStr`, usadas pelas STRING de verdade do DIGNAC — ver `docs/manual-basic-dignified.md` §3); conversão pra hex/decimal. | **As rotinas novas de texto estão nas áreas `char`, `cstr`, `str`, `num` e `console` (abaixo); estes nomes continuam como estão.**
 | **`char`** | `CHAR_IsDigit/Alpha/AlNum/Upper/Lower/HexDigit/Space/Control/Ascii/Print/Graph/Punct`, `CHAR_ToUpper`, `CHAR_ToLower`, `CHAR_DigitValue`, `CHAR_HexChar` | Classificação e conversão de caracteres (ASCII de 7 bits). Predicados devolvem A = 1/0 e o flag Z. Testados nos 256 valores. |
@@ -302,6 +302,48 @@ de algum outro módulo da biblioteca. Rótulos auxiliares referenciados de
 outro módulo são promovidos a `PUBLIC` automaticamente pelo KAJI80 — por
 isso rotinas que compartilham dados/rótulos internos (ex.: `VDP_Line` e suas
 células de trabalho) ficam juntas num mesmo módulo.
+
+### 6.1.2. O VDP da MSXLIB (Fase 2)
+
+Convenções das rotinas `VDP_*` novas (todas em Assembly, chamadas diretas; os descritores para
+BASIC/Pascal estão em `lib/api/vdp.api`, exceto as que devolvem duas saídas):
+
+- **Endereço de VRAM de 17 bits** (128 KB) viaja em `A:HL`: `A` = bit 16 (0 ou 1), `HL` = os 16
+  bits baixos. Vale para `VDP_VramSetWrite/SetRead`, os `VDP_Set/Get*Table` e a base das rotinas
+  de sprite. `VDP_VPoke/VPeek` recebem o bit 16 em `D`.
+- **Cópia sombra**: os registradores do VDP são só de escrita. Toda rotina que altera um
+  registrador (`VDP_SetReg`, `VDP_UpdateReg`, `VDP_SetMode`, os setters de tabela...) atualiza
+  `VDP_Shadow` e muda **só os bits que lhe cabem**. Escritas por outros meios (`VDP_WriteReg`, a
+  BIOS, `BIOS_CHGMOD`) não passam pela cópia — depois de um `CHGMOD` chame `VDP_SetMode` (ou
+  `VDP_SetReg`) para re-sincronizar antes de usar rotinas que dependem do modo.
+- **Modo**: `VDP_SetMode(0..9)` = SCREEN 0 a 8 e o texto de 80 colunas; grava só registradores
+  (não limpa a VRAM, não carrega fonte nem paleta). Os setters/getters de tabela, as rotinas de
+  sprite e as de piscar consultam o modo ajustado por ela (ex.: bits fixos em 1 do SCREEN 2/4,
+  bitmap, sprites modo 2).
+- **Preservação**: as rotinas preservam `A, BC, DE, HL` salvo indicação, destroem flags e
+  **reabilitam as interrupções (`EI`)** ao terminar. As transferências com a CPU (`VDP_HwLoadRect`,
+  `VDP_HwReadRect`...) rodam com `DI` do começo ao fim.
+- **Retângulos e linhas** recebem **ponteiro para palavras em RAM** (`x, y, largura, altura` ou
+  `x1, y1, x2, y2`), porque não cabem em registradores. Coordenadas: X 0-511, Y 0-1023.
+
+**Motor de comandos (SCREEN 5 a 8 somente).** `VDP_CmdRun(HL = bloco de 15 bytes)` grava
+`SX SY DX DY NX NY CLR ARG CMD` em R#32-R#46 e dispara; não espera o fim — use `VDP_CmdWait`
+antes de ler resultados ou mexer na VRAM com a CPU (as rotinas `VDP_Hw*` já esperam o comando
+*anterior* antes de disparar o novo). Operação lógica (`B` ou `H`): 0 = copia, 1 AND, 2 OR, 3 XOR,
+4 NOT, +8 = a cor 0 é transparente. `VDP_HwLine` desenha NX+1 pontos (NX = lado maior) com os dois
+extremos incluídos; `VDP_HwBox` desenha os cantos duas vezes (com XOR eles se apagam — use
+`VDP_HwBoxFill` ou a operação de cópia). As variantes `Fast` (HMMV/HMMM/HMMC) trabalham em bytes:
+`X` e largura em múltiplos de pixels-por-byte (SCREEN 5: 2, 6: 4, 7: 2, 8: 1).
+
+**Estado de verificação** (2026-09-24): tudo é conferido no simulador (`pkg/z80sim`, que tem um
+modelo do V9938 com motor de comandos) contra referências em Go. Em hardware/openMSX foram
+confirmados, pelo `sample/vdpcmd`: `HwFillRect`, `HwBox`, `HwLine` (NX+1 pontos), `HwPlot`,
+`HwBoxFill`, `HwCopyRect`, `HwLoadRect` e `HwReadRect`. **Ainda não testados fora do simulador:** a
+Fase 2a inteira (modos, sombra, paleta, VRAM de 17 bits), a 2b (tabelas, sprites modo 1/2, piscar,
+rolagem — a codificação de `VDP_SetHScrollCoarse/Fine` e `VDP_SetAdjustRaw` é o valor cru do
+registrador e o sentido do deslocamento em pixels não foi conferido) e, na 2c, `HwFillRectFast`,
+`HwMoveRect`, `HwCopyLines`, `HwLoadFast`, `HwSearch`, `HwPoint`, `CmdStop` e as operações lógicas
+além da cópia. A cobertura frente ao guia está em `docs/cobertura.md`.
 
 ### 6.2. Depuração e garantias do KAJI80
 

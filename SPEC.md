@@ -188,6 +188,7 @@ convenção de registradores do Turbo Pascal original).
 6. [x] **Fase 5.2**: `WIRTH80` (compilador Pascal / TP4-like) gerando `.MOB` e integrando com `MSXLIB`.
 7. [x] **Fase 5.3**: `DIGNAC` (compilador do MSX-BASIC Dignified para Z80).
 8. [x] **Fase 6**: `OBI` como orquestrador declarativo (`Obifile`).
+9. [ ] **Fase 7 (em andamento)**: expansão da `MSXLIB` (matemática, memória, texto, VDP completo, desenho, entrada, som, sistema/BIOS/DOS/relógio, V9990), usando MSXgl e Fusion-C só como *catálogo* do que cobrir — API própria, recriada do zero (plano e andamento em `docs/plano-expansao-msxlib.md`; cobertura em `docs/cobertura.md`). Feito: Fase 0 (infra: descritores `.api`, simulador Z80), Fase 1 (matemática, memória, texto), Fase 2a-2c (VDP: registradores/sombra, VRAM 128 KB, paleta, modos, tabelas, sprites, motor de comandos). Falta: 2d (texto em VRAM), Fases 3-7 e depois as camadas de linguagem (aliases estilo MS-BASIC, Turbo Pascal 4, macros KAJI80). Retomada: `docs/proxima-sessao.md`.
 
 ## 9. Fora de escopo nesta versão (ideias registradas para o futuro)
 

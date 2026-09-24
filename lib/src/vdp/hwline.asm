@@ -15,7 +15,8 @@ EXTERN VDP_Cmd_SX, VDP_Cmd_DX, VDP_Cmd_DY, VDP_Cmd_NX, VDP_Cmd_NY, VDP_Cmd_CLR, 
 
 ; VDP_HwLine: linha reta de (x1,y1) a (x2,y2), os dois extremos incluidos. Calcula
 ; o lado maior, o lado menor e os sentidos, e dispara o comando LINE (NX = lado maior,
-; NY = lado menor; o motor desenha NX+1 pontos). Coordenadas de 0 a 511 (X) e 0 a 1023 (Y).
+; NY = lado menor; o motor desenha NX+1 pontos -- confirmado no teste de
+; hardware/openMSX de 2026-09-24, sample/vdpcmd). Coordenadas de 0 a 511 (X) e 0 a 1023 (Y).
 ; Entrada: HL = pontos em RAM: x1(2) y1(2) x2(2) y2(2), A = cor, B = operacao logica
 ; Preserva: A, BC, DE, HL. Destrói: flags. Reabilita as interrupcoes (EI).
 VDP_HwLine:

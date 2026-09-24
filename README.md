@@ -35,7 +35,7 @@ BASIC estruturado no mesmo binário `.COM`.
 | `MUSUBI`  | Linker com Smart-Linking e Mapper     | **Concluído & Validado — um único ponto de entrada garantido por executável** (v4.9.0) |
 | `HAKO`    | Bibliotecário / Empacotador (`.hlib`) | **Concluído & Validado** (v4.3)   |
 | `MOBDUMP` | Inspecionador de objetos `.MOB`       | **Concluído & Validado** (v4.2)   |
-| `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG) | **Concluído & Validado — SCREEN 2, sprites, música PSG e I/O de arquivo confirmados em hardware** (v4.7.0) |
+| `MSXLIB`  | Biblioteca padrão (BDOS/BIOS/VDP/PSG, texto, memória, matemática) | **Em expansão** — base (SCREEN 2, sprites, música PSG, I/O de arquivo) confirmada em hardware (v4.7.0); Fase 1 (matemática, memória, texto) e Fase 2a-2c (VDP: modos, tabelas, sprites, motor de comandos) no simulador, motor de comandos parcialmente confirmado em hardware (`docs/plano-expansao-msxlib.md`) |
 | `OBI`     | Orquestrador de build (`Obifile`)     | **Concluído & Validado, confirmado em hardware — as 3 linguagens linkadas num único `.COM`, testado em hardware real** (v4.9.0) |
 
 Cada compilador/assembler gera um objeto relocável no formato próprio `.MOB`;
