@@ -127,6 +127,14 @@ isolado que não é uma constante `EQU`/variável conhecida (`LD HL,
 MinhaLabel`) continua funcionando normalmente como rótulo/símbolo comum —
 só some quando aparece **dentro** de uma expressão maior com operador.
 
+**Onde valem:** além dos citados acima, também os imediatos de 8 bits
+(`CP FOO+1`, `LD A, 2*3`, `BIT 1+1,A`, `OUT (PORTA+1),A`, `LD (IX+2), N-1`), os
+endereços de 16 bits (`LD HL, FOO+1`, `LD A,(FOO+1)`, `JP FOO+1`) e a contagem de
+`DS` (`DS TAMANHO*2`, `DS 3, 0FFh` preenche com 0FFh). Literais de caractere
+(`'A'`) valem em qualquer expressão. Um imediato que não resolve para um número,
+ou que fica fora de -128..255 (8 bits) / 16 bits, é **erro** — antes era lido só
+até o primeiro caractere inválido e virava `0` em silêncio (`CP FOO+1` → `CP 0`).
+
 ### Operadores (precedência igual ao C, do mais apertado pro mais solto)
 
 ```

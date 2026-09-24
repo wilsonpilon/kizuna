@@ -210,7 +210,7 @@ func (l *Lexer) NextToken() (Token, error) {
 			if err != nil {
 				return Token{}, fmt.Errorf("linha %d:%d: número hexadecimal inválido: %w", startLine, startCol, err)
 			}
-			return Token{Type: TokenNumber, Value: hexStr, Number: val, Line: startLine, Col: startCol}, nil
+			return Token{Type: TokenNumber, Value: "$" + hexStr, Number: val, Line: startLine, Col: startCol}, nil
 		}
 
 		if ch == '%' {
@@ -223,7 +223,7 @@ func (l *Lexer) NextToken() (Token, error) {
 			if err != nil {
 				return Token{}, fmt.Errorf("linha %d:%d: número binário inválido: %w", startLine, startCol, err)
 			}
-			return Token{Type: TokenNumber, Value: binStr, Number: val, Line: startLine, Col: startCol}, nil
+			return Token{Type: TokenNumber, Value: binStr + "b", Number: val, Line: startLine, Col: startCol}, nil
 		}
 
 		// Números iniciando com dígito decimal (0-9)

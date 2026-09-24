@@ -598,12 +598,11 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 	case "DW", "DEFW", "WORD":
 		return uint16(len(ops) * 2), nil
 	case "DS", "DEFS", "BLKB":
-		if len(ops) > 0 {
-			var count int
-			_, _ = fmt.Sscanf(ops[0], "%d", &count)
-			return uint16(count), nil
+		count, _, err := a.dsOperands(ops)
+		if err != nil {
+			return 0, err
 		}
-		return 0, nil
+		return uint16(count), nil
 	case "EQU", "ASSIGN":
 		return 0, nil
 	case "CALLBIOS":
@@ -763,7 +762,11 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 		if len(ops) != 1 {
 			return fmt.Errorf("linha %d: CALLDOS requer 1 operando (o código de função do MSX-DOS)", lineNum)
 		}
-		a.emit(0x0E, a.parseImm8(ops[0])) // LD C, n
+		fn, err := a.imm8(ops[0])
+		if err != nil {
+			return fmt.Errorf("linha %d: %v", lineNum, err)
+		}
+		a.emit(0x0E, fn) // LD C, n
 		a.emit(0xCD, 0x05, 0x00)          // CALL 0005h
 		return nil
 	case "INCBIN":
@@ -821,7 +824,10 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 		if len(ops) != 2 {
 			return fmt.Errorf("%s requer 2 operandos (bit, reg)", mnem)
 		}
-		bitVal := a.parseImm8(ops[0])
+		bitVal, err := a.imm8(ops[0])
+		if err != nil {
+			return err
+		}
 		if bitVal > 7 {
 			return fmt.Errorf("bit deve estar entre 0 e 7: %d", bitVal)
 		}
@@ -944,7 +950,10 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 		if len(ops) == 2 && strings.EqualFold(ops[0], "A") {
 			// IN A, (n)
 			port := strings.Trim(ops[1], "()")
-			val := a.parseImm8(port)
+			val, err := a.imm8(port)
+			if err != nil {
+				return err
+			}
 			a.emit(0xDB, val)
 		} else {
 			return fmt.Errorf("forma de IN não suportada: %v", ops)
@@ -953,7 +962,10 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 		if len(ops) == 2 && strings.EqualFold(ops[1], "A") {
 			// OUT (n), A
 			port := strings.Trim(ops[0], "()")
-			val := a.parseImm8(port)
+			val, err := a.imm8(port)
+			if err != nil {
+				return err
+			}
 			a.emit(0xD3, val)
 		} else {
 			return fmt.Errorf("forma de OUT não suportada: %v", ops)
@@ -1068,7 +1080,11 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 				a.emit(uint8(int64(val)))
 				continue
 			}
-			a.emit(a.parseImm8(op))
+			bv, err := a.imm8(op)
+			if err != nil {
+				return err
+			}
+			a.emit(bv)
 		}
 	case "DW", "DEFW", "WORD":
 		for _, op := range ops {
@@ -1086,12 +1102,12 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 			}
 		}
 	case "DS", "DEFS", "BLKB":
-		var count int
-		if len(ops) > 0 {
-			_, _ = fmt.Sscanf(ops[0], "%d", &count)
-			for i := 0; i < count; i++ {
-				a.emit(0x00)
-			}
+		count, fill, err := a.dsOperands(ops)
+		if err != nil {
+			return err
+		}
+		for i := 0; i < count; i++ {
+			a.emit(fill)
 		}
 	default:
 		return fmt.Errorf("instrução desconhecida '%s'", mnem)
@@ -1143,7 +1159,10 @@ func (a *Assembler) encodeAlu8(mnem string, ops []string) error {
 		return fmt.Errorf("forma de %s não suportada: %s -- ALU indireto só existe via (HL) ou (IX+d)/(IY+d), nunca endereço absoluto", mnem, target)
 	} else {
 		// Imediato de 8 bits
-		val := a.parseImm8(target)
+		val, err := a.imm8(target)
+		if err != nil {
+			return err
+		}
 		a.emit(0xC6|(opCode<<3), val)
 	}
 	return nil
@@ -1195,7 +1214,10 @@ func (a *Assembler) encodeLd(ops []string) error {
 			return nil
 		}
 		// LD (IX+d), n
-		val := a.parseImm8(ops[1])
+		val, err := a.imm8(ops[1])
+		if err != nil {
+			return err
+		}
 		a.emit(prefix, 0x36, uint8(disp), val)
 		return nil
 	}
@@ -1235,7 +1257,10 @@ func (a *Assembler) encodeLd(ops []string) error {
 			return fmt.Errorf("forma de LD não suportada: LD %s, %s -- só LD A,(nn) tem endereçamento absoluto de 16 bits pra um registrador de 8 bits; carregue em A e mova com LD %s,A", ops[0], ops[1], ops[0])
 		}
 		// LD r, n
-		val := a.parseImm8(ops[1])
+		val, err := a.imm8(ops[1])
+		if err != nil {
+			return err
+		}
 		a.emit(0x06|(d<<3), val)
 		return nil
 	}
@@ -1246,7 +1271,10 @@ func (a *Assembler) encodeLd(ops []string) error {
 			a.emit(0x70 | s)
 			return nil
 		}
-		val := a.parseImm8(ops[1])
+		val, err := a.imm8(ops[1])
+		if err != nil {
+			return err
+		}
 		a.emit(0x36, val)
 		return nil
 	}
@@ -1361,46 +1389,66 @@ func (a *Assembler) emit(bytes ...uint8) {
 	a.codeBytes = append(a.codeBytes, bytes...)
 }
 
-func (a *Assembler) parseImm8(s string) uint8 {
-	s = strings.TrimSpace(s)
-	if val, ok := a.constants[s]; ok {
-		return uint8(val & 0xFF)
+// dsOperands lê "DS contagem[, preenchimento]": a contagem é uma expressão
+// numérica (EQU, hex, aritmética); antes era lida por Sscanf("%d"), então
+// "DS 0FFh" ou "DS TAMANHO" reservavam 0 bytes em silêncio.
+func (a *Assembler) dsOperands(ops []string) (count int, fill uint8, err error) {
+	if len(ops) == 0 || len(ops) > 2 {
+		return 0, 0, fmt.Errorf("DS requer 'contagem' ou 'contagem, preenchimento'")
 	}
-	// Rótulo pré-definido (BIOS/BDOS/BIOSVARS) -- ex.: "LD C, F_OPEN" --
-	// só como último recurso, código do usuário (rótulo do arquivo ou
-	// EXTERN explícito) sempre tem prioridade. Trunca pro byte baixo, já
-	// que a maioria dos usos de 8 bits aqui é código de função BDOS
-	// (cabe num byte de verdade); um endereço BIOS de 16 bits usado aqui
-	// por engano só trunca, mesmo comportamento silencioso que qualquer
-	// outra constante grande demais já tinha antes desta leva.
-	if _, isLocal := a.symbols[s]; !isLocal {
-		if _, isExtern := a.externs[s]; !isExtern {
-			if v, ok := lookupPredefined(s); ok {
-				return uint8(v & 0xFF)
-			}
+	v, ok, err := a.EvalExpr(ops[0])
+	if err != nil {
+		return 0, 0, fmt.Errorf("DS: contagem '%s': %v", ops[0], err)
+	}
+	if !ok {
+		return 0, 0, fmt.Errorf("DS: contagem '%s' não é um número nem constante EQU", ops[0])
+	}
+	if v < 0 || v > 65535 {
+		return 0, 0, fmt.Errorf("DS: contagem %v fora de 0..65535", v)
+	}
+	if len(ops) == 2 {
+		fill, err = a.imm8(ops[1])
+		if err != nil {
+			return 0, 0, err
 		}
 	}
-	// Literal de caractere entre aspas simples: 'A', '$', etc. -- sem isso,
-	// caía no Sscanf genérico abaixo, que falha silenciosamente pra essa
-	// sintaxe e devolve 0 (mesma classe de bug já vista com operandos
-	// indexados não reconhecidos, ver estimateSize/encodeAlu8).
-	if len(s) == 3 && s[0] == '\'' && s[2] == '\'' {
-		return s[1]
+	return int(v), fill, nil
+}
+
+// imm8 avalia um imediato de 8 bits: literal (10, 0Ah, $0A, 0x0A, 1010b, 'A'),
+// constante EQU/variável, nome pré-definido (BIOS/BDOS/BIOSVARS) ou uma
+// expressão numérica inteira (FOO+1, 2*3, 1<<4, ...). Qualquer coisa que não
+// dê um número em -128..255 é ERRO -- antes disto o KAJI80 lia só o começo do
+// texto e devolvia 0 em silêncio (CP FOO+1 virava CP 0; OUT (FOO+1),A virava
+// OUT (0),A).
+func (a *Assembler) imm8(s string) (uint8, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, fmt.Errorf("imediato de 8 bits vazio")
 	}
-	// Tratar hex como 0x10, 10h, $10, #10
-	if strings.HasPrefix(s, "$") || strings.HasPrefix(s, "#") {
-		var val uint8
-		_, _ = fmt.Sscanf(s[1:], "%x", &val)
-		return val
+	v, ok, err := a.EvalExpr(s)
+	if err != nil {
+		return 0, fmt.Errorf("imediato de 8 bits '%s': %v", s, err)
 	}
-	if strings.HasSuffix(strings.ToLower(s), "h") {
-		var val uint8
-		_, _ = fmt.Sscanf(s[:len(s)-1], "%x", &val)
-		return val
+	if !ok {
+		// Um único nome que não é constante: só serve se for pré-definido
+		// (ex.: "LD C, F_OPEN") e o código do usuário não o tiver definido.
+		_, isLocal := a.symbols[s]
+		_, isExtern := a.externs[s]
+		if !isLocal && !isExtern {
+			if pv, found := lookupPredefined(s); found {
+				v, ok = float64(pv), true
+			}
+		}
+		if !ok {
+			return 0, fmt.Errorf("imediato de 8 bits '%s': '%s' não é um número nem constante EQU (rótulo/EXTERN não cabe num imediato de 8 bits)", s, s)
+		}
 	}
-	var val int
-	_, _ = fmt.Sscanf(s, "%v", &val)
-	return uint8(val)
+	n := int64(v)
+	if n < -128 || n > 255 {
+		return 0, fmt.Errorf("imediato de 8 bits '%s' vale %d, fora de -128..255", s, n)
+	}
+	return uint8(n & 0xFF), nil
 }
 
 // isValidSymbolName reporta se s tem a forma de um identificador de verdade
@@ -1478,6 +1526,18 @@ func (a *Assembler) emitAddressOrReloc(symbolOrAddr string) error {
 	}
 
 	if !isValidSymbolName(symbolOrAddr) {
+		// Expressão numérica pura (FOO+1, 2*3, 1<<8...) -- avaliada em
+		// tempo de montagem; erro claro se tiver rótulo dentro.
+		if v, ok, evalErr := a.EvalExpr(symbolOrAddr); evalErr == nil && ok {
+			n := int64(v)
+			if n < -32768 || n > 65535 {
+				return fmt.Errorf("endereço/imediato '%s' vale %d, fora de 16 bits", symbolOrAddr, n)
+			}
+			a.emit(uint8(n&0xFF), uint8((n>>8)&0xFF))
+			return nil
+		} else if evalErr != nil {
+			return fmt.Errorf("operando de endereço inválido '%s': %v", symbolOrAddr, evalErr)
+		}
 		return fmt.Errorf("operando de endereço inválido: '%s' não é um número, constante EQU nem nome de símbolo válido", symbolOrAddr)
 	}
 

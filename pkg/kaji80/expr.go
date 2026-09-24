@@ -184,6 +184,13 @@ func tokenizeExpr(s string) ([]exprTok, error) {
 				return nil, err
 			}
 			toks = append(toks, exprTok{kind: etNum, num: val, text: raw})
+		case c == '\'':
+			// Literal de caractere: 'A'
+			if i+2 >= n || s[i+2] != '\'' {
+				return nil, fmt.Errorf("literal de caractere mal formado em %q (esperado 'X')", s)
+			}
+			toks = append(toks, exprTok{kind: etNum, num: float64(s[i+1]), text: s[i : i+3]})
+			i += 3
 		case c == '$':
 			// $HEX (convenção do KAJI80 -- ver manual-assembly.md)
 			start := i
@@ -769,6 +776,23 @@ func (a *Assembler) lookupNumericName(name string) (float64, bool) {
 	if a.variables != nil {
 		if v, ok := a.variables[name]; ok {
 			return v, true
+		}
+	}
+	// Nome pré-definido (BIOS/BDOS/BIOSVARS): último recurso, o código do
+	// usuário (rótulo do arquivo ou EXTERN) sempre tem prioridade.
+	if _, isLocal := a.symbols[name]; !isLocal {
+		if _, isExtern := a.externs[name]; !isExtern {
+			// Literal hexadecimal com sufixo h sem o 0 na frente (F0h, FFh):
+			// o lexer o vê como identificador. Só vale se o nome NÃO foi
+			// declarado como rótulo/EXTERN (Each, Beach seriam números).
+			if len(name) > 1 && (name[len(name)-1] == 'h' || name[len(name)-1] == 'H') {
+				if hv, err := strconv.ParseUint(name[:len(name)-1], 16, 32); err == nil {
+					return float64(hv), true
+				}
+			}
+			if v, ok := lookupPredefined(name); ok {
+				return float64(v), true
+			}
 		}
 	}
 	return 0, false

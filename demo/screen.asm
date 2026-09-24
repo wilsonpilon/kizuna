@@ -13,6 +13,8 @@
         EXTERN  BIOS_CHGMOD, BIOS_CHGCLR, BIOS_WIDTH, BIOS_KEYOFF
         EXTERN  RES_Opening          ; resource de 12Kb, banco 3
 
+MAPPER_PAGE2    EQU     0FEh         ; porta do mapper: banco da pagina 2
+
 ; --------------------------------------------------------------
 ; Setup: SCREEN 2, COLOR 15,1,1, WIDTH 32, KEY OFF
 ; --------------------------------------------------------------
