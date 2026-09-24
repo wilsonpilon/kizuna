@@ -19,6 +19,17 @@ comportamento idêntico. Também: `BIOS_Call` não arrasta mais o módulo de
 VDP inteiro (havia uma dependência circular bios↔vdp em nível de módulo).
 Base para a expansão da MSXLIB no estilo MSXgl.
 
+### MSXLIB Fase 1 — memória (`lib/src/mem`, 22 rotinas)
+
+Cópia com tratamento de sobreposição (`MEM_Copy`, como `memmove`) e variantes diretas, preenchimento
+(8 e 16 bits), zerar, trocar, comparar, buscar, `MEM_GetSP`/`MEM_TPATop`, e um **heap dinâmico**
+(`MEM_HeapInit`/`InitToStack`, `MEM_Alloc`, `MEM_Free` com recusa de ponteiro inválido e liberação
+dupla, `MEM_BlockSize`, `MEM_HeapCompact`, `MEM_HeapSize/Free/Largest`). O heap é comparado **byte a
+byte** com um modelo em Go depois de cada operação (12 sequências aleatórias de 600 passos) mais
+checagens independentes (blocos ladrilham a região, conteúdo dos blocos vivos intacto). Descritores em
+`lib/api/mem.api`. Itens do guia deixados de fora de propósito (alocador estático, `Mutex_*`) estão
+em `docs/cobertura.map` com o motivo.
+
 ### KAJI80: conjunto Z80 documentado completo
 
 Faltavam instruções básicas: operações de bloco (`LDIR`, `LDDR`, `CPIR`, `CPDR`, `INIR`, `OTIR`…),

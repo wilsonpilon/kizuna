@@ -75,3 +75,37 @@ QMN_Set16 = MATH_Shl16
 # QMN_Get8/16 ficam pendentes de propósito: o guia divide por 2^n TRUNCANDO em direção
 # a zero, e o nosso MATH_Sar8/16 é deslocamento aritmético (arredonda para baixo) --
 # diferem nos negativos. Entra quando houver uma rotina com a mesma semântica.
+
+# --- Memória (Fase 1) --------------------------------------------------------
+Mem_Copy = MEM_Copy
+Mem_FastCopy = MEM_CopyFast
+Mem_Copy_16b = MEM_CopyWords
+Mem_FastCopy_16b = MEM_CopyFastWords
+Mem_Set = MEM_Fill
+Mem_FastSet = MEM_Fill
+Mem_Set_16b = MEM_Fill16
+Mem_GetStackAddress = MEM_GetSP
+Mem_DynamicInitialize = MEM_HeapInit
+Mem_DynamicAlloc = MEM_Alloc
+Mem_DynamicFree = MEM_Free
+Mem_GetDynamicSize = MEM_BlockSize
+MemChr = MEM_Find
+MemFill = MEM_Fill
+MemCopy = MEM_Copy
+MemCopyReverse = MEM_CopyRev
+MemCompare = MEM_Compare
+MMalloc = MEM_Alloc
+ReadTPA = MEM_TPATop
+ReadSP = MEM_GetSP
+
+# Decisões de não fazer (podem ser revistas):
+Mem_HeapAlloc = -- alocador "de ponteiro que só avança" do guia; o heap dinâmico (MEM_Alloc/MEM_Free) cobre o uso e a lista de blocos é mais geral
+Mem_HeapFree = -- idem Mem_HeapAlloc
+Mem_GetHeapAddress = -- estado do alocador estático do guia; não existe no nosso modelo (ver MEM_HeapSize/MEM_HeapFree)
+Mem_GetHeapSize = -- idem: o guia mede "SP menos endereço do heap"; use MEM_HeapFree para o espaço livre do heap dinâmico
+Mem_DynamicInitializeHeap = -- depende do alocador estático; use MEM_HeapInit/MEM_HeapInitToStack
+Mutex_Init = -- MSX-DOS é monotarefa; o único paralelismo é o tratador de interrupção, tratado com DI/EI. Rever se surgir um uso real
+Mutex_Lock = -- idem Mutex_Init
+Mutex_Release = -- idem Mutex_Init
+Mutex_Wait = -- idem Mutex_Init
+Mutex_Gate = -- idem Mutex_Init

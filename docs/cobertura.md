@@ -10,7 +10,7 @@
 
 | Área | Itens | Feito | Planejado | Não faremos | Pendente |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Memória | 28 | 0 | 0 | 0 | 28 |
+| Memória | 28 | 18 | 0 | 10 | 0 |
 | Matemática | 29 | 27 | 0 | 0 | 2 |
 | Strings e texto | 103 | 8 | 0 | 0 | 95 |
 | VDP | 173 | 6 | 0 | 0 | 167 |
@@ -26,44 +26,44 @@
 | SCC | 11 | 0 | 0 | 0 | 11 |
 | BIOS | 90 | 0 | 0 | 0 | 90 |
 | DOS | 105 | 0 | 0 | 0 | 105 |
-| System | 86 | 0 | 0 | 0 | 86 |
+| System | 86 | 2 | 0 | 0 | 84 |
 | Clock | 30 | 0 | 0 | 0 | 30 |
 | V9990 | 179 | 0 | 0 | 0 | 179 |
 | Fora da lista (por enquanto) | 322 | 0 | 0 | 0 | 322 |
-| **Total** | **1463** | **46** | **0** | **0** | **1417** |
+| **Total** | **1463** | **66** | **0** | **10** | **1387** |
 
 ## Memória
 
 | Função (guia) | Origem | Cabeçalho | Estado | Nossa rotina / motivo |
 | --- | --- | --- | --- | --- |
-| `MMalloc` | Fusion-C | msx_fusion.h | pendente |  |
-| `MemChr` | Fusion-C | msx_fusion.h | pendente |  |
-| `MemCompare` | Fusion-C | msx_fusion.h | pendente |  |
-| `MemCopy` | Fusion-C | msx_fusion.h | pendente |  |
-| `MemCopyReverse` | Fusion-C | msx_fusion.h | pendente |  |
-| `MemFill` | Fusion-C | msx_fusion.h | pendente |  |
-| `Mem_Copy` | MSXgl | memory.h | pendente |  |
-| `Mem_Copy_16b` | MSXgl | memory.h | pendente |  |
-| `Mem_DynamicAlloc` | MSXgl | memory.h | pendente |  |
-| `Mem_DynamicFree` | MSXgl | memory.h | pendente |  |
-| `Mem_DynamicInitialize` | MSXgl | memory.h | pendente |  |
-| `Mem_DynamicInitializeHeap` | MSXgl | memory.h | pendente |  |
-| `Mem_FastCopy` | MSXgl | memory.h | pendente |  |
-| `Mem_FastCopy_16b` | MSXgl | memory.h | pendente |  |
-| `Mem_FastSet` | MSXgl | memory.h | pendente |  |
-| `Mem_GetDynamicSize` | MSXgl | memory.h | pendente |  |
-| `Mem_GetHeapAddress` | MSXgl | memory.h | pendente |  |
-| `Mem_GetHeapSize` | MSXgl | memory.h | pendente |  |
-| `Mem_GetStackAddress` | MSXgl | memory.h | pendente |  |
-| `Mem_HeapAlloc` | MSXgl | memory.h | pendente |  |
-| `Mem_HeapFree` | MSXgl | memory.h | pendente |  |
-| `Mem_Set` | MSXgl | memory.h | pendente |  |
-| `Mem_Set_16b` | MSXgl | memory.h | pendente |  |
-| `Mutex_Gate` | MSXgl | mutex.h | pendente |  |
-| `Mutex_Init` | MSXgl | mutex.h | pendente |  |
-| `Mutex_Lock` | MSXgl | mutex.h | pendente |  |
-| `Mutex_Release` | MSXgl | mutex.h | pendente |  |
-| `Mutex_Wait` | MSXgl | mutex.h | pendente |  |
+| `MMalloc` | Fusion-C | msx_fusion.h | feito | MEM_Alloc |
+| `MemChr` | Fusion-C | msx_fusion.h | feito | MEM_Find |
+| `MemCompare` | Fusion-C | msx_fusion.h | feito | MEM_Compare |
+| `MemCopy` | Fusion-C | msx_fusion.h | feito | MEM_Copy |
+| `MemCopyReverse` | Fusion-C | msx_fusion.h | feito | MEM_CopyRev |
+| `MemFill` | Fusion-C | msx_fusion.h | feito | MEM_Fill |
+| `Mem_Copy` | MSXgl | memory.h | feito | MEM_Copy |
+| `Mem_Copy_16b` | MSXgl | memory.h | feito | MEM_CopyWords |
+| `Mem_DynamicAlloc` | MSXgl | memory.h | feito | MEM_Alloc |
+| `Mem_DynamicFree` | MSXgl | memory.h | feito | MEM_Free |
+| `Mem_DynamicInitialize` | MSXgl | memory.h | feito | MEM_HeapInit |
+| `Mem_DynamicInitializeHeap` | MSXgl | memory.h | não faremos | depende do alocador estático; use MEM_HeapInit/MEM_HeapInitToStack |
+| `Mem_FastCopy` | MSXgl | memory.h | feito | MEM_CopyFast |
+| `Mem_FastCopy_16b` | MSXgl | memory.h | feito | MEM_CopyFastWords |
+| `Mem_FastSet` | MSXgl | memory.h | feito | MEM_Fill |
+| `Mem_GetDynamicSize` | MSXgl | memory.h | feito | MEM_BlockSize |
+| `Mem_GetHeapAddress` | MSXgl | memory.h | não faremos | estado do alocador estático do guia; não existe no nosso modelo (ver MEM_HeapSize/MEM_HeapFree) |
+| `Mem_GetHeapSize` | MSXgl | memory.h | não faremos | idem: o guia mede "SP menos endereço do heap"; use MEM_HeapFree para o espaço livre do heap dinâmico |
+| `Mem_GetStackAddress` | MSXgl | memory.h | feito | MEM_GetSP |
+| `Mem_HeapAlloc` | MSXgl | memory.h | não faremos | alocador "de ponteiro que só avança" do guia; o heap dinâmico (MEM_Alloc/MEM_Free) cobre o uso e a lista de blocos é mais geral |
+| `Mem_HeapFree` | MSXgl | memory.h | não faremos | idem Mem_HeapAlloc |
+| `Mem_Set` | MSXgl | memory.h | feito | MEM_Fill |
+| `Mem_Set_16b` | MSXgl | memory.h | feito | MEM_Fill16 |
+| `Mutex_Gate` | MSXgl | mutex.h | não faremos | idem Mutex_Init |
+| `Mutex_Init` | MSXgl | mutex.h | não faremos | MSX-DOS é monotarefa; o único paralelismo é o tratador de interrupção, tratado com DI/EI. Rever se surgir um uso real |
+| `Mutex_Lock` | MSXgl | mutex.h | não faremos | idem Mutex_Init |
+| `Mutex_Release` | MSXgl | mutex.h | não faremos | idem Mutex_Init |
+| `Mutex_Wait` | MSXgl | mutex.h | não faremos | idem Mutex_Init |
 
 ## Matemática
 
@@ -990,8 +990,8 @@
 | `PutText` | Fusion-C | msx_fusion.h | pendente |  |
 | `Read` | Fusion-C | io.h | pendente |  |
 | `ReadMSXtype` | Fusion-C | msx_fusion.h | pendente |  |
-| `ReadSP` | Fusion-C | msx_fusion.h | pendente |  |
-| `ReadTPA` | Fusion-C | msx_fusion.h | pendente |  |
+| `ReadSP` | Fusion-C | msx_fusion.h | feito | MEM_GetSP |
+| `ReadTPA` | Fusion-C | msx_fusion.h | feito | MEM_TPATop |
 | `Remove` | Fusion-C | io.h | pendente |  |
 | `RemoveDir` | Fusion-C | io.h | pendente |  |
 | `Rename` | Fusion-C | io.h | pendente |  |

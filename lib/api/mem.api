@@ -1,0 +1,29 @@
+; Memoria (lib/src/mem): blocos, busca, heap dinamico. "ptr" = endereco de 16 bits.
+
+; --- copia, preenchimento, comparacao --------------------------------------------------
+proc MEM_Copy(src: ptr in HL, dst: ptr in DE, count: word in BC)        ; trata sobreposicao (como memmove)
+proc MEM_CopyFast(src: ptr in HL, dst: ptr in DE, count: word in BC)    ; LDIR, sem checar sobreposicao
+proc MEM_CopyRev(src: ptr in HL, dst: ptr in DE, count: word in BC)     ; LDDR: do fim para o inicio
+proc MEM_CopyWords(src: ptr in HL, dst: ptr in DE, words: word in BC)   ; como MEM_Copy, em palavras de 16 bits
+proc MEM_CopyFastWords(src: ptr in HL, dst: ptr in DE, words: word in BC)
+proc MEM_Fill(dst: ptr in HL, count: word in BC, val: byte in A)
+proc MEM_Fill16(dst: ptr in HL, words: word in BC, val: word in DE)
+proc MEM_Zero(dst: ptr in HL, count: word in BC)
+proc MEM_Swap(a: ptr in HL, b: ptr in DE, count: word in BC)
+func MEM_Compare(a: ptr in HL, b: ptr in DE, count: word in BC): byte out A   ; 0 iguais, 1 se a > b, 255 (-1) se a < b
+func MEM_Find(start: ptr in HL, count: word in BC, val: byte in A): word out HL ; endereco da 1a ocorrencia, ou 0
+
+; --- sistema -----------------------------------------------------------------------------
+func MEM_GetSP(): word out HL                                            ; topo da pilha do programa
+func MEM_TPATop(): word out HL                                           ; inicio do BDOS (a TPA termina antes)
+
+; --- heap dinamico -------------------------------------------------------------------------
+func MEM_HeapInit(start: ptr in HL, size: word in BC): byte out A        ; 0 = ok, 1 = regiao invalida
+func MEM_HeapInitToStack(start: ptr in HL, margin: word in BC): byte out A ; heap ate (SP - margem)
+func MEM_Alloc(size: word in HL): word out HL                            ; 0 se nao ha espaco
+func MEM_Free(p: ptr in HL): byte out A                                  ; 0 = ok, 1 = ponteiro invalido / liberacao dupla
+func MEM_BlockSize(p: ptr in HL): word out HL
+proc MEM_HeapCompact()
+func MEM_HeapSize(): word out HL
+func MEM_HeapFree(): word out HL
+func MEM_HeapLargest(): word out HL
