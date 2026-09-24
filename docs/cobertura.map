@@ -48,6 +48,35 @@ VDP_SetLineCount = VDP_SetLines
 VDP_Poke_128K = VDP_VPoke
 VDP_Peek_128K = VDP_VPeek
 VDP_SetPage = VDP_SetDisplayPage
+# Fase 2b (tabelas, sprites, piscar, rolagem, bits de modo)
+VDP_SetLayoutTable = VDP_SetNameTable
+VDP_GetLayoutTable = VDP_GetNameTable
+VDP_SetPatternTable = VDP_SetPatternTable
+VDP_GetPatternTable = VDP_GetPatternTable
+VDP_SetColorTable = VDP_SetColorTable
+VDP_GetColorTable = VDP_GetColorTable
+VDP_SetSpriteAttributeTable = VDP_SetSpriteAttrTable
+VDP_GetSpriteAttributeTable = VDP_GetSpriteAttrTable
+VDP_SetSpritePatternTable = VDP_SetSpritePatternTable
+VDP_GetSpritePatternTable = VDP_GetSpritePatternTable
+VDP_IsBitmapMode = VDP_IsBitmapMode
+VDP_SetSpritePosition = VDP_SpriteSetPos
+VDP_SetSpritePositionX = VDP_SpriteSetX
+VDP_SetSpritePositionY = VDP_SpriteSetY
+VDP_SetSpritePattern = VDP_SpriteSetPattern
+VDP_SetSpriteUniColor = VDP_SpriteSetColor
+VDP_SetSpriteColorSM1 = VDP_SpriteSetColor
+VDP_SetSpriteMultiColor = VDP_SpriteSetLineColors
+VDP_DisableSpritesFrom = VDP_SpriteDisableFrom
+VDP_GetVersion = VDP_GetVersion
+VDP_SetVerticalOffset = VDP_SetVerticalOffset
+VDP_SetHBlankLine = VDP_SetHBlankLine
+VDP_SetInterlace = VDP_Interlace
+VDP_SetPageAlternance = VDP_PageAlternate
+VDP_SetGrayScale = VDP_GrayScale
+VDP_EnableTransparency = VDP_Transparency
+VDP_EnableHBlank = VDP_HBlankInt
+VDP_EnableMask = VDP_LeftMask
 
 # --- Strings e texto ---------------------------------------------------------
 # (Print_Draw* do MSXgl escrevem na VRAM em qualquer modo; as nossas PrintHex*/

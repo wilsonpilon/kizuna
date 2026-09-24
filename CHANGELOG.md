@@ -5,6 +5,24 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Não lançado]
 
+### MSXLIB Fase 2b — tabelas, sprites, piscar, rolagem (`lib/src/vdp`, ~45 rotinas novas)
+
+- **Endereços das tabelas** de VRAM (nomes, padrões, cores, atributos e padrões de sprite) com
+  endereço de 17 bits em `A:HL`: `VDP_Set*Table`/`VDP_Get*Table`. Os bits "fixos em 1" que o V9938
+  exige (SCREEN 2/4, bitmap, texto 80 col, sprites modo 2) são acrescentados conforme o modo de
+  `VDP_SetMode`; os getters devolvem os endereços padrão do MSX-BASIC logo após `SetMode`.
+- **Sprites modo 1 e modo 2** lendo a tabela dos registradores (vale em qualquer SCREEN, inclusive
+  acima de 64 KB): posição/padrão/cor, cor por linha (`SetLineColors`), `SetAll`, fim de lista
+  (`D0h`/`D8h`), carga de padrões, tamanho e ampliação.
+- **Piscar do texto 80 colunas**: cores/tempos (R#12/R#13) e tabela de piscar (`BlinkFill/Line/Cell`).
+- **Rolagem/ajuste e bits de modo**: `VDP_SetVerticalOffset`, `SetHScrollCoarse/Fine` (V9958),
+  `SetAdjustRaw`, `SetHBlankLine`, `HBlankInt`, `Interlace`, `PageAlternate`, `Transparency`,
+  `GrayScale`, `LeftMask`, `GetVersion`, `IsBitmapMode`.
+Testado no simulador contra referências escritas em Go (conteúdo da VRAM byte a byte, registradores,
+preservação de registradores, mutações verificadas). **Não testado em hardware.** Ver "não
+verificado" na doc de `VDP_SetHScrollCoarse/Fine` e `VDP_SetAdjustRaw`: a codificação é a crua do
+registrador, sem a conversão de pixels.
+
 ### KAJI80: imediatos e `DS` com expressão (correção de erro silencioso)
 
 `parseImm8` lia o operando com `Sscanf` e devolvia `0` para o que não entendia:
