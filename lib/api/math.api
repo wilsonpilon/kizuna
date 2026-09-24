@@ -1,3 +1,53 @@
-; Matemática (lib/src/math)
-func Mul16(a: word in HL, b: word in DE): word out HL   ; produto (16 bits baixos)
-func Div16(a: word in HL, b: word in DE): word out HL   ; quociente (x/0 = FFFFh)
+; Matematica (lib/src/math). Inteiros de 16 bits; "S" = com sinal, "U" = sem sinal.
+; Rotinas com duas saidas (Div16 devolve quociente em HL e resto em DE) aparecem
+; aqui pela saida principal; o resto tem rotina propria (MATH_Mod16, MATH_ModS16).
+
+; --- aritmetica basica ---------------------------------------------------------
+func Mul16(a: word in HL, b: word in DE): word out HL          ; produto (16 bits baixos; vale para com e sem sinal)
+func Div16(a: word in HL, b: word in DE): word out HL          ; quociente sem sinal (x/0 = FFFFh)
+func MATH_Mod16(a: word in HL, b: word in DE): word out HL     ; resto sem sinal (x mod 0 = 0)
+func MATH_DivS16(a: word in HL, b: word in DE): word out HL    ; quociente com sinal (trunca para zero)
+func MATH_ModS16(a: word in HL, b: word in DE): word out HL    ; resto com sinal (sinal do dividendo)
+func MATH_Mul8(a: byte in A, b: byte in E): word out HL        ; 8x8 -> 16 bits, sem sinal
+
+; --- sinal e comparacao --------------------------------------------------------
+func MATH_Neg16(v: word in HL): word out HL
+func MATH_Abs16(v: word in HL): word out HL
+func MATH_Sign16(v: word in HL): byte out A                    ; 0, 1 ou 255 (-1)
+func MATH_Min16U(a: word in HL, b: word in DE): word out HL
+func MATH_Max16U(a: word in HL, b: word in DE): word out HL
+func MATH_Min16S(a: word in HL, b: word in DE): word out HL
+func MATH_Max16S(a: word in HL, b: word in DE): word out HL
+func MATH_Clamp16S(v: word in HL, lo: word in DE, hi: word in BC): word out HL
+
+; --- deslocamentos e raiz ----------------------------------------------------------
+func MATH_Shl16(v: word in HL, bits: byte in B): word out HL
+func MATH_Shr16(v: word in HL, bits: byte in B): word out HL
+func MATH_Sar16(v: word in HL, bits: byte in B): word out HL
+func MATH_Sqrt16(v: word in HL): byte out A                    ; piso da raiz quadrada
+
+; --- decimal -----------------------------------------------------------------------
+func MATH_DivMod10(v: word in HL): word out HL                 ; quociente de v/10 (o resto vem em A: so no Assembly)
+
+; --- aleatorio ---------------------------------------------------------------------
+proc MATH_RandSeed(seed: word in HL)                           ; mesma semente = mesma sequencia
+func MATH_Rand16(): word out HL                                ; 1..65535
+func MATH_Rand8(): byte out A
+func MATH_RandRange16(max: word in HL): word out HL            ; 0..max-1
+func MATH_RandRange8(max: byte in A): byte out A               ; 0..max-1
+
+; --- bits, 8 bits, decimal, faixa, ponto fixo 8.8 ---------------------------------------
+func MATH_Flip8(v: byte in A): byte out A                      ; inverte a ordem dos bits
+func MATH_Flip16(v: word in HL): word out HL
+func MATH_Swap16(v: word in HL): word out HL                   ; troca os dois bytes
+func MATH_Neg8(v: byte in A): byte out A
+func MATH_Abs8(v: byte in A): byte out A
+func MATH_Shl8(v: byte in A, bits: byte in B): byte out A
+func MATH_Shr8(v: byte in A, bits: byte in B): byte out A
+func MATH_Sar8(v: byte in A, bits: byte in B): byte out A      ; Sar8(x, 1..5) = divisao com sinal por 2, 4, ..., 32
+func MATH_Mod10(v: word in HL): byte out A                     ; v mod 10 (sem sinal)
+func MATH_DivS10(v: word in HL): word out HL                   ; v / 10 com sinal (o resto vem em A: so no Assembly)
+func MATH_RandBetween16(lo: word in HL, hi: word in DE): word out HL   ; lo..hi-1
+func MATH_RandBetween8(lo: byte in A, hi: byte in E): byte out A
+func MATH_FixMul88(a: word in HL, b: word in DE): word out HL  ; multiplicacao em ponto fixo 8.8 com sinal
+func MATH_FixDiv88(a: word in HL, b: word in DE): word out HL  ; divisao em ponto fixo 8.8 com sinal

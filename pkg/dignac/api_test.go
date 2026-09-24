@@ -230,3 +230,36 @@ func TestAPIMissingDescriptorIsAnError(t *testing.T) {
 		}
 	}
 }
+
+// Rotinas novas de matemática chamadas do BASIC pelos descritores (inclui uma
+// de 3 argumentos em HL/DE/BC e uma de 8 bits em A).
+func TestAPIMathFromBasic(t *testing.T) {
+	src := `MODULE M
+BANK 0
+PUBLIC Main
+
+PROCEDURE Main()
+    PrintDec16(MATH_Sqrt16(1000))
+    BDOS_PrintChar(44)
+    PrintDec16(MATH_Clamp16S(500, 10, 100))
+    BDOS_PrintChar(44)
+    PrintDec16(MATH_Mod16(100, 7))
+    BDOS_PrintChar(44)
+    PrintDec16(MATH_Mul8(12, 13))
+    BDOS_PrintChar(44)
+    PrintDec16(MATH_DivMod10(12345))
+END PROCEDURE
+END MODULE
+`
+	obj, asm, err := compileBasic(t, src, libtest.RepoAPI(t))
+	if err != nil {
+		t.Fatalf("%v\n%s", err, asm)
+	}
+	m := libtest.Machine(libtest.LinkObjects(t, obj))
+	if err := m.Run(5_000_000); err != nil {
+		t.Fatal(err)
+	}
+	if got := string(m.Console); got != "31,100,2,156,1234" {
+		t.Errorf("console = %q", got)
+	}
+}

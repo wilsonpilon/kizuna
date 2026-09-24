@@ -11,26 +11,26 @@
 | Área | Itens | Feito | Planejado | Não faremos | Pendente |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Memória | 28 | 0 | 0 | 0 | 28 |
-| Matemática | 28 | 0 | 0 | 0 | 28 |
+| Matemática | 29 | 27 | 0 | 0 | 2 |
 | Strings e texto | 103 | 8 | 0 | 0 | 95 |
-| VDP | 171 | 6 | 0 | 0 | 165 |
+| VDP | 173 | 6 | 0 | 0 | 167 |
 | Draw | 41 | 0 | 0 | 0 | 41 |
 | Tile | 14 | 0 | 0 | 0 | 14 |
 | Scroll | 7 | 0 | 0 | 0 | 7 |
 | Teclado | 23 | 0 | 0 | 0 | 23 |
 | Joystick e mouse | 15 | 0 | 0 | 0 | 15 |
 | PSG | 28 | 5 | 0 | 0 | 23 |
-| Play (players) | 164 | 0 | 0 | 0 | 164 |
+| Play (players) | 166 | 0 | 0 | 0 | 166 |
 | MSX-Music | 7 | 0 | 0 | 0 | 7 |
 | MSX-Audio | 6 | 0 | 0 | 0 | 6 |
 | SCC | 11 | 0 | 0 | 0 | 11 |
 | BIOS | 90 | 0 | 0 | 0 | 90 |
-| DOS | 103 | 0 | 0 | 0 | 103 |
+| DOS | 105 | 0 | 0 | 0 | 105 |
 | System | 86 | 0 | 0 | 0 | 86 |
 | Clock | 30 | 0 | 0 | 0 | 30 |
 | V9990 | 179 | 0 | 0 | 0 | 179 |
-| Fora da lista (por enquanto) | 321 | 0 | 0 | 0 | 321 |
-| **Total** | **1455** | **19** | **0** | **0** | **1436** |
+| Fora da lista (por enquanto) | 322 | 0 | 0 | 0 | 322 |
+| **Total** | **1463** | **46** | **0** | **0** | **1417** |
 
 ## Memória
 
@@ -69,34 +69,35 @@
 
 | Função (guia) | Origem | Cabeçalho | Estado | Nossa rotina / motivo |
 | --- | --- | --- | --- | --- |
-| `Math_Abs` | MSXgl | math.h | pendente |  |
-| `Math_Abs_16b` | MSXgl | math.h | pendente |  |
-| `Math_Abs_32b` | MSXgl | math.h | pendente |  |
-| `Math_Div10` | MSXgl | math.h | pendente |  |
-| `Math_Div10_16b` | MSXgl | math.h | pendente |  |
-| `Math_Flip` | MSXgl | math.h | pendente |  |
-| `Math_Flip_16b` | MSXgl | math.h | pendente |  |
-| `Math_GetRandom8` | MSXgl | math.h | pendente |  |
-| `Math_GetRandomMax16` | MSXgl | math.h | pendente |  |
-| `Math_GetRandomMax8` | MSXgl | math.h | pendente |  |
-| `Math_GetRandomRange16` | MSXgl | math.h | pendente |  |
-| `Math_GetRandomRange8` | MSXgl | math.h | pendente |  |
-| `Math_Mod10` | MSXgl | math.h | pendente |  |
-| `Math_Mod10_16b` | MSXgl | math.h | pendente |  |
-| `Math_Negative` | MSXgl | math.h | pendente |  |
-| `Math_Negative16` | MSXgl | math.h | pendente |  |
-| `Math_SetRandomSeed16` | MSXgl | math.h | pendente |  |
-| `Math_SetRandomSeed8` | MSXgl | math.h | pendente |  |
-| `Math_SignedDiv16` | MSXgl | math.h | pendente |  |
-| `Math_SignedDiv2` | MSXgl | math.h | pendente |  |
-| `Math_SignedDiv32` | MSXgl | math.h | pendente |  |
-| `Math_SignedDiv4` | MSXgl | math.h | pendente |  |
-| `Math_SignedDiv8` | MSXgl | math.h | pendente |  |
-| `Math_Swap` | MSXgl | math.h | pendente |  |
+| `Math_Abs` | MSXgl | math.h | feito | MATH_Abs8 |
+| `Math_Abs_16b` | MSXgl | math.h | feito | MATH_Abs16 |
+| `Math_Abs_32b` | MSXgl | math.h | feito | MATH_Abs32 |
+| `Math_Div10` | MSXgl | math.h | feito | MATH_DivS10 |
+| `Math_Div10_16b` | MSXgl | math.h | feito | MATH_DivS10 |
+| `Math_Flip` | MSXgl | math.h | feito | MATH_Flip8 |
+| `Math_Flip_16b` | MSXgl | math.h | feito | MATH_Flip16 |
+| `Math_GetRandom16` | MSXgl | math.h | feito | MATH_Rand16 |
+| `Math_GetRandom8` | MSXgl | math.h | feito | MATH_Rand8 |
+| `Math_GetRandomMax16` | MSXgl | math.h | feito | MATH_RandRange16 |
+| `Math_GetRandomMax8` | MSXgl | math.h | feito | MATH_RandRange8 |
+| `Math_GetRandomRange16` | MSXgl | math.h | feito | MATH_RandBetween16 |
+| `Math_GetRandomRange8` | MSXgl | math.h | feito | MATH_RandBetween8 |
+| `Math_Mod10` | MSXgl | math.h | feito | MATH_Mod10 |
+| `Math_Mod10_16b` | MSXgl | math.h | feito | MATH_Mod10 |
+| `Math_Negative` | MSXgl | math.h | feito | MATH_Neg8 |
+| `Math_Negative16` | MSXgl | math.h | feito | MATH_Neg16 |
+| `Math_SetRandomSeed16` | MSXgl | math.h | feito | MATH_RandSeed |
+| `Math_SetRandomSeed8` | MSXgl | math.h | feito | MATH_RandSeed |
+| `Math_SignedDiv16` | MSXgl | math.h | feito | MATH_Sar8 |
+| `Math_SignedDiv2` | MSXgl | math.h | feito | MATH_Sar8 |
+| `Math_SignedDiv32` | MSXgl | math.h | feito | MATH_Sar8 |
+| `Math_SignedDiv4` | MSXgl | math.h | feito | MATH_Sar8 |
+| `Math_SignedDiv8` | MSXgl | math.h | feito | MATH_Sar8 |
+| `Math_Swap` | MSXgl | math.h | feito | MATH_Swap16 |
 | `QMN_Get16` | MSXgl | fixed_point.h | pendente |  |
 | `QMN_Get8` | MSXgl | fixed_point.h | pendente |  |
-| `QMN_Set16` | MSXgl | fixed_point.h | pendente |  |
-| `QMN_Set8` | MSXgl | fixed_point.h | pendente |  |
+| `QMN_Set16` | MSXgl | fixed_point.h | feito | MATH_Shl16 |
+| `QMN_Set8` | MSXgl | fixed_point.h | feito | MATH_Shl8 |
 
 ## Strings e texto
 
@@ -268,6 +269,7 @@
 | `VDP_ClearVRAM` | MSXgl | vdp.h | pendente |  |
 | `VDP_CommandCustomR32` | MSXgl | vdp.h | pendente |  |
 | `VDP_CommandCustomR36` | MSXgl | vdp.h | pendente |  |
+| `VDP_CommandReadLoop` | MSXgl | vdp.h | pendente |  |
 | `VDP_CommandSetupR32` | MSXgl | vdp.h | pendente |  |
 | `VDP_CommandSetupR36` | MSXgl | vdp.h | pendente |  |
 | `VDP_CommandWait` | MSXgl | vdp.h | pendente |  |
@@ -297,6 +299,7 @@
 | `VDP_GetSpriteAttributeTable` | MSXgl | vdp.h | pendente |  |
 | `VDP_GetSpriteColorTable` | MSXgl | vdp.h | pendente |  |
 | `VDP_GetSpritePatternTable` | MSXgl | vdp.h | pendente |  |
+| `VDP_GetVersion` | MSXgl | vdp.h | pendente |  |
 | `VDP_HideAllSprites` | MSXgl | vdp.h | feito | VDP_SpriteHideAll |
 | `VDP_HideSprite` | MSXgl | vdp.h | feito | VDP_SpriteHide |
 | `VDP_Initialize` | MSXgl | vdp.h | pendente |  |
@@ -691,6 +694,8 @@
 | `WYZ_Decode` | MSXgl | wyz/wyz_player.h | pendente |  |
 | `WYZ_InitPlayer` | MSXgl | wyz/wyz_player2.h | pendente |  |
 | `WYZ_IsFinished` | MSXgl | wyz/wyz_player.h | pendente |  |
+| `WYZ_Pause` | MSXgl | wyz/wyz_player.h | pendente |  |
+| `WYZ_Play` | MSXgl | wyz/wyz_player2.h | pendente |  |
 | `WYZ_PlayAY` | MSXgl | wyz/wyz_player.h | pendente |  |
 | `WYZ_PlayFX` | MSXgl | wyz/wyz_player.h | pendente |  |
 | `WYZ_Resume` | MSXgl | wyz/wyz_player.h | pendente |  |
@@ -880,6 +885,7 @@
 | `DOSMapper_SetPage1` | MSXgl | dos_mapper.h | pendente |  |
 | `DOSMapper_SetPage2` | MSXgl | dos_mapper.h | pendente |  |
 | `DOSMapper_WriteByte` | MSXgl | dos_mapper.h | pendente |  |
+| `DOS_AvailableDrives` | MSXgl | dos.h | pendente |  |
 | `DOS_Beep` | MSXgl | dos.h | pendente |  |
 | `DOS_Call` | MSXgl | dos.h | pendente |  |
 | `DOS_ChangeDirectory` | MSXgl | dos.h | pendente |  |
@@ -941,6 +947,7 @@
 | `DOS_RenameHandle` | MSXgl | dos.h | pendente |  |
 | `DOS_ResetLastError` | MSXgl | dos.h | pendente |  |
 | `DOS_Return` | MSXgl | dos.h | pendente |  |
+| `DOS_SeekHandle` | MSXgl | dos.h | pendente |  |
 | `DOS_SelectDrive` | MSXgl | dos.h | pendente |  |
 | `DOS_SelectDriveLetter` | MSXgl | dos.h | pendente |  |
 | `DOS_SequentialReadFCB` | MSXgl | dos.h | pendente |  |
@@ -1486,6 +1493,7 @@
 | `Printer_ChangePage` | MSXgl | device/printer.h | pendente |  |
 | `Printer_CheckReady` | MSXgl | device/printer.h | pendente |  |
 | `Printer_LineReturn` | MSXgl | device/printer.h | pendente |  |
+| `Printer_SendChar` | MSXgl | device/printer.h | pendente |  |
 | `Printer_SendString` | MSXgl | device/printer.h | pendente |  |
 | `RLEp_UnpackToRAM` | MSXgl | compress.h | pendente |  |
 | `Sequence_CheckArea` | MSXgl | game/sequence.h | pendente |  |

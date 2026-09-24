@@ -19,6 +19,19 @@ comportamento idêntico. Também: `BIOS_Call` não arrasta mais o módulo de
 VDP inteiro (havia uma dependência circular bios↔vdp em nível de módulo).
 Base para a expansão da MSXLIB no estilo MSXgl.
 
+### MSXLIB Fase 1 — matemática (`lib/src/math`, ~45 rotinas novas)
+
+Inteiros de 8/16/32 bits com e sem sinal (`MATH_*`): resto, divisão e resto com sinal, produtos
+completos de 32 bits, `Neg/Abs/Sign`, comparação/mínimo/máximo/`Clamp`, deslocamentos de 8 e 16
+bits com contagem variável, raiz quadrada inteira, divisão por 10, inversão de bits, ponto fixo
+8.8 (`FixMul88/FixDiv88`), divisão 32/16 e gerador pseudoaleatório (xorshift, período 65535, com
+faixa e intervalo). Cada rotina foi testada no simulador Z80 contra uma referência em Go
+(exaustivamente quando barato) **incluindo a checagem de que os registradores não-saída foram
+preservados**. Descritores em `lib/api/math.api` (chamáveis do BASIC/Pascal).
+KAJI80: novo `EX (SP),HL/IX/IY`. Cobertura: 25 dos 29 itens de matemática do guia
+(`docs/cobertura.md`); `QMN_Get8/16` ficam pendentes de propósito (semântica de arredondamento
+diferente do nosso deslocamento aritmético).
+
 ### Fase 0 da expansão da MSXLIB (ver `docs/plano-expansao-msxlib.md`)
 
 - **Descritores de API (`.api`)**: DIGNAC e WIRTH80 passam a chamar rotinas da MSXLIB de

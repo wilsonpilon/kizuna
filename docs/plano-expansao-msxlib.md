@@ -125,16 +125,33 @@ sinal), então "parece certo" não basta:
 Rotina "pronta": módulo monta, entrada no `.api`, teste Go passa, documentada,
 marcada no `cobertura.md`.
 
-## 4. Trilha de linguagens (paralela)
+## 4. Camadas de linguagem (depois da biblioteca)
 
-Depois de cada fase de biblioteca, expor no BASIC e no Pascal:
-- **BASIC (DIGNAC)**: mapear comandos do MS-BASIC ao que a lib ganha — `SCREEN`,
-  `COLOR`, `LOCATE`, `PSET/LINE/CIRCLE/PAINT/DRAW`, `PUT SPRITE`, `VPOKE/VPEEK`,
-  `SOUND/PLAY`, `STICK/STRIG`, `INKEY$`, `PEEK/POKE`, `TIME/DATE$`, arquivos.
-  Vários já existem; o resto vira linhas do `.api`.
-- **Pascal (WIRTH80)**: organizar em *units* como o Borland Pascal 4 (`Crt`, `Dos`,
-  `Graph`…), cada uma fachada de áreas da lib. Exige `uses` e mais tipos no WIRTH80:
-  trabalho de linguagem, planejado à parte.
+**Ordem decidida por Wilson (2026-09-23):** primeiro toda a API/LIB para Assembly e
+chamadas diretas (Fases 1–7); só então as linguagens, por cima, com *aliases* — a MSXLIB
+continua com o nome nosso (`VDP_SetColor`) e cada dialeto é uma fachada. Meta final: cada
+dialeto oferece **tudo o que o guia (MSXgl/Fusion-C) oferece**, na sua sintaxe:
+
+| Dialeto | Linguagem | Como cada função do guia aparece |
+| --- | --- | --- |
+| **MS-BASIC** | DIGNAC | comandos e funções no estilo MSX-BASIC/Microsoft: `COLOR 15,4`, `SOUND 7,62`, `LOCATE`, `VPOKE`, `PUT SPRITE`, `CIRCLE`, `PAINT`, `STICK()`, `INKEY$`… |
+| **Turbo Pascal 4** | WIRTH80 | *units* no estilo Borland: `Crt` (o análogo de conio), `Graph` (o análogo da BGI), `Dos`… com `uses` |
+| **asMSX-style** | KAJI80 | macros/diretivas: `CALLBIOS`, `CALLDOS` e macros por área (`SETCOLOR 15,4`…) sobre as mesmas rotinas |
+
+**BASIC vem primeiro** entre as linguagens. Peças necessárias (detalhadas na conversa de
+2026-09-23, ainda a implementar depois das Fases 1–7):
+1. forma `command basic NOME = ROTINA` no `.api` e parser do DIGNAC aceitando `NOME expr, expr`
+   (sem parênteses) para comandos registrados — o parser precisa conhecer os descritores;
+2. parâmetros **opcionais com valor padrão** e argumento omitido (`COLOR ,4`);
+3. rotinas "fachada" na lib quando o MS-BASIC faz mais que uma chamada (`COLOR` também grava
+   `FORCLR/BAKCLR/BDRCLR`; `SCREEN` reinicializa a tela);
+4. ligar o `COLOR` que já existe no lexer, criar `SOUND` etc.
+
+Depois, no WIRTH80: `uses` + `unit` no `.api` (escopo dos nomes), estado das units
+(`TextColor`, `SetColor`, `GotoXY`) e mais tipos (`array`, `record`, `real`).
+
+Critério de cobertura por dialeto: cada item de `docs/cobertura.md` ganha uma coluna por
+dialeto ("BASIC", "Pascal", "asMSX") quando a fase de linguagens começar.
 
 ## 5. Fases
 

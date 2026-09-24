@@ -43,3 +43,35 @@ StrCopy = StrCopy
 Cls = BIOS_CLS
 Beep = BIOS_BEEP
 Getche = BDOS_ReadChar
+
+# --- Matemática (Fase 1) -----------------------------------------------------
+Math_Div10 = MATH_DivS10
+Math_Div10_16b = MATH_DivS10
+Math_Mod10 = MATH_Mod10
+Math_Mod10_16b = MATH_Mod10
+Math_Flip = MATH_Flip8
+Math_Flip_16b = MATH_Flip16
+Math_Negative = MATH_Neg8
+Math_Negative16 = MATH_Neg16
+Math_Swap = MATH_Swap16
+Math_SignedDiv2 = MATH_Sar8
+Math_SignedDiv4 = MATH_Sar8
+Math_SignedDiv8 = MATH_Sar8
+Math_SignedDiv16 = MATH_Sar8
+Math_SignedDiv32 = MATH_Sar8
+Math_Abs = MATH_Abs8
+Math_Abs_16b = MATH_Abs16
+Math_Abs_32b = MATH_Abs32
+Math_SetRandomSeed8 = MATH_RandSeed
+Math_SetRandomSeed16 = MATH_RandSeed
+Math_GetRandom8 = MATH_Rand8
+Math_GetRandom16 = MATH_Rand16
+Math_GetRandomMax8 = MATH_RandRange8
+Math_GetRandomMax16 = MATH_RandRange16
+Math_GetRandomRange8 = MATH_RandBetween8
+Math_GetRandomRange16 = MATH_RandBetween16
+QMN_Set8 = MATH_Shl8
+QMN_Set16 = MATH_Shl16
+# QMN_Get8/16 ficam pendentes de propósito: o guia divide por 2^n TRUNCANDO em direção
+# a zero, e o nosso MATH_Sar8/16 é deslocamento aritmético (arredonda para baixo) --
+# diferem nos negativos. Entra quando houver uma rotina com a mesma semântica.

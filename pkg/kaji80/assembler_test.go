@@ -1734,3 +1734,16 @@ func TestMsxlibIncludesAssembleTogether(t *testing.T) {
 		}
 	}
 }
+
+// EX (SP),HL / IX / IY -- troca com o topo da pilha.
+func TestExSPEncodings(t *testing.T) {
+	src := "MODULE ExSp\nBANK 0\nPUBLIC Start\nStart:\n    ex (sp), hl\n    ex (sp), ix\n    ex (sp), iy\n    ex de, hl\n"
+	obj, err := NewAssembler().Assemble(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []byte{0xE3, 0xDD, 0xE3, 0xFD, 0xE3, 0xEB}
+	if got := obj.Segments[0].Data; !bytes.Equal(got, want) {
+		t.Errorf("bytes = % X, quer % X", got, want)
+	}
+}

@@ -448,6 +448,11 @@ func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uin
 	case "RLC", "RRC", "RL", "RR", "SLA", "SRA", "SRL", "BIT", "RES", "SET":
 		return 2, nil
 	case "EX":
+		if len(ops) == 2 && strings.EqualFold(ops[0], "(SP)") {
+			if r := strings.ToUpper(ops[1]); r == "IX" || r == "IY" {
+				return 2, nil
+			}
+		}
 		return 1, nil
 	case "PUSH", "POP":
 		if len(ops) > 0 {
@@ -832,6 +837,12 @@ func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, t
 			a.emit(0xEB)
 		} else if len(ops) == 2 && strings.EqualFold(ops[0], "AF") && strings.EqualFold(ops[1], "AF'") {
 			a.emit(0x08)
+		} else if len(ops) == 2 && strings.EqualFold(ops[0], "(SP)") && strings.EqualFold(ops[1], "HL") {
+			a.emit(0xE3)
+		} else if len(ops) == 2 && strings.EqualFold(ops[0], "(SP)") && strings.EqualFold(ops[1], "IX") {
+			a.emit(0xDD, 0xE3)
+		} else if len(ops) == 2 && strings.EqualFold(ops[0], "(SP)") && strings.EqualFold(ops[1], "IY") {
+			a.emit(0xFD, 0xE3)
 		} else {
 			return fmt.Errorf("combinação de EX não suportada: %v", ops)
 		}

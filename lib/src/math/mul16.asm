@@ -12,7 +12,8 @@ PUBLIC Mul16
 ; -----------------------------------------------------------------------------
 ; Mul16: Multiplicação inteira não sinalizada de 16 bits
 ; Entrada: HL = multiplicando, DE = multiplicador
-; Saída: HL = produto (16 bits mais baixos)
+; Saída: HL = produto (16 bits mais baixos; igual para com e sem sinal)
+; Preserva: BC, DE. Destrói: A, flags.
 ; -----------------------------------------------------------------------------
 Mul16:
     PUSH BC

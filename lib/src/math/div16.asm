@@ -14,6 +14,7 @@ PUBLIC Div16
 ; Entrada: HL = dividendo, DE = divisor
 ; Saída: HL = quociente, DE = resto
 ; Se divisor for 0: retorna HL = 0xFFFF, DE = 0
+; Preserva: BC. Destrói: A, flags.
 ; -----------------------------------------------------------------------------
 Div16:
     PUSH BC
