@@ -384,18 +384,24 @@ entre dezenas de módulos pequenos. Regras:
 
 ## 13. Conjunto de instruções Z80 suportadas
 
+O `KAJI80` cobre o conjunto Z80 **documentado** completo. Os bytes de cada forma
+abaixo são conferidos por testes contra as tabelas oficiais
+(`pkg/kaji80/extra_instr_test.go`).
+
 ### Controle e estado
 
-`NOP`, `HALT`, `DI`, `EI`, `EXX`, `EX DE,HL`, `EX AF,AF'`
+`NOP`, `HALT`, `DI`, `EI`, `EXX`, `DAA`, `CPL`, `NEG`, `SCF`, `CCF`,
+`IM 0`/`IM 1`/`IM 2`, `EX DE,HL`, `EX AF,AF'`, `EX (SP),HL`, `EX (SP),IX`, `EX (SP),IY`
 
 ### Fluxo e chamadas
 
-- `RET` e `RET cc` (`NZ`,`Z`,`NC`,`C`,`PO`,`PE`,`P`,`M`)
+- `RET` e `RET cc` (`NZ`,`Z`,`NC`,`C`,`PO`,`PE`,`P`,`M`), `RETI`, `RETN`
 - `CALL nn` / `CALL sym` e `CALL cc, nn` (gera relocation `ABS16`)
 - `JP nn` / `JP sym` e `JP cc, nn`
 - `JP (HL)`, `JP (IX)`, `JP (IY)`
 - `JR e`, `JR cc, e` (`NZ`,`Z`,`NC`,`C`) — gera relocation `REL8` se for cross-label
 - `DJNZ e`
+- `RST 00h`/`08h`/`10h`/`18h`/`20h`/`28h`/`30h`/`38h`
 
 ### Pilha
 
@@ -403,34 +409,44 @@ entre dezenas de módulos pequenos. Regras:
 
 ### Entrada e saída (I/O)
 
-`IN A,(n)`, `OUT (n),A`
+- `IN A,(n)`, `OUT (n),A`
+- `IN r,(C)` e `OUT (C),r` para `A,B,C,D,E,H,L`
+- Blocos: `INI`, `INIR`, `IND`, `INDR`, `OUTI`, `OTIR`, `OUTD`, `OTDR`
 
 ### Aritmética e lógica
 
-- `INC r` / `DEC r` (8 bits: `A,B,C,D,E,H,L`) e `INC (HL)` / `DEC (HL)`
+- `INC r` / `DEC r` (8 bits: `A,B,C,D,E,H,L`), `INC (HL)` / `DEC (HL)` e `INC (IX+d)` / `DEC (IY+d)`
 - `INC rr` / `DEC rr` (16 bits: `BC,DE,HL,SP,IX,IY`)
 - `ADD A,...`, `ADC A,...`, `SUB ...`, `SBC A,...`, `AND ...`, `XOR ...`, `OR ...`, `CP ...`
   - Operando registrador (`r` ou `(HL)`), imediato (`n` ou constante `EQU`), **ou indexado** `(IX+d)`/`(IY+d)`
-- `ADD HL,rr` (`BC,DE,HL,SP`) e `ADD IX,rr` (`BC,DE,IX,SP`)
+- `ADD HL,rr` (`BC,DE,HL,SP`), `ADC HL,rr`, `SBC HL,rr`; `ADD IX,rr` (`BC,DE,IX,SP`), `ADD IY,rr` (`BC,DE,IY,SP`)
+- Rotações e deslocamentos `RLC`, `RRC`, `RL`, `RR`, `SLA`, `SRA`, `SRL` em `r`, `(HL)` e `(IX+d)`/`(IY+d)`; `RLCA`, `RRCA`, `RLA`, `RRA`, `RLD`, `RRD`
+- `BIT n,`, `RES n,`, `SET n,` em `r`, `(HL)` e `(IX+d)`/`(IY+d)`
 
 ### Movimentação de dados (`LD`)
 
-- `LD r,r'`, `LD r,n`, `LD r,(HL)`, `LD (HL),r`, `LD (HL),n`
+- `LD r,r'`, `LD r,n`, `LD r,(HL)`, `LD (HL),r`, `LD (HL),n`, `LD r,(IX+d)`, `LD (IX+d),r`, `LD (IX+d),n`
 - `LD A,(BC)` / `LD A,(DE)` / `LD (BC),A` / `LD (DE),A`
-- `LD A,(nn)` / `LD (nn),A` e `LD HL,(nn)` / `LD (nn),HL`
-- `LD rr,nn` (`BC,DE,HL,SP`), `LD IX,nn`, `LD IY,nn` — gera relocation `ABS16` se `nn` for label
-- `LD SP,HL`
+- `LD A,(nn)` / `LD (nn),A`
+- `LD HL,(nn)` / `LD (nn),HL` e, novidade, **`LD BC,(nn)`, `LD DE,(nn)`, `LD SP,(nn)`, `LD IX,(nn)`, `LD IY,(nn)`** e as formas inversas `LD (nn),BC/DE/SP/IX/IY` — `nn` pode ser rótulo/`EXTERN` (gera relocation `ABS16`)
+- `LD rr,nn` (`BC,DE,HL,SP`), `LD IX,nn`, `LD IY,nn`
+- `LD SP,HL`, `LD SP,IX`, `LD SP,IY`
+- `LD A,I`, `LD A,R`, `LD I,A`, `LD R,A`
+- Blocos: `LDI`, `LDIR`, `LDD`, `LDDR`; busca `CPI`, `CPIR`, `CPD`, `CPDR`
 
 ### O que **não** é suportado (erro na montagem, nunca silencioso)
 
-- `LD (nn),DE` / `LD (nn),BC` — só `(nn),HL` e `(nn),A` têm forma de 16 bits absoluta. Contorne com `EX DE,HL` antes do `LD (nn),HL`.
-- `LDIR`/`LDDR`/`CPIR`/`CPDR` e demais instruções de bloco — para cópias de tamanho conhecido em tempo de compilação, desenrole o laço manualmente (`LD A,(HL)` / `LD (DE),A` / `INC HL` / `INC DE` repetido, opcionalmente com `REPT`, §8).
+- Instruções não documentadas (`SLL`, `IXH`/`IXL`/`IYH`/`IYL` como registradores de 8 bits, `IN F,(C)`, `OUT (C),0`).
+- `$` (posição atual) como alvo de `JR`/`DJNZ`: use um rótulo.
 
-Se você tentar uma dessas formas, o `KAJI80` recusa a montagem com uma
+Se você tentar uma forma não suportada, o `KAJI80` recusa a montagem com uma
 mensagem de erro — ele nunca cai silenciosamente para uma codificação
 diferente da que você escreveu (essa garantia já foi a causa raiz de mais de
 um bug real neste projeto — ver `docs/manual-ferramentas.md` §"Depuração e
-garantias do KAJI80").
+garantias do KAJI80"). Duas correções desta família aconteceram junto com a
+cobertura completa: `IN A,(C)` e `OUT (C),A` eram montados como `IN A,(0)` /
+`OUT (0),A` em silêncio, e `EX AF,AF'` não montava (o `'` abria um literal de
+caractere).
 
 ## 14. O montador `KAJI80` (linha de comando)
 

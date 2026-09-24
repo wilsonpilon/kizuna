@@ -240,6 +240,12 @@ func (l *Lexer) NextToken() (Token, error) {
 		// Identificadores (labels, mnemônicos, registradores)
 		if isIdentStart(ch) {
 			ident := l.readIdentifier()
+			// "AF'" (o par alternativo de EX AF,AF'): o apóstrofo faz parte do
+			// nome do registrador, não abre um literal de caractere.
+			if strings.EqualFold(ident, "AF") && l.pos < l.length && l.current() == '\'' {
+				l.advance()
+				ident += "'"
+			}
 			return Token{Type: TokenIdentifier, Value: ident, Line: startLine, Col: startCol}, nil
 		}
 

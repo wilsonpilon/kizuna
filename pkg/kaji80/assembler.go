@@ -436,6 +436,9 @@ func (a *Assembler) parseLine(tokens []Token) (parsedLine, error) {
 }
 
 func (a *Assembler) estimateSize(mnem string, ops []string, tokens []Token) (uint16, error) {
+	if n, ok, err := a.extraSize(mnem, ops); ok {
+		return n, err
+	}
 	switch mnem {
 	case "NOP", "HALT", "DI", "EI", "RET", "EXX", "RLCA", "RRCA", "RLA", "RRA", "CPL", "SCF", "CCF":
 		if len(ops) > 0 {
@@ -711,6 +714,9 @@ func (a *Assembler) estimateLdSize(ops []string) (uint16, error) {
 }
 
 func (a *Assembler) encodeInstruction(mnem string, label string, ops []string, tokens []Token, lineNum int) error {
+	if ok, err := a.encodeExtra(mnem, ops); ok {
+		return err
+	}
 	switch mnem {
 	case "ASSIGN":
 		// "Nome = expressão" -- reavaliada aqui (não só no Pass 1) porque o

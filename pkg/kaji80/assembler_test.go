@@ -376,8 +376,7 @@ func TestMalformedAddressOperandRejected(t *testing.T) {
 	cases := []string{
 		"    CALL (Algo)\n",
 		"    JP (Algo)\n",
-		"    LD DE, (Algo)\n",
-		"    LD BC, (Algo)\n",
+		// (LD DE,(nn) e LD BC,(nn) eram recusados aqui; agora sao instrucoes suportadas -- ver extra_instr_test.go)
 	}
 	for _, instr := range cases {
 		src := "MODULE BadAddr\nBANK 0\nPUBLIC Start\nAlgo: DB 00h\nStart:\n" + instr

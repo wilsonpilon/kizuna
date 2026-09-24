@@ -19,6 +19,16 @@ comportamento idêntico. Também: `BIOS_Call` não arrasta mais o módulo de
 VDP inteiro (havia uma dependência circular bios↔vdp em nível de módulo).
 Base para a expansão da MSXLIB no estilo MSXgl.
 
+### KAJI80: conjunto Z80 documentado completo
+
+Faltavam instruções básicas: operações de bloco (`LDIR`, `LDDR`, `CPIR`, `CPDR`, `INIR`, `OTIR`…),
+`LD BC/DE/SP/IX/IY,(nn)` e inversas, `DAA`, `IM`, `RST`, `RLD`/`RRD`, `RETI`/`RETN`, `LD I/R,A`,
+`JP (HL)`/`(IX)`/`(IY)`, `IN/OUT r,(C)`, `ADD IX,IX`, e as formas indexadas de rotação/`BIT`/`RES`/
+`SET`/`INC`/`DEC`. Todas com teste de bytes contra a documentação oficial. **Bug silencioso
+corrigido**: `IN A,(C)` e `OUT (C),A` eram montados como `IN A,(0)`/`OUT (0),A` (`DB 00`/`D3 00`);
+`EX AF,AF'` não montava (o `'` abria um literal de caractere). O manual (§13) dizia que
+`JP (HL)` era suportado, mas não era — agora é.
+
 ### MSXLIB Fase 1 — matemática (`lib/src/math`, ~45 rotinas novas)
 
 Inteiros de 8/16/32 bits com e sem sinal (`MATH_*`): resto, divisão e resto com sinal, produtos
