@@ -17,3 +17,38 @@ proc VDP_SpriteSet(index: byte in A, y: byte in H, x: byte in L, pattern: byte i
 proc VDP_SpriteHide(index: byte in A)
 proc VDP_SpriteHideAll()
 proc VDP_SpriteSetSize(r1: byte in A)             ; byte completo do R#1
+
+; --- Fase 2a: registradores com copia sombra, VRAM de 128 KB, paleta, modos ---
+proc VDP_SetReg(reg: byte in C, val: byte in B)   ; R#reg = val, atualiza a copia sombra
+func VDP_GetReg(reg: byte in A): byte out A       ; ultimo valor escrito (copia sombra)
+proc VDP_UpdateReg(reg: byte in C, mask: byte in D, val: byte in E) ; muda so os bits da mascara
+func VDP_ReadStatus(n: byte in A): byte out A     ; S#n (0..9)
+proc VDP_WaitVBlank()
+proc VDP_WaitFrames(n: byte in B)
+proc VDP_DisplayOn()
+proc VDP_DisplayOff()
+proc VDP_VBlankIntOn()
+proc VDP_VBlankIntOff()
+proc VDP_SpritesOn()
+proc VDP_SpritesOff()
+proc VDP_SetLines(lines: byte in A)               ; 192 ou 212
+proc VDP_SetRefresh(hz: byte in A)                ; 50 ou 60
+proc VDP_Backdrop(color: byte in A)
+proc VDP_TextColor(color: byte in A)
+proc VDP_SetDisplayPage(page: byte in A)
+proc VDP_SetMode(mode: byte in A)                 ; 0..9 (SCREEN 0..8 + texto 80 col)
+func VDP_GetMode(): byte out A                    ; 0FFh se nenhum modo foi ajustado
+proc VDP_VramSetWrite(hi: byte in A, addr: word in HL)  ; ponteiro de escrita de 17 bits
+proc VDP_VramSetRead(hi: byte in A, addr: word in HL)   ; ponteiro de leitura de 17 bits
+proc VDP_VramPut(val: byte in A)
+func VDP_VramGet(): byte out A
+proc VDP_VramWriteStream(src: ptr in HL, count: word in BC)
+proc VDP_VramReadStream(dst: ptr in DE, count: word in BC)
+proc VDP_VramFillStream(val: byte in A, count: word in BC)
+proc VDP_VPoke(hi: byte in D, addr: word in HL, val: byte in A)
+func VDP_VPeek(hi: byte in D, addr: word in HL): byte out A
+proc VDP_ClearVRAM(blocks: byte in A)             ; zera A blocos de 16 KB
+proc VDP_SetPaletteEntry(idx: byte in A, r: byte in B, g: byte in C, b: byte in D)
+proc VDP_SetPaletteBlock(src: ptr in HL)          ; 16 cores x 2 bytes
+proc VDP_SetDefaultPalette()
+proc VDP_SetMSX1Palette()

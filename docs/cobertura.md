@@ -13,7 +13,7 @@
 | Memória | 28 | 18 | 0 | 10 | 0 |
 | Matemática | 29 | 27 | 0 | 0 | 2 |
 | Strings e texto | 118 | 46 | 2 | 0 | 70 |
-| VDP | 174 | 6 | 0 | 0 | 168 |
+| VDP | 174 | 22 | 0 | 0 | 152 |
 | Draw | 41 | 0 | 0 | 0 | 41 |
 | Tile | 14 | 0 | 0 | 0 | 14 |
 | Scroll | 7 | 0 | 0 | 0 | 7 |
@@ -30,7 +30,7 @@
 | Clock | 30 | 0 | 0 | 0 | 30 |
 | V9990 | 185 | 0 | 0 | 0 | 185 |
 | Fora da lista (por enquanto) | 323 | 0 | 0 | 0 | 323 |
-| **Total** | **1501** | **105** | **2** | **10** | **1384** |
+| **Total** | **1501** | **121** | **2** | **10** | **1368** |
 
 ## Memória
 
@@ -281,7 +281,7 @@
 | `YMMM` | Fusion-C | vdp_graph2.h | pendente |  |
 | `fLMMM` | Fusion-C | vdp_graph2.h | pendente |  |
 | `VDP_CleanBlinkScreen` | MSXgl | vdp.h | pendente |  |
-| `VDP_ClearVRAM` | MSXgl | vdp.h | pendente |  |
+| `VDP_ClearVRAM` | MSXgl | vdp.h | feito | VDP_ClearVRAM |
 | `VDP_CommandCustomR32` | MSXgl | vdp.h | pendente |  |
 | `VDP_CommandCustomR36` | MSXgl | vdp.h | pendente |  |
 | `VDP_CommandReadLoop` | MSXgl | vdp.h | pendente |  |
@@ -308,7 +308,7 @@
 | `VDP_GetColorTable_GM2` | MSXgl | vdp.h | pendente |  |
 | `VDP_GetFrequency` | MSXgl | vdp.h | pendente |  |
 | `VDP_GetLayoutTable` | MSXgl | vdp.h | pendente |  |
-| `VDP_GetMode` | MSXgl | vdp.h | pendente |  |
+| `VDP_GetMode` | MSXgl | vdp.h | feito | VDP_GetMode |
 | `VDP_GetPatternTable` | MSXgl | vdp.h | pendente |  |
 | `VDP_GetPatternTable_GM2` | MSXgl | vdp.h | pendente |  |
 | `VDP_GetSpriteAttributeTable` | MSXgl | vdp.h | pendente |  |
@@ -325,23 +325,23 @@
 | `VDP_LoadColor_GM2` | MSXgl | vdp.h | pendente |  |
 | `VDP_LoadPattern_GM2` | MSXgl | vdp.h | pendente |  |
 | `VDP_LoadSpritePattern` | MSXgl | vdp.h | feito | VDP_SpriteDefine |
-| `VDP_Peek_128K` | MSXgl | vdp.h | pendente |  |
+| `VDP_Peek_128K` | MSXgl | vdp.h | feito | VDP_VPeek |
 | `VDP_Peek_16K` | MSXgl | vdp.h | pendente |  |
 | `VDP_Peek_GM2` | MSXgl | vdp.h | pendente |  |
-| `VDP_Poke_128K` | MSXgl | vdp.h | pendente |  |
+| `VDP_Poke_128K` | MSXgl | vdp.h | feito | VDP_VPoke |
 | `VDP_Poke_16K` | MSXgl | vdp.h | pendente |  |
 | `VDP_Poke_GM2` | MSXgl | vdp.h | pendente |  |
 | `VDP_ReadDefaultStatus` | MSXgl | vdp.h | pendente |  |
-| `VDP_ReadStatus` | MSXgl | vdp.h | pendente |  |
+| `VDP_ReadStatus` | MSXgl | vdp.h | feito | VDP_ReadStatus |
 | `VDP_ReadVRAM_128K` | MSXgl | vdp.h | pendente |  |
 | `VDP_ReadVRAM_16K` | MSXgl | vdp.h | feito | VDP_ReadVRAM |
 | `VDP_RegWrite` | MSXgl | vdp.h | pendente |  |
-| `VDP_RegWriteBak` | MSXgl | vdp.h | pendente |  |
-| `VDP_RegWriteBakMask` | MSXgl | vdp.h | pendente |  |
+| `VDP_RegWriteBak` | MSXgl | vdp.h | feito | VDP_SetReg |
+| `VDP_RegWriteBakMask` | MSXgl | vdp.h | feito | VDP_UpdateReg |
 | `VDP_ResetVRAMAddrMSB` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetAdjustOffset` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetAdjustOffsetXY` | MSXgl | vdp.h | pendente |  |
-| `VDP_SetBackdropColor` | MSXgl | vdp.h | pendente |  |
+| `VDP_SetBackdropColor` | MSXgl | vdp.h | feito | VDP_Backdrop |
 | `VDP_SetBlinkChunk` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetBlinkChunkMask` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetBlinkChunkX` | MSXgl | vdp.h | pendente |  |
@@ -356,9 +356,9 @@
 | `VDP_SetColor2` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetColorTable` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetColorTableEx` | MSXgl | vdp.h | pendente |  |
-| `VDP_SetDefaultPalette` | MSXgl | vdp.h | pendente |  |
+| `VDP_SetDefaultPalette` | MSXgl | vdp.h | feito | VDP_SetDefaultPalette |
 | `VDP_SetFrameRender` | MSXgl | vdp.h | pendente |  |
-| `VDP_SetFrequency` | MSXgl | vdp.h | pendente |  |
+| `VDP_SetFrequency` | MSXgl | vdp.h | feito | VDP_SetRefresh |
 | `VDP_SetGrayScale` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetHBlankLine` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetHorizontalMode` | MSXgl | vdp.h | pendente |  |
@@ -367,14 +367,14 @@
 | `VDP_SetInterlace` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetLayoutTable` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetLayoutTableEx` | MSXgl | vdp.h | pendente |  |
-| `VDP_SetLineCount` | MSXgl | vdp.h | pendente |  |
-| `VDP_SetMSX1Palette` | MSXgl | vdp.h | pendente |  |
-| `VDP_SetMode` | MSXgl | vdp.h | pendente |  |
+| `VDP_SetLineCount` | MSXgl | vdp.h | feito | VDP_SetLines |
+| `VDP_SetMSX1Palette` | MSXgl | vdp.h | feito | VDP_SetMSX1Palette |
+| `VDP_SetMode` | MSXgl | vdp.h | feito | VDP_SetMode |
 | `VDP_SetModeFlag` | MSXgl | vdp.h | pendente |  |
-| `VDP_SetPage` | MSXgl | vdp.h | pendente |  |
+| `VDP_SetPage` | MSXgl | vdp.h | feito | VDP_SetDisplayPage |
 | `VDP_SetPageAlternance` | MSXgl | vdp.h | pendente |  |
-| `VDP_SetPalette` | MSXgl | vdp.h | pendente |  |
-| `VDP_SetPaletteEntry` | MSXgl | vdp.h | pendente |  |
+| `VDP_SetPalette` | MSXgl | vdp.h | feito | VDP_SetPaletteBlock |
+| `VDP_SetPaletteEntry` | MSXgl | vdp.h | feito | VDP_SetPaletteEntry |
 | `VDP_SetPatternTable` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetPatternTableEx` | MSXgl | vdp.h | pendente |  |
 | `VDP_SetSprite` | MSXgl | vdp.h | pendente |  |

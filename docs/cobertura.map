@@ -31,6 +31,23 @@ VDP_ReadVRAM_16K = VDP_ReadVRAM
 VDP_HideSprite = VDP_SpriteHide
 VDP_HideAllSprites = VDP_SpriteHideAll
 VDP_LoadSpritePattern = VDP_SpriteDefine
+# Fase 2a (registradores com cópia sombra, VRAM de 128K, paleta, modos)
+VDP_ClearVRAM = VDP_ClearVRAM
+VDP_ReadStatus = VDP_ReadStatus
+VDP_GetMode = VDP_GetMode
+VDP_SetMode = VDP_SetMode
+VDP_SetDefaultPalette = VDP_SetDefaultPalette
+VDP_SetMSX1Palette = VDP_SetMSX1Palette
+VDP_SetPaletteEntry = VDP_SetPaletteEntry
+VDP_SetPalette = VDP_SetPaletteBlock
+VDP_RegWriteBak = VDP_SetReg
+VDP_RegWriteBakMask = VDP_UpdateReg
+VDP_SetBackdropColor = VDP_Backdrop
+VDP_SetFrequency = VDP_SetRefresh
+VDP_SetLineCount = VDP_SetLines
+VDP_Poke_128K = VDP_VPoke
+VDP_Peek_128K = VDP_VPeek
+VDP_SetPage = VDP_SetDisplayPage
 
 # --- Strings e texto ---------------------------------------------------------
 # (Print_Draw* do MSXgl escrevem na VRAM em qualquer modo; as nossas PrintHex*/

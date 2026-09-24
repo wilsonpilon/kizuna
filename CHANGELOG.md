@@ -5,6 +5,34 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Não lançado]
 
+### KAJI80: imediatos e `DS` com expressão (correção de erro silencioso)
+
+`parseImm8` lia o operando com `Sscanf` e devolvia `0` para o que não entendia:
+`CP FOO+1`, `LD A,FOO*2`, `BIT 1+1,A`, `OUT (FOO+1),A`, `IN A,(FOO+1)` viravam
+`CP 0`/`LD A,0`/... sem aviso, e `DS 0FFh`/`DS NOME` reservavam 0 bytes. Agora
+imediatos de 8 bits, endereços de 16 bits e a contagem de `DS` passam pelo
+avaliador de expressões (§6 do manual); nome desconhecido, sintaxe inválida ou
+valor fora de faixa é **erro**. O lexer também deixou de perder o prefixo de
+`$FF`/`#FF`/`%1010` ao reconstruir operandos (`$10` era lido como decimal 10),
+`F0h`/`FFh` sem zero na frente seguem valendo, e literais `'A'` funcionam dentro
+de expressões. A suíte inteira continuou verde; o único achado real foi
+`demo/screen.asm`, que usava `MAPPER_PAGE2` sem definir (montava como porta 0).
+Testes em `pkg/kaji80/imm_expr_test.go`.
+
+### MSXLIB Fase 2a — fundação do VDP (`lib/src/vdp`, 27 módulos novos)
+
+Registradores de escrita apenas com **cópia sombra** (`VDP_SetReg/GetReg/UpdateReg`),
+leitura de status, `VDP_WaitVBlank/WaitFrames`, exibição/sprites/interrupção liga-desliga,
+linhas 192/212, 50/60 Hz, cor de borda/texto, página de exibição, ponteiro de VRAM de
+**17 bits** (128 KB) com `VramPut/Get`, fluxos `OTIR/INIR`, preenchimento, `VPoke/VPeek`,
+`VDP_ClearVRAM`, paleta (`SetPaletteEntry/Block`, padrão MSX2 e MSX1) e
+`VDP_SetMode(0..9)` (SCREEN 0–8 + texto 80 colunas, dirigido por tabela). Verificado no
+simulador, que ganhou um **modelo do V9938** (`pkg/z80sim/vdp.go`: VRAM 128K, contador de
+17 bits com vai-um para R#14, pré-leitura, status, paleta, R#17, `JIFFY`): os testes olham
+o conteúdo da VRAM e dos registradores, não só o traço de portas. **Ainda não testado em
+hardware/emulador real.** Descritores em `lib/api/vdp.api`; 16 equivalências novas em
+`docs/cobertura.map`.
+
 ### MSXLIB dividida em módulos pequenos (um por rotina/família)
 
 `lib/src/{bdos,bios,vdp,psg,string,math}.asm` deram lugar a 56 módulos em

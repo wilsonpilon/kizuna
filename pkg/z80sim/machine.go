@@ -49,6 +49,11 @@ type Machine struct {
 	// 0 se a fila está vazia), 0Bh (A = FFh se há tecla) e 0Ah (leitura de linha
 	// até o ENTER). Sem eco no Console além do da função 01h.
 	Input []byte
+	// VDP, se não for nil (ver AttachVDP), atende as portas 98h-9Bh.
+	VDP *VDP
+	// JiffyEvery > 0 simula a interrupção da BIOS: a cada JiffyEvery instrucoes
+	// o contador JIFFY (FC9Eh) é incrementado, para rotinas que esperam o vblank.
+	JiffyEvery int
 	// BDOSCalls registra o número de função (registrador C) de cada CALL 0005h.
 	BDOSCalls []uint8
 
@@ -58,6 +63,14 @@ type Machine struct {
 type ports struct{ m *Machine }
 
 func (p ports) ReadPort(a uint16) byte {
+	if v := p.m.VDP; v != nil {
+		switch uint8(a) {
+		case 0x98:
+			return v.Read98()
+		case 0x99:
+			return v.Read99()
+		}
+	}
 	if p.m.PortIn != nil {
 		return p.m.PortIn(uint8(a))
 	}
@@ -66,6 +79,18 @@ func (p ports) ReadPort(a uint16) byte {
 func (p ports) ReadPortInternal(a uint16, _ bool) byte { return p.ReadPort(a) }
 func (p ports) WritePort(a uint16, b byte) {
 	p.m.Ports = append(p.m.Ports, PortWrite{Port: uint8(a), Value: b})
+	if v := p.m.VDP; v != nil {
+		switch uint8(a) {
+		case 0x98:
+			v.Write98(b)
+		case 0x99:
+			v.Write99(b)
+		case 0x9A:
+			v.Write9A(b)
+		case 0x9B:
+			v.Write9B(b)
+		}
+	}
 }
 func (p ports) WritePortInternal(a uint16, b byte, _ bool) { p.WritePort(a, b) }
 func (ports) ContendPortPreio(uint16)                      {}
@@ -126,6 +151,11 @@ func (m *Machine) Call(addr uint16, maxSteps int) error {
 func (m *Machine) run(maxSteps int, stopAt *uint16) error {
 	cpu := m.CPU
 	for i := 0; i < maxSteps; i++ {
+		if m.JiffyEvery > 0 && i%m.JiffyEvery == 0 {
+			j := uint16(m.Mem[0xFC9E]) | uint16(m.Mem[0xFC9F])<<8
+			j++
+			m.Mem[0xFC9E], m.Mem[0xFC9F] = byte(j), byte(j>>8)
+		}
 		pc := cpu.PC()
 		if stopAt != nil && pc == *stopAt {
 			return nil
