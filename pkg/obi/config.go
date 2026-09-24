@@ -11,6 +11,7 @@ type Config struct {
 
 	Link      LinkSpec
 	Libraries []string // caminhos .hlib já empacotados, incluídos na linkagem final
+	API       []string // descritores de API da MSXLIB (.api, arquivo ou diretório) para DIGNAC/WIRTH80
 }
 
 // ModuleSpec descreve um módulo-fonte a ser compilado por um dos frontends.

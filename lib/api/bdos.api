@@ -1,0 +1,6 @@
+; MSX-DOS: console e arquivos (lib/src/bdos)
+proc BDOS_PrintChar(c: byte in E)                 ; imprime um caractere
+proc BDOS_PrintString(s: ptr in DE)               ; string terminada em '$'
+func BDOS_ReadChar(): byte out A                  ; lê tecla com eco
+proc BDOS_Exit()                                  ; volta ao MSX-DOS
+func BDOS_FileClose(handle: byte in B): byte out A ; A = erro (0 = ok)

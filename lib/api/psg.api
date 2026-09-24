@@ -1,0 +1,7 @@
+; PSG AY-3-8910 / YM2149 (lib/src/psg)
+proc PSG_Write(reg: byte in A, val: byte in E)
+func PSG_Read(reg: byte in A): byte out A
+proc PSG_MuteAll()
+proc PSG_PlayTone(channel: byte in A, period: word in HL, volume: byte in E)
+proc PSG_PlayNoteIndexed(channel: byte in A, note: byte in D, volume: byte in E)
+proc PSG_PlaySequence(seq: ptr in HL)             ; 4 bytes por evento, termina em FFh

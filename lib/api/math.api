@@ -1,0 +1,3 @@
+; Matemática (lib/src/math)
+func Mul16(a: word in HL, b: word in DE): word out HL   ; produto (16 bits baixos)
+func Div16(a: word in HL, b: word in DE): word out HL   ; quociente (x/0 = FFFFh)

@@ -83,6 +83,8 @@ Write-Host "[4/8] Construindo Biblioteca Padrao MSXLIB (msxlib.hlib)..." -Foregr
 & pwsh -ExecutionPolicy Bypass -File "$RootDir/lib/build.ps1"
 if ($LASTEXITCODE -ne 0) { throw "Falha ao construir a biblioteca MSXLIB" }
 Copy-Item -Path "$RootDir/lib/msxlib.hlib" -Destination "$LibDistDir/msxlib.hlib"
+# Descritores de API (.api): o dignac/wirth80 os acham em <bin>/../lib/api
+Copy-Item -Path "$RootDir/lib/api" -Destination "$LibDistDir/api" -Recurse
 
 # 6. Compilar todos os programas de exemplo em sample/
 Write-Host "[5/8] Compilando todos os programas de exemplo em sample/..." -ForegroundColor Yellow
@@ -137,6 +139,11 @@ if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/fileio" }
 Write-Host "      - Compilando sample/macroasm -> expr_labels/predefined/incbin.com..." -ForegroundColor Gray
 & pwsh -ExecutionPolicy Bypass -File "$RootDir/sample/macroasm/build.ps1"
 if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/macroasm" }
+
+# 6.11. Exemplo de descritores de API (.api): BASIC e Pascal chamando a MSXLIB
+Write-Host "      - Compilando sample/api -> api_demo.com (BASIC) e api_demop.com (Pascal)..." -ForegroundColor Gray
+& pwsh -ExecutionPolicy Bypass -File "$RootDir/sample/api/build.ps1"
+if ($LASTEXITCODE -ne 0) { throw "Falha ao compilar sample/api" }
 
 # 7. Copiar documentação essencial e licença
 Write-Host "[6/8] Copiando documentacao de usuario e licenca..." -ForegroundColor Yellow
@@ -242,6 +249,15 @@ Copy-Item -Path "$RootDir/sample/macroasm/incbin.asm" -Destination "$MacroasmDir
 Copy-Item -Path "$RootDir/sample/macroasm/incbin.com" -Destination "$MacroasmDir/incbin.com"
 Copy-Item -Path "$RootDir/sample/macroasm/greeting.dat" -Destination "$MacroasmDir/greeting.dat"
 Copy-Item -Path "$RootDir/sample/macroasm/build.ps1" -Destination "$MacroasmDir/build.ps1"
+
+# API (.api)
+$ApiSampDir = Join-Path $SampDir "api"
+New-Item -ItemType Directory -Path $ApiSampDir -Force | Out-Null
+Copy-Item -Path "$RootDir/sample/api/api_demo.bas" -Destination "$ApiSampDir/api_demo.bas"
+Copy-Item -Path "$RootDir/sample/api/api_demo.pas" -Destination "$ApiSampDir/api_demo.pas"
+Copy-Item -Path "$RootDir/sample/api/api_demo.com" -Destination "$ApiSampDir/api_demo.com"
+Copy-Item -Path "$RootDir/sample/api/api_demop.com" -Destination "$ApiSampDir/api_demop.com"
+Copy-Item -Path "$RootDir/sample/api/build.ps1" -Destination "$ApiSampDir/build.ps1"
 
 # 9. Gerar pacote compactado .ZIP
 Write-Host "[8/8] Criando arquivo compactado $ZipFileName..." -ForegroundColor Yellow

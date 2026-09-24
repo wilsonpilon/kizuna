@@ -1,0 +1,7 @@
+; Saída numérica (lib/src/string). As rotinas de string de C ("terminadas em \0":
+; StrLen, StrCopy, StrToUpper) não entram: as STRING do DIGNAC são de outro
+; formato (tamanho + dados) e a biblioteca de strings será refeita na Fase 1.
+proc PrintHex8(v: byte in A)
+proc PrintHex16(v: word in HL)
+proc PrintDec16(v: word in HL)
+proc BDOS_PrintLenStr(s: ptr in HL)               ; string no formato tamanho+dados

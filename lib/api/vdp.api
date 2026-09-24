@@ -1,0 +1,19 @@
+; VDP TMS9918/V9938/V9958 (lib/src/vdp)
+proc VDP_SetScreen(mode: byte in A)               ; 0, 1 ou 2
+proc VDP_InitScreen0()
+proc VDP_InitScreen1()
+proc VDP_InitScreen2()                            ; SCREEN 2 com tabelas limpas
+proc VDP_WriteReg(reg: byte in C, val: byte in B) ; R#reg = val
+proc VDP_SetWriteAddr(addr: word in HL)           ; ponteiro de escrita da VRAM (14 bits)
+proc VDP_SetReadAddr(addr: word in HL)            ; ponteiro de leitura da VRAM (14 bits)
+proc VDP_FillVRAM(addr: word in HL, count: word in BC, val: byte in A)
+proc VDP_WriteVRAM(src: ptr in HL, dst: word in DE, count: word in BC)  ; RAM -> VRAM
+proc VDP_ReadVRAM(src: word in HL, dst: ptr in DE, count: word in BC)   ; VRAM -> RAM
+proc VDP_CopyVRAM(src: word in HL, dst: word in DE, count: word in BC)  ; VRAM -> VRAM
+proc VDP_SetColor(fg: byte in H, bg: byte in L)   ; cor de texto e de fundo (R#7)
+proc VDP_PSet(x: word in BC, y: word in DE, color: byte in A)           ; pixel em SCREEN 2
+proc VDP_SpriteDefine(pattern: byte in A, data: ptr in HL, size: word in BC)
+proc VDP_SpriteSet(index: byte in A, y: byte in H, x: byte in L, pattern: byte in D, color: byte in E)
+proc VDP_SpriteHide(index: byte in A)
+proc VDP_SpriteHideAll()
+proc VDP_SpriteSetSize(r1: byte in A)             ; byte completo do R#1

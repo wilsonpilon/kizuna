@@ -1,0 +1,63 @@
+===============================================================================
+  KIZUNA MUSUBI LINKER — RELATÓRIO DE MAPA DE MEMÓRIA (MULTI-BANCO)
+===============================================================================
+
+Modo de Memória: Monobanco
+Bancos Utilizados: [0]
+Endereço Base:     0x0100
+Ponto de Entrada:  0x0100
+Tamanho do .COM:   1162 bytes (0x048A)
+
+--- SEGMENTOS ALOCADOS ---
+[ 0] 0x0100 - 0x031D | Banco:  0 | Tipo: CODE | Mod:  0 | Tam:   541 bytes
+[ 1] 0x031D - 0x034A | Banco:  0 | Tipo: CODE | Mod:  1 | Tam:    45 bytes
+[ 2] 0x034A - 0x0360 | Banco:  0 | Tipo: CODE | Mod:  2 | Tam:    22 bytes
+[ 3] 0x0360 - 0x0376 | Banco:  0 | Tipo: CODE | Mod:  3 | Tam:    22 bytes
+[ 4] 0x0376 - 0x0393 | Banco:  0 | Tipo: CODE | Mod:  4 | Tam:    29 bytes
+[ 5] 0x0393 - 0x039A | Banco:  0 | Tipo: CODE | Mod:  5 | Tam:     7 bytes
+[ 6] 0x039A - 0x03B1 | Banco:  0 | Tipo: CODE | Mod:  6 | Tam:    23 bytes
+[ 7] 0x03B1 - 0x03B7 | Banco:  0 | Tipo: CODE | Mod:  7 | Tam:     6 bytes
+[ 8] 0x03B7 - 0x03E0 | Banco:  0 | Tipo: CODE | Mod:  8 | Tam:    41 bytes
+[ 9] 0x03E0 - 0x0417 | Banco:  0 | Tipo: CODE | Mod:  9 | Tam:    55 bytes
+[10] 0x0417 - 0x0428 | Banco:  0 | Tipo: CODE | Mod: 10 | Tam:    17 bytes
+[11] 0x0428 - 0x0430 | Banco:  0 | Tipo: CODE | Mod: 11 | Tam:     8 bytes
+[12] 0x0430 - 0x0445 | Banco:  0 | Tipo: CODE | Mod: 12 | Tam:    21 bytes
+[13] 0x0445 - 0x048D | Banco:  0 | Tipo: CODE | Mod: 13 | Tam:    72 bytes
+[14] 0x048D - 0x04D5 | Banco:  0 | Tipo: CODE | Mod: 14 | Tam:    72 bytes
+[15] 0x04D5 - 0x04E7 | Banco:  0 | Tipo: CODE | Mod: 15 | Tam:    18 bytes
+[16] 0x04E7 - 0x0568 | Banco:  0 | Tipo: CODE | Mod: 16 | Tam:   129 bytes
+[17] 0x0568 - 0x0584 | Banco:  0 | Tipo: CODE | Mod: 17 | Tam:    28 bytes
+[18] 0x0584 - 0x058A | Banco:  0 | Tipo: CODE | Mod: 18 | Tam:     6 bytes
+
+--- TABELA GLOBAL DE SÍMBOLOS ---
+0x0100 [Banco  0] PROC Start
+0x0106 [Banco  0] PROC Main
+0x026A [Banco  0] PROC StrLit_6
+0x02A1 [Banco  0] PROC StrLit_7
+0x02A6 [Banco  0] PROC StrLit_1
+0x02D2 [Banco  0] PROC StrLit_2
+0x02FE [Banco  0] PROC StrLit_3
+0x0306 [Banco  0] PROC StrLit_4
+0x0310 [Banco  0] PROC StrLit_5
+0x031D [Banco  0] PROC Div16
+0x034A [Banco  0] PROC BDOS_PrintChar
+0x0360 [Banco  0] PROC BDOS_PrintString
+0x0376 [Banco  0] PROC PSG_MuteAll
+0x0393 [Banco  0] PROC BIOS_CLS
+0x039A [Banco  0] PROC VDP_SetColor
+0x03B1 [Banco  0] PROC BDOS_Exit
+0x03B7 [Banco  0] PROC PrintHex8
+0x03C4 [Banco  0] PROC PrintNibble
+0x03D5 [Banco  0] PROC PrintHex16
+0x03E0 [Banco  0] PROC PSG_PlayTone
+0x0417 [Banco  0] PROC VDP_WriteReg
+0x041D [Banco  0] PROC VDP_WriteReg_Raw
+0x0428 [Banco  0] PROC BDOS_ReadChar
+0x0430 [Banco  0] PROC Mul16
+0x0445 [Banco  0] PROC PrintDec16
+0x046F [Banco  0] PROC PrintDecDigit
+0x048D [Banco  0] PROC BIOS_CHGMOD
+0x04D5 [Banco  0] PROC BIOS_Call
+0x04E7 [Banco  0] PROC VDP_InitScreen2_Tables
+0x0568 [Banco  0] PROC VDP_FillVRAM
+0x0584 [Banco  0] PROC PSG_Write

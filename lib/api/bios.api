@@ -1,0 +1,7 @@
+; BIOS via inter-slot (lib/src/bios)
+proc BIOS_CLS()                                   ; limpa a tela
+proc BIOS_BEEP()
+proc BIOS_CHPUT(c: byte in A)                     ; imprime um caractere
+func BIOS_CHGET(): byte out A                     ; espera tecla (timeout ~60 s => 0)
+proc BIOS_CHGMOD(mode: byte in A)                 ; muda o modo de tela
+proc BIOS_INIT32()                                ; SCREEN 1

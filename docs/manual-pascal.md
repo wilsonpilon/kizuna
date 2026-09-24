@@ -26,10 +26,11 @@ chamar, ou declarar `EXTERN` pra chamar uma rotina de outro módulo — **desde
 que essa rotina siga a mesma ABI Kizuna baseada em pilha** (`PUSH`
 esquerda→direita, `IX` como frame pointer, limpeza pelo chamador — ver
 `docs/manual-ferramentas.md` §"ABI"). Rotinas da `MSXLIB` com convenção de
-registrador própria (`VDP_PSet`, `BDOS_PrintChar` etc.) **não** são
-chamáveis assim — só por comandos dedicados como `Write`/`WriteLn`, do mesmo
-jeito que o `DIGNAC` só acessa essas rotinas via `PSET`/`LINE`, nunca por
-uma chamada genérica. Ver `docs/manual-ferramentas.md` §10 pra um exemplo
+registrador própria (`VDP_PSet`, `BDOS_PrintChar` etc.) são chamáveis **desde
+que descritas num arquivo `.api`** (`lib/api/`): o `WIRTH80` carrega o descritor
+(`-api`, ou `../lib/api` ao lado do executável) e gera a carga de registradores —
+ver `docs/manual-ferramentas.md` §6.3. Sem descritor, seguem acessíveis só pelos
+comandos dedicados (`Write`/`WriteLn`). Ver `docs/manual-ferramentas.md` §10 pra um exemplo
 prático do que isso já destrava.
 
 ## 2. Estrutura de um programa
@@ -172,11 +173,11 @@ end;
 - `Start` (o bloco principal `begin...end.`) é **sempre** `PUBLIC`,
   automaticamente, mesmo sem nada declarado — continua sendo o ponto de
   entrada padrão de um `.COM` standalone.
-- **Limitação real**: `EXTERN` + chamada genérica só funciona pra símbolos
+- **Limitação**: `EXTERN` + chamada genérica só funciona pra símbolos
   que seguem a ABI Kizuna de pilha (outra `PROCEDURE` `DIGNAC`/`KAJI80`, ou
-  uma `procedure` `WIRTH80` `PUBLIC`) — não serve pra chamar rotinas da
-  `MSXLIB` diretamente (elas usam convenção de registrador, não pilha). Ver
-  §1.
+  uma `procedure` `WIRTH80` `PUBLIC`). As rotinas da `MSXLIB` (convenção de
+  registrador) são chamadas pelos descritores `.api`, **sem** `EXTERN` — ver
+  `docs/manual-ferramentas.md` §6.3.
 
 ## 6. Comandos suportados
 

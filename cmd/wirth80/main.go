@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wilsonpilon/kizuna/pkg/api"
 	"github.com/wilsonpilon/kizuna/pkg/mob"
 	"github.com/wilsonpilon/kizuna/pkg/version"
 	"github.com/wilsonpilon/kizuna/pkg/wirth80"
@@ -24,6 +25,8 @@ OPÇÕES:
     -S             Emite o código Assembly Z80 (.asm) em vez de compilar diretamente para .mob
     --log          Gera arquivo de log da compilação (<arquivo>.log)
     --log-file <f> Especifica caminho customizado para o arquivo de log
+    -api <f|dir>   Descritor(es) de API da MSXLIB (.api, arquivo ou diretório; repetível).
+                   Sem -api, usa ../lib/api ao lado do executável, se existir.
     -v             Modo detalhado (exibe resumo da AST, símbolos e código gerado)
     --version      Exibe a versão atual
     -h, --help     Exibe esta ajuda completa
@@ -45,6 +48,8 @@ func main() {
 	verbose := flag.Bool("v", false, "Modo detalhado")
 	logFlag := flag.Bool("log", false, "Gera arquivo de log da compilação (<arquivo>.log)")
 	logPath := flag.String("log-file", "", "Especifica caminho customizado para o log")
+	var apiPaths api.PathList
+	flag.Var(&apiPaths, "api", "Descritor(es) de API da MSXLIB (.api, arquivo ou diretório; repetível)")
 
 	_ = flag.CommandLine.Parse(rearrangeArgs(os.Args[1:]))
 
@@ -88,6 +93,12 @@ func main() {
 
 	// 2. Codegen
 	cg := wirth80.NewCodeGenerator(prog)
+	apiSet, err := api.ForCompiler(apiPaths, os.Args[0])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Erro nos descritores de API: %v\n", err)
+		os.Exit(1)
+	}
+	cg.SetAPI(apiSet)
 
 	getLogDest := func(defaultOut string) string {
 		if *logPath != "" {
@@ -268,7 +279,7 @@ func rearrangeArgs(args []string) []string {
 		arg := args[i]
 		if strings.HasPrefix(arg, "-") {
 			flags = append(flags, arg)
-			if (arg == "-o" || arg == "--log-file" || arg == "-log-file") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+			if (arg == "-o" || arg == "--log-file" || arg == "-log-file" || arg == "-api" || arg == "--api") && i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
 				i++
 				flags = append(flags, args[i])
 			}

@@ -101,6 +101,14 @@ func ParseObifile(content string) (*Config, error) {
 			}
 			i = next
 
+		case "api":
+			items, next, err := collectStringListBlock(lines, i+1)
+			if err != nil {
+				return nil, err
+			}
+			cfg.API = append(cfg.API, items...)
+			i = next
+
 		case "libraries":
 			items, next, err := collectStringListBlock(lines, i+1)
 			if err != nil {

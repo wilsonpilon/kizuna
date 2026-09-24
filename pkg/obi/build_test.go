@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/wilsonpilon/kizuna/pkg/z80sim"
 )
 
 func TestParseObifile_FullExample(t *testing.T) {
@@ -255,5 +257,66 @@ func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatalf("falha ao escrever %s: %v", path, err)
+	}
+}
+
+// A chave "api:" do Obifile carrega descritores .api para os modulos BASIC e
+// Pascal. O programa chama Diff(50, 8) -- rotina de REGISTRADORES (HL - DE) --
+// e imprime o resultado; rodado no simulador Z80, so com o descritor o
+// resultado e 42 (sem ele, a chamada sai em convencao de pilha e a rotina le
+// registradores errados).
+func TestBuild_APIKey(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, content string) {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	nl := "\n"
+	write("my.api", "func Diff(a: word in HL, b: word in DE): word out HL"+nl+"proc PrintDec16(v: word in HL)"+nl)
+	write("diff.asm", "MODULE Diff"+nl+"BANK 0"+nl+"PUBLIC Diff"+nl+"Diff:"+nl+"    OR A"+nl+"    SBC HL, DE"+nl+"    RET"+nl+"ENDMOD"+nl)
+	write("main.bas", "MODULE M"+nl+"BANK 0"+nl+"PUBLIC Main"+nl+"PROCEDURE Main()"+nl+"    PrintDec16(Diff(50, 8))"+nl+"END PROCEDURE"+nl+"END MODULE"+nl)
+	lib, err := filepath.Abs(filepath.Join("..", "..", "lib", "msxlib.hlib"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	write("Obifile", "target: app.com"+nl+"entry: Start"+nl+"modules:"+nl+"  - source: main.bas"+nl+"  - source: diff.asm"+nl+"api:"+nl+"  - my.api"+nl+"libraries:"+nl+"  - "+filepath.ToSlash(lib)+nl)
+
+	content, _ := os.ReadFile(filepath.Join(dir, "Obifile"))
+	cfg, err := ParseObifile(string(content))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.API) != 1 || cfg.API[0] != "my.api" {
+		t.Fatalf("cfg.API = %v", cfg.API)
+	}
+
+	run := func() string {
+		res, err := Build(cfg, dir, BuildOptions{})
+		if err != nil {
+			t.Fatalf("build: %v", err)
+		}
+		m := z80sim.New()
+		m.LoadCOM(res.LinkResult.Binary)
+		m.CPU.SetPC(res.LinkResult.EntryPoint)
+		if err := m.Run(1_000_000); err != nil {
+			t.Fatal(err)
+		}
+		return string(m.Console)
+	}
+
+	if got := run(); got != "42" {
+		t.Errorf("com api: console = %q, quer %q", got, "42")
+	}
+
+	cfg.API = nil // sem descritor: PrintDec16/Diff viram chamadas de pilha
+	if got := run(); got == "42" {
+		t.Errorf("sem api: o resultado nao deveria coincidir com 42 (mesmo caminho de codigo?)")
+	}
+
+	// caminho de api inexistente e erro alto, nunca silencioso
+	cfg.API = []string{"nao_existe.api"}
+	if _, err := Build(cfg, dir, BuildOptions{}); err == nil {
+		t.Error("api: inexistente deveria falhar")
 	}
 }

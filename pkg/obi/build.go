@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/wilsonpilon/kizuna/pkg/api"
 	"github.com/wilsonpilon/kizuna/pkg/dignac"
 	"github.com/wilsonpilon/kizuna/pkg/hako"
 	"github.com/wilsonpilon/kizuna/pkg/kaji80"
@@ -53,8 +54,17 @@ func Build(cfg *Config, baseDir string, opts BuildOptions) (*BuildResult, error)
 
 	var linkInputs []string
 
+	var apiPaths []string
+	for _, a := range cfg.API {
+		apiPaths = append(apiPaths, resolvePath(baseDir, a))
+	}
+	apiSet, err := api.LoadPaths(apiPaths)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, m := range cfg.Modules {
-		mr, err := buildModule(baseDir, m)
+		mr, err := buildModule(baseDir, m, apiSet)
 		if err != nil {
 			return nil, fmt.Errorf("módulo '%s': %w", displayName(m.Name, m.Source), err)
 		}
@@ -117,7 +127,7 @@ func Build(cfg *Config, baseDir string, opts BuildOptions) (*BuildResult, error)
 	return res, nil
 }
 
-func buildModule(baseDir string, m ModuleSpec) (*ModuleResult, error) {
+func buildModule(baseDir string, m ModuleSpec, apiSet *api.Set) (*ModuleResult, error) {
 	srcPath := resolvePath(baseDir, m.Source)
 	content, err := os.ReadFile(srcPath)
 	if err != nil {
@@ -132,7 +142,7 @@ func buildModule(baseDir string, m ModuleSpec) (*ModuleResult, error) {
 		}
 	}
 
-	obj, err := compileModule(compiler, string(content))
+	obj, err := compileModule(compiler, string(content), apiSet)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", compiler, err)
 	}
@@ -172,7 +182,7 @@ func buildModule(baseDir string, m ModuleSpec) (*ModuleResult, error) {
 // compileModule despacha para o frontend certo e devolve o objeto compilado
 // em memória, reusando exatamente as mesmas APIs que cmd/kaji80, cmd/wirth80
 // e cmd/dignac já usam — nenhum subprocesso é lançado.
-func compileModule(compiler, source string) (*mob.ObjectFile, error) {
+func compileModule(compiler, source string, apiSet *api.Set) (*mob.ObjectFile, error) {
 	switch compiler {
 	case "kaji80":
 		return kaji80.NewAssembler().Assemble(source)
@@ -186,7 +196,9 @@ func compileModule(compiler, source string) (*mob.ObjectFile, error) {
 		if err != nil {
 			return nil, err
 		}
-		obj, _, err := wirth80.NewCodeGenerator(prog).Compile()
+		cg := wirth80.NewCodeGenerator(prog)
+		cg.SetAPI(apiSet)
+		obj, _, err := cg.Compile()
 		return obj, err
 
 	case "dignac":
@@ -198,7 +210,9 @@ func compileModule(compiler, source string) (*mob.ObjectFile, error) {
 		if err != nil {
 			return nil, err
 		}
-		obj, _, err := dignac.NewCodeGenerator(modAst).Compile()
+		cg := dignac.NewCodeGenerator(modAst)
+		cg.SetAPI(apiSet)
+		obj, _, err := cg.Compile()
 		return obj, err
 
 	default:

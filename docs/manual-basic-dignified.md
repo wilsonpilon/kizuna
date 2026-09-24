@@ -325,6 +325,7 @@ dignac [opções] <arquivo.bas>
 | -------------- | ---------------------------------------------------------------------------- |
 | `-o <caminho>` | Arquivo `.mob` de saída (padrão: mesmo nome com extensão `.mob`).            |
 | `-S`           | Emite o Assembly Z80 gerado (`.asm`) em vez do `.mob` — ótimo pra aprender/depurar. |
+| `-api <f|dir>` | Descritores de API da MSXLIB (`.api`, arquivo ou diretório; repetível). Sem `-api`, usa `../lib/api` ao lado do executável. |
 | `-v`           | Modo detalhado.                                                              |
 | `--version`    | Versão atual.                                                                |
 | `-h`, `--help` | Ajuda completa.                                                              |
@@ -336,6 +337,23 @@ dignac sample/basic/hello.bas -o sample/basic/hello.mob
 # 2. Linka com a biblioteca padrão gerando o executável .COM
 musubi -v -o sample/basic/hello.com sample/basic/hello.mob lib/msxlib.hlib
 ```
+
+### Chamando rotinas da MSXLIB (`.api`)
+
+Qualquer rotina da MSXLIB descrita num `.api` (`lib/api/`) pode ser chamada como uma
+`PROCEDURE`/função qualquer, sem `EXTERN` e sem comando dedicado no compilador:
+
+```basic
+PROCEDURE Main()
+    PSG_Write(7, 62)              ' proc: comando
+    VDP_SetColor(15, 4)           ' texto branco sobre fundo azul
+    PrintDec16(Mul16(6, 7))       ' func: usada como expressão
+END PROCEDURE
+```
+
+Número de argumentos errado, ou usar uma `proc` numa expressão, é erro de compilação.
+Uma `PROCEDURE` do próprio programa com o mesmo nome vence a rotina da biblioteca.
+Formato do `.api` e regras: `docs/manual-ferramentas.md` §6.3.
 
 ## 14. Ver também
 

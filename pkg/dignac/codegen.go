@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/wilsonpilon/kizuna/pkg/api"
 	"github.com/wilsonpilon/kizuna/pkg/kaji80"
 	"github.com/wilsonpilon/kizuna/pkg/mob"
 )
@@ -66,6 +67,12 @@ func storageDirective(t string) string {
 // CodeGenerator traduz a AST de MSX-BASIC Dignified em Assembly Z80 compatível com KAJI80
 type CodeGenerator struct {
 	module         *ModuleNode
+
+	// api: descritores de rotinas da MSXLIB de convenção de registradores
+	// (lib/api/*.api). Nil = nenhum carregado. apiUsed: rotinas efetivamente
+	// chamadas (viram EXTERN), na ordem da primeira chamada.
+	api     *api.Set
+	apiUsed []string
 	asm            strings.Builder
 	labelCounter   int
 	stringLits     map[string]string // texto -> label (ex: "StrLit_1")
@@ -110,6 +117,48 @@ type CodeGenerator struct {
 }
 
 // NewCodeGenerator cria um novo gerador de código
+// SetAPI informa os descritores de rotinas da MSXLIB (pkg/api). Com eles,
+// "Nome(args)" que não seja uma PROCEDURE/EXTERN do próprio programa vira uma
+// chamada por registradores da rotina descrita.
+func (cg *CodeGenerator) SetAPI(set *api.Set) { cg.api = set }
+
+// apiRoutine devolve a rotina descrita para name, exceto se o programa definir
+// (PROCEDURE) ou importar (EXTERN) um símbolo de mesmo nome -- o do usuário vence.
+func (cg *CodeGenerator) apiRoutine(name string) (*api.Routine, bool) {
+	if cg.api == nil {
+		return nil, false
+	}
+	for _, proc := range cg.module.Procedures {
+		if strings.EqualFold(proc.Name, name) {
+			return nil, false
+		}
+	}
+	for _, ext := range cg.module.Externs {
+		if strings.EqualFold(ext, name) {
+			return nil, false
+		}
+	}
+	return cg.api.Lookup(api.LangBasic, name)
+}
+
+// emitAPICall gera a chamada por registradores e registra o EXTERN.
+func (cg *CodeGenerator) emitAPICall(sb *strings.Builder, rt *api.Routine, args []Expr, asExpr bool) error {
+	err := rt.EmitCall(sb, len(args), func(i int) error {
+		if err := cg.generateExpr(sb, args[i]); err != nil {
+			return err
+		}
+		sb.WriteString("    PUSH HL\n")
+		return nil
+	}, asExpr)
+	if err != nil {
+		return err
+	}
+	if !containsString(cg.apiUsed, rt.Name) {
+		cg.apiUsed = append(cg.apiUsed, rt.Name)
+	}
+	return nil
+}
+
 func NewCodeGenerator(module *ModuleNode) *CodeGenerator {
 	return &CodeGenerator{
 		module:     module,
@@ -289,6 +338,12 @@ func (cg *CodeGenerator) GenerateAsm() (string, error) {
 	}
 	if cg.needsFloatCmp32 && !containsString(externs, "Float_Cmp32") {
 		externs = append(externs, "Float_Cmp32")
+	}
+
+	for _, name := range cg.apiUsed {
+		if !containsString(externs, name) {
+			externs = append(externs, name)
+		}
 	}
 
 	if len(externs) > 0 {
@@ -679,6 +734,9 @@ func (cg *CodeGenerator) generateStmt(sb *strings.Builder, stmt Stmt) error {
 		return nil
 
 	case *CallStmt:
+		if rt, ok := cg.apiRoutine(s.Name); ok {
+			return cg.emitAPICall(sb, rt, s.Args, false)
+		}
 		// Empilha argumentos da esquerda para a direita (Kizuna ABI)
 		for _, arg := range s.Args {
 			if err := cg.generateExpr(sb, arg); err != nil {
@@ -1107,6 +1165,9 @@ func (cg *CodeGenerator) generateExpr(sb *strings.Builder, expr Expr) error {
 		return nil
 
 	case *CallExpr:
+		if rt, ok := cg.apiRoutine(e.Name); ok {
+			return cg.emitAPICall(sb, rt, e.Args, true)
+		}
 		// Chamada de função como expressão: empilha argumentos, CALL, e
 		// limpa a pilha (convenção do chamador) SEM perder o valor de
 		// retorno que o CALL deixou em HL. Troca HL/DE ANTES de calcular o

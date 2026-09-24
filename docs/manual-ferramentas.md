@@ -311,6 +311,44 @@ projeto: o `KAJI80` sempre recusar montagem de uma forma não reconhecida
 documentação segue essa mesma regra (nunca documentar como "funciona" algo
 que só falha silenciosamente).
 
+### 6.3. Descritores de API (`lib/api/*.api`): chamar a MSXLIB do BASIC e do Pascal
+
+As rotinas da `MSXLIB` recebem parâmetros em **registradores** (`A`, `BC`, `HL`…),
+não na pilha como as `PROCEDURE` de BASIC/Pascal. Um arquivo `.api` descreve, por
+rotina, quais parâmetros existem, em que registrador cada um entra e onde o valor
+volta; com ele o `DIGNAC` e o `WIRTH80` chamam a rotina **como uma procedure/função
+qualquer**, sem comando dedicado no compilador:
+
+```
+; lib/api/vdp.api
+proc VDP_SetColor(fg: byte in H, bg: byte in L)
+proc VDP_FillVRAM(addr: word in HL, count: word in BC, val: byte in A)
+func Mul16(a: word in HL, b: word in DE): word out HL
+alias basic  Random = MATH_Random8      ; apelido só para BASIC ("pascal" = só Pascal, "all" = ambos)
+```
+
+- **Tipos**: `byte` (registrador de 8 bits `A B C D E H L`), `word` e `ptr` (par `BC`,
+  `DE` ou `HL`). Retorno de `func`: `A`, `BC`, `DE` ou `HL`. Uma só saída; rotinas com
+  várias saídas (ex.: `BDOS_FileOpen` devolve erro em `A` e handle em `B`) ainda não
+  são descritas.
+- **Uso**: `PSG_Write(7, 62)`, `x% = Mul16(6, 7)` em BASIC; `PSG_Write(7, 62);`,
+  `x := Mul16(6, 7);` em Pascal. Funções sem parâmetros levam parênteses vazios em
+  expressão (`x% = Random()`). Maiúsculas/minúsculas não importam; o compilador emite
+  o nome canônico e declara o `EXTERN` sozinho.
+- **Argumentos** são expressões inteiras; um `byte` recebe só o byte baixo do valor.
+  Argumento a menos/a mais, ou `proc` usada como expressão, é **erro de compilação**.
+- **Precedência**: uma `PROCEDURE`/`EXTERN` do próprio programa com o mesmo nome vence
+  a rotina descrita.
+- **IX**: as rotinas podem destruir qualquer registrador (menos `SP`); o compilador
+  salva/restaura `IX` (frame pointer) em volta de cada chamada.
+- **Onde o compilador procura**: `-api <arquivo|diretório>` (repetível) em `dignac` e
+  `wirth80`; sem `-api`, usa `../lib/api` ao lado do executável (layout da distribuição:
+  `bin/` ao lado de `lib/`). No `OBI`, a chave `api:` do `Obifile`.
+- **Exemplo completo**: `sample/api/` (mesmo programa em BASIC e Pascal).
+
+Rotinas de convenção de pilha (`VDP_Line`, `VDP_BoxFill`) já têm comandos próprios
+(`LINE`) e não são descritas aqui. As descritas hoje: `lib/api/{bdos,bios,vdp,psg,string,math}.api`.
+
 ## 7. O orquestrador de build `OBI`
 
 `OBI` (帯, "faixa que amarra o conjunto") é o "make" do KIZUNA — lê uma
@@ -356,6 +394,9 @@ library:
   archive: <caminho.hlib>           # forma singular — uma biblioteca
 libraries:
   - <caminho.hlib>                  # forma plural — várias
+
+api:
+  - <arquivo.api ou diretório>      # descritores de API da MSXLIB p/ DIGNAC/WIRTH80 (§6.3)
 ```
 
 - `target: *.com` invoca `MUSUBI` no final; `target: *.hlib` invoca `HAKO`
