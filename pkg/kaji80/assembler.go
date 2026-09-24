@@ -1445,19 +1445,26 @@ func (a *Assembler) emitAddressOrReloc(symbolOrAddr string) error {
 		return nil
 	}
 
-	// Se for número literal (ex: 0x1234, 100, $C000)
+	// Se for número literal (ex: 0x1234, 100, $C000). Um nome que já é um rótulo
+	// deste arquivo ou um EXTERN declarado NUNCA é lido como número, mesmo que
+	// termine em "h" e tenha só dígitos hexadecimais antes (ex.: "Each", "Beach"
+	// seriam EACh e BEACh). Literais como "F0h" (sem o 0 na frente) continuam
+	// valendo quando o nome não foi declarado como símbolo.
 	var numVal int64
 	var err error
-	if strings.HasPrefix(symbolOrAddr, "$") || strings.HasPrefix(symbolOrAddr, "#") {
+	_, isLabel := a.symbols[symbolOrAddr]
+	_, isExtern := a.externs[symbolOrAddr]
+	if isLabel || isExtern {
+		err = fmt.Errorf("é símbolo")
+	} else if strings.HasPrefix(symbolOrAddr, "$") || strings.HasPrefix(symbolOrAddr, "#") {
 		numVal, err = parseHex(symbolOrAddr[1:])
 	} else if strings.HasSuffix(strings.ToLower(symbolOrAddr), "h") {
 		numVal, err = parseHex(symbolOrAddr[:len(symbolOrAddr)-1])
 	} else if strings.HasPrefix(strings.ToLower(symbolOrAddr), "0x") {
 		numVal, err = parseHex(symbolOrAddr[2:])
 	} else {
-		var n int
-		n, err = fmt.Sscanf(symbolOrAddr, "%d", &numVal)
-		if n == 0 {
+		numVal, err = strconv.ParseInt(symbolOrAddr, 10, 64)
+		if err != nil {
 			err = fmt.Errorf("não é número")
 		}
 	}
@@ -1537,13 +1544,16 @@ func (a *Assembler) emitRelativeOrReloc(symbolOrTarget string) error {
 	return nil
 }
 
+// parseHex lê um número hexadecimal INTEIRO: a string toda tem que ser dígitos
+// hexadecimais. (A versão anterior usava fmt.Sscanf("%x"), que aceita só o
+// PREFIXO -- então um símbolo como "CHAR_IsGraph", que termina em "h" e começa
+// com uma letra hexadecimal, virava o número 0Ch sem erro e sem relocation.)
 func parseHex(s string) (int64, error) {
-	var val int64
-	n, err := fmt.Sscanf(s, "%x", &val)
-	if n == 0 || err != nil {
+	v, err := strconv.ParseInt(s, 16, 64)
+	if err != nil {
 		return 0, fmt.Errorf("hex inválido")
 	}
-	return val, nil
+	return v, nil
 }
 
 // =============================================================================

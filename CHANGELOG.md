@@ -30,6 +30,15 @@ checagens independentes (blocos ladrilham a região, conteúdo dos blocos vivos 
 `lib/api/mem.api`. Itens do guia deixados de fora de propósito (alocador estático, `Mutex_*`) estão
 em `docs/cobertura.map` com o motivo.
 
+### KAJI80: símbolo terminado em `h` era lido como número hexadecimal
+
+Um operando de endereço cujo nome **terminava em `h` e começava com letras hexadecimais**
+(`CHAR_IsGraph`, `Fetch`, `Data_Path`) virava um número (`CHAR_IsGrap` → `0Ch`) **sem erro e sem
+relocation** — o `parseHex` usava `Sscanf("%x")`, que aceita só o prefixo. Achado ao gerar
+`CHAR_IsGraph`. Corrigido (`parseHex` exige a string inteira em hexadecimal) e um nome que é
+rótulo do arquivo ou `EXTERN` declarado nunca é lido como número (`Each` seria `EACh`); literais
+como `F0h` sem o `0` na frente continuam valendo para nomes não declarados.
+
 ### KAJI80: conjunto Z80 documentado completo
 
 Faltavam instruções básicas: operações de bloco (`LDIR`, `LDDR`, `CPIR`, `CPDR`, `INIR`, `OTIR`…),
