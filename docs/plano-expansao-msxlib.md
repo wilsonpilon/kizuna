@@ -81,7 +81,7 @@ Convenção `AREA_Verbo...` (a da lib atual). Os 120 símbolos existentes ficam
 como estão. Colisão só é possível com nomes futuros nossos; o teste da lib já
 rejeita `PUBLIC` duplicado.
 
-### D2. Convenção de chamada e descritores de API
+### D2. Convenção de chamada e descritores de API (implementado)
 Hoje as rotinas da MSXLIB usam **registradores** e só são alcançáveis pelo
 BASIC/Pascal via comandos dedicados (`PSET`, `LINE`, `WriteLn`…), limitação
 registrada em `docs/manual-pascal.md` §5. Com centenas de rotinas novas, não dá para
@@ -140,10 +140,23 @@ Depois de cada fase de biblioteca, expor no BASIC e no Pascal:
 
 Cada fase é um marco: commit, CHANGELOG, testes, `sample/` para hardware.
 
-- **Fase 0 — Fundação**: (a) `lib/inc/` com constantes de portas/registradores dos chips
-  (`PORT_`, registradores VDP/PSG/OPLL/Y8950/SCC/V9990, ASCII, cores), escritas por nós
-  a partir dos manuais; (b) `.api` + suporte em DIGNAC/WIRTH80 (D2); (c) harness Z80 no
-  repo; (d) `cobertura.md` gerado + `CREDITS.md`.
+- **Fase 0 — Fundação** — ✅ **concluída (2026-09-23)**:
+  (a) `lib/inc/` ganhou `ports.inc`, `vdpreg.inc`, `psgreg.inc`, `opll.inc`, `y8950.inc`,
+  `scc.inc`, `v9990.inc` (só portas), `ascii.inc`, `color.inc` — escritos por nós e
+  conferidos contra os cabeçalhos-guia; um teste de montagem inclui todos juntos e confere
+  ~50 valores de hardware conhecidos;
+  (b) descritores `.api` (`pkg/api`, `lib/api/*.api`) lidos por DIGNAC, WIRTH80 e OBI
+  (`-api`, `api:`), provados com **rotinas reais** (VDP, PSG, BDOS, BIOS, matemática) e
+  rodando no simulador — ver `docs/manual-ferramentas.md` §6.3 e `sample/api/`;
+  (c) simulador Z80 em `pkg/z80sim` + auxiliares de teste em `pkg/libtest` (monta a
+  MSXLIB fresca de `lib/src`, liga, roda, registra console/portas/CALSLT);
+  (d) `docs/cobertura.md` (gerado por `go run ./tools/cobertura` a partir de
+  `docs/cobertura.map`) e `docs/CREDITS.md`.
+  Decisões tomadas no caminho: o compilador salva/restaura **IX** em volta de toda
+  chamada por `.api` (rotinas que usam BIOS destroem IX); o carregamento de parâmetros de
+  8 bits escolhe, a cada `POP`, um par que ainda não tenha registrador carregado (ver
+  `Routine.plan`), o que dispensou a regra "um par de rascunho livre" do desenho inicial
+  e permite assinaturas reais como `BDOS_FileRead(B, DE, HL)`.
 - **Fase 1 — Núcleo sem hardware**: memória, matemática, strings/ctype/conversões.
   Ideal para exercitar o processo (sem dependência de VDP). Inclui aleatório,
   `Mul32/Div32`, cópia/preenchimento (com variantes rápidas `LDIR`/`LDDR`), heap simples.

@@ -19,6 +19,23 @@ comportamento idêntico. Também: `BIOS_Call` não arrasta mais o módulo de
 VDP inteiro (havia uma dependência circular bios↔vdp em nível de módulo).
 Base para a expansão da MSXLIB no estilo MSXgl.
 
+### Fase 0 da expansão da MSXLIB (ver `docs/plano-expansao-msxlib.md`)
+
+- **Descritores de API (`.api`)**: DIGNAC e WIRTH80 passam a chamar rotinas da MSXLIB de
+  convenção de registradores como qualquer procedure/função (`PSG_Write(7, 62)`,
+  `x% = Mul16(6, 7)`), sem comando dedicado no compilador e sem `EXTERN`. Novo pacote
+  `pkg/api`, opção `-api` nos dois compiladores, chave `api:` no `Obifile`, e
+  `lib/api/{bdos,bios,vdp,psg,string,math}.api` descrevendo as rotinas existentes. Erros de
+  contagem de argumentos e `proc` em expressão são erros de compilação; o compilador
+  salva/restaura IX em volta da chamada. Exemplo: `sample/api/` (BASIC e Pascal).
+- **Simulador Z80 no repositório** (`pkg/z80sim`, `pkg/libtest`): roda `.COM` ou uma rotina só,
+  com BDOS/CALSLT simulados e registro de escritas de porta — a mesma técnica que achou o
+  bug `LD B,(nn)`, agora usada nos testes de tudo o que é novo.
+- **Constantes dos chips em `lib/inc/`**: portas, VDP (registradores, comandos, status), PSG,
+  YM2413, Y8950, SCC, V9990 (portas), ASCII e cores.
+- **`docs/cobertura.md`** (gerado por `tools/cobertura`): checklist do que o MSXgl e o
+  Fusion-C oferecem, com o estado de cada item no KIZUNA; `docs/CREDITS.md`.
+
 ### KAJI80: `INCLUDE "arquivo"`
 
 Insere o texto de outro arquivo-fonte (relativo ao arquivo que inclui,

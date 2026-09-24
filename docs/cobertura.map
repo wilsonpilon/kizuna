@@ -1,0 +1,45 @@
+# Mapa de cobertura: nome no guia (MSXgl / Fusion-C)  =  nossa rotina
+#
+#   Guia = Nossa           o item do guia é coberto por essa rotina nossa
+#   Guia = -- motivo       decidimos não fazer, com o motivo
+#   fusion:Nome = ...      só para nomes do Fusion-C que colidem com um do MSXgl
+#
+# Sem linha = pendente. "Feito" só aparece quando a rotina nossa existe em
+# lib/src (PUBLIC) ou lib/api (proc/func). Gere docs/cobertura.md com:
+#   go run ./tools/cobertura        (e valide este arquivo com -check)
+#
+# REGRA: só entram equivalências REAIS de comportamento. A assinatura pode ser
+# diferente (é de propósito: a API é nossa), mas o que a rotina FAZ tem que ser
+# o mesmo. Funções do guia que fazem mais (operação lógica, cópia sombra dos
+# registradores, VRAM de 128K, strings terminadas em zero vs '$') NÃO entram
+# aqui até termos a rotina equivalente -- ficam pendentes, de propósito.
+
+# --- PSG ---------------------------------------------------------------------
+PSG_SetRegister = PSG_Write
+PSG_GetRegister = PSG_Read
+PSGwrite = PSG_Write
+PSGRead = PSG_Read
+SilencePSG = PSG_MuteAll
+
+# --- VDP ---------------------------------------------------------------------
+# (VDP_SetColor do MSXgl grava R#7 inteiro com 1 parâmetro; a nossa recebe frente
+#  e fundo -- semânticas diferentes, por isso fica pendente. Idem VDP_RegWrite, que
+#  no MSXgl mantém cópia sombra, e VDP_SetSprite, que não mexe na cor.)
+VDP_FillVRAM_16K = VDP_FillVRAM
+VDP_WriteVRAM_16K = VDP_WriteVRAM
+VDP_ReadVRAM_16K = VDP_ReadVRAM
+VDP_HideSprite = VDP_SpriteHide
+VDP_HideAllSprites = VDP_SpriteHideAll
+VDP_LoadSpritePattern = VDP_SpriteDefine
+
+# --- Strings e texto ---------------------------------------------------------
+# (Print_Draw* do MSXgl escrevem na VRAM em qualquer modo; as nossas PrintHex*/
+#  PrintDec* escrevem no console do MSX-DOS -- por isso não são equivalentes.)
+PrintHex = PrintHex16
+PrintNumber = PrintDec16
+PrintChar = BDOS_PrintChar
+StrLen = StrLen
+StrCopy = StrCopy
+Cls = BIOS_CLS
+Beep = BIOS_BEEP
+Getche = BDOS_ReadChar

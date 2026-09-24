@@ -1667,3 +1667,70 @@ func TestIncludeMissingFileErrors(t *testing.T) {
 		t.Fatal("esperado erro para INCLUDE de arquivo inexistente")
 	}
 }
+
+// TestMsxlibIncludesAssembleTogether inclui TODOS os lib/inc/*.inc num mesmo
+// módulo: nomes duplicados entre arquivos (o KAJI80 recusa EQU repetido) ou
+// erro de sintaxe numa constante aparecem aqui. Confere também alguns valores
+// de hardware conhecidos, para pegar erro de digitação numa constante.
+func TestMsxlibIncludesAssembleTogether(t *testing.T) {
+	incDir := filepath.Join("..", "..", "lib", "inc")
+	entries, err := os.ReadDir(incDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sb strings.Builder
+	sb.WriteString("MODULE IncAll\nBANK 0\nPUBLIC Start\n")
+	n := 0
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".inc") {
+			sb.WriteString("INCLUDE \"" + filepath.ToSlash(filepath.Join(incDir, e.Name())) + "\"\n")
+			n++
+		}
+	}
+	if n < 8 {
+		t.Fatalf("esperava ao menos 8 arquivos .inc, achei %d", n)
+	}
+	// (símbolo, valor esperado) -- valores da folha de dados de cada chip
+	checks := []struct {
+		name string
+		want int
+	}{
+		{"PORT_VDP_DATA", 0x98}, {"PORT_VDP_CMD", 0x99}, {"PORT_VDP_PAL", 0x9A}, {"PORT_VDP_IREG", 0x9B},
+		{"PORT_PSG_ADDR", 0xA0}, {"PORT_PSG_WRITE", 0xA1}, {"PORT_PSG_READ", 0xA2},
+		{"PORT_PPI_A", 0xA8}, {"PORT_PPI_B", 0xA9}, {"PORT_PPI_C", 0xAA},
+		{"PORT_RTC_ADDR", 0xB4}, {"PORT_MAPPER_P2", 0xFE},
+		{"PORT_OPLL_ADDR", 0x7C}, {"PORT_Y8950_ADDR", 0xC0},
+		{"VDP_REG_CMD", 46}, {"VDP_REG_MODE4", 25}, {"VDP_REG_STATSEL", 15},
+		{"VDP_R1_BL", 0x40}, {"VDP_R9_LN", 0x80}, {"VDP_R25_YJK", 0x08},
+		{"VDP_CMD_HMMM", 0xD0}, {"VDP_CMD_LINE", 0x70}, {"VDP_CMD_PSET", 0x50}, {"VDP_LOP_TIMP", 0x08},
+		{"VDP_S2_TR", 0x80}, {"VDP_S2_CE", 0x01},
+		{"PSG_R_MIXER", 7}, {"PSG_R_ENV_SHAPE", 13}, {"PSG_MIX_NOISE_C_OFF", 0x20},
+		{"PSG_ENV_DECAY_LOW", 0x09}, {"PSG_ENV_ATTACK_LOW", 0x0F}, {"PSG_ENV_TRI_UP", 0x0E},
+		{"JOY_BUTTON_B", 0x20}, {"PSG_R15_PORT2", 0x40},
+		{"OPLL_R_RHYTHM", 0x0E}, {"OPLL_INST_PIANO", 3}, {"OPLL_RHYTHM_BD", 0x10},
+		{"Y8950_R_RHYTHM", 0xBD}, {"Y8950_R_ADPCM_CTL", 0x07},
+		{"SCC_FREQ1", 0x9880}, {"SCC_VOL5", 0x988E}, {"SCC_MIXER", 0x988F}, {"SCC_WAVE4", 0x9860},
+		{"ASCII_CLS", 0x0C}, {"ASCII_LEFT", 0x1D}, {"COLOR_WHITE", 15}, {"COLOR_DARK_BLUE", 4},
+	}
+	sb.WriteString("Start:\n")
+	for _, c := range checks {
+		sb.WriteString("    DW " + c.name + "\n")
+	}
+
+	a := NewAssembler()
+	a.SetBaseDir(".")
+	obj, err := a.Assemble(sb.String())
+	if err != nil {
+		t.Fatalf("Assemble falhou: %v", err)
+	}
+	data := obj.Segments[0].Data
+	if len(data) != 2*len(checks) {
+		t.Fatalf("segmento com %d bytes, esperava %d", len(data), 2*len(checks))
+	}
+	for i, c := range checks {
+		got := int(data[2*i]) | int(data[2*i+1])<<8
+		if got != c.want {
+			t.Errorf("%s = %#x, esperado %#x", c.name, got, c.want)
+		}
+	}
+}
